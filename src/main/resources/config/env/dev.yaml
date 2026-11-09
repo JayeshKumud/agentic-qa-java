@@ -1,0 +1,15 @@
+ui:
+  baseUrl: http://127.0.0.1:8000
+  browser: chromium
+  headless: false
+  slowMoMs: 0
+  timeoutMs: 15000
+api:
+  baseUrl: http://127.0.0.1:8000
+  timeoutMs: 15000
+healing:
+  enabled: true
+  probeTimeoutMs: 2000
+  minScore: 0.6
+  fingerprintsFile: healing/fingerprints.json
+  reportFile: target/healing/heals.jsonl

@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+
+# local classpath dump
+cp.txt
+
+# personal Claude Code settings
+.claude/settings.local.json

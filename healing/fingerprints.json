@@ -1,0 +1,50 @@
+{
+  "customers.addButton" : {
+    "tag" : "button",
+    "id" : "add-customer-button",
+    "type" : "submit",
+    "text" : "Add Customer"
+  },
+  "customers.newEmail" : {
+    "tag" : "input",
+    "id" : "new-customer-email",
+    "name" : "email",
+    "type" : "email",
+    "placeholder" : "Email"
+  },
+  "customers.newName" : {
+    "tag" : "input",
+    "id" : "new-customer-name",
+    "name" : "name",
+    "type" : "text",
+    "placeholder" : "Name"
+  },
+  "customers.nextLink" : {
+    "tag" : "a",
+    "id" : "next-page-link",
+    "text" : "Next"
+  },
+  "customers.pageIndicator" : {
+    "tag" : "span",
+    "id" : "page-indicator",
+    "text" : "Page 1 of 2"
+  },
+  "customers.previousLink" : {
+    "tag" : "a",
+    "id" : "prev-page-link",
+    "text" : "Previous"
+  },
+  "customers.searchButton" : {
+    "tag" : "button",
+    "id" : "search-button",
+    "type" : "submit",
+    "text" : "Search"
+  },
+  "customers.searchInput" : {
+    "tag" : "input",
+    "id" : "search-input",
+    "name" : "q",
+    "type" : "text",
+    "placeholder" : "Search by name"
+  }
+}
