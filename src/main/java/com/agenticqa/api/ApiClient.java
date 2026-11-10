@@ -51,7 +51,19 @@ public abstract class ApiClient {
      * @return the raw response
      */
     protected APIResponse post(String path, Object body) {
-        return send("POST", path, body);
+        return send("POST", path, toJson(body));
+    }
+
+    /**
+     * Sends a POST request with a JSON body that is already text. The text is sent exactly as given, so it may
+     * contain extra fields, wrong types or even be malformed (for negative tests).
+     *
+     * @param path path of the endpoint
+     * @param json the request body
+     * @return the raw response
+     */
+    protected APIResponse postJson(String path, String json) {
+        return send("POST", path, json);
     }
 
     /**
@@ -62,7 +74,18 @@ public abstract class ApiClient {
      * @return the raw response
      */
     protected APIResponse put(String path, Object body) {
-        return send("PUT", path, body);
+        return send("PUT", path, toJson(body));
+    }
+
+    /**
+     * Sends a PUT request with a JSON body that is already text, exactly as given.
+     *
+     * @param path path of the endpoint
+     * @param json the request body
+     * @return the raw response
+     */
+    protected APIResponse putJson(String path, String json) {
+        return send("PUT", path, json);
     }
 
     /**
@@ -112,14 +135,14 @@ public abstract class ApiClient {
      *
      * @param method HTTP verb: GET, POST, PUT or DELETE
      * @param path   path of the endpoint, appended to the base URL
-     * @param body   object to send as JSON, or null for none
+     * @param json   the JSON body as text, or null for none
      * @return the raw response
      */
-    private APIResponse send(String method, String path, Object body) {
+    private APIResponse send(String method, String path, String json) {
         String url = baseUrl + path;
         RequestOptions options = RequestOptions.create().setTimeout(session.settings().api().timeoutMs());
-        if (body != null) {
-            options.setHeader("Content-Type", "application/json").setData(toJson(body));
+        if (json != null) {
+            options.setHeader("Content-Type", "application/json").setData(json);
         }
         APIRequestContext api = session.api();
         APIResponse response = switch (method) {

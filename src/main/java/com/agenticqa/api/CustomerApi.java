@@ -50,6 +50,28 @@ public class CustomerApi extends ApiClient {
     }
 
     /**
+     * POST /customers with a body written as JSON text, sent exactly as given (for requests built in feature
+     * files and for negative tests).
+     *
+     * @param json the request body
+     * @return the response (201 with the created customer, 422 if invalid)
+     */
+    public APIResponse createFromJson(String json) {
+        return postJson(CUSTOMERS, json);
+    }
+
+    /**
+     * PUT /customers/{id} with a body written as JSON text, sent exactly as given.
+     *
+     * @param id   the customer id
+     * @param json the request body
+     * @return the response (200 with the updated customer, 422 if invalid)
+     */
+    public APIResponse updateFromJson(long id, String json) {
+        return putJson(CUSTOMERS + "/" + id, json);
+    }
+
+    /**
      * PUT /customers/{id}: replaces a customer's name, email and status.
      *
      * @param id       the customer id
