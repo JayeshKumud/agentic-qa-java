@@ -1,5 +1,6 @@
 package com.agenticqa.api;
 
+import com.agenticqa.config.Settings;
 import com.agenticqa.core.TestSession;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -9,11 +10,13 @@ import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.options.RequestOptions;
 
 import java.io.UncheckedIOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * Base class of every service client (CustomerApi, OrderApi, ...). It sends requests through the scenario's
+ * Base class of every service client (CustomerApi, ServiceClient, ...). It sends requests through the scenario's
  * Playwright API context, so API calls share cookies with the browser. Subclasses only describe business
- * operations; URL building, timeout, JSON and logging live here, once.
+ * operations; URL building, timeout, default headers, JSON, logging and the call log live here, once.
  */
 public abstract class ApiClient {
 
@@ -21,16 +24,20 @@ public abstract class ApiClient {
 
     private final TestSession session;
     private final String baseUrl;
+    private final int timeoutMs;
+    private final Map<String, String> defaultHeaders;
 
     /**
-     * Creates a client for one service.
+     * Creates a client for one configured service.
      *
-     * @param session the per-scenario session that provides the API context and the timeout
-     * @param baseUrl base URL of the service, for example http://127.0.0.1:8000
+     * @param session the per-scenario session that provides the API context
+     * @param service the service settings (base URL, timeout, default headers)
      */
-    protected ApiClient(TestSession session, String baseUrl) {
+    protected ApiClient(TestSession session, Settings.Service service) {
         this.session = session;
-        this.baseUrl = baseUrl;
+        this.baseUrl = service.baseUrl();
+        this.timeoutMs = service.timeoutMs();
+        this.defaultHeaders = service.headers();
     }
 
     /**
@@ -40,7 +47,7 @@ public abstract class ApiClient {
      * @return the raw response
      */
     protected APIResponse get(String path) {
-        return send("GET", path, null);
+        return send("GET", path, null, Map.of());
     }
 
     /**
@@ -51,7 +58,7 @@ public abstract class ApiClient {
      * @return the raw response
      */
     protected APIResponse post(String path, Object body) {
-        return send("POST", path, toJson(body));
+        return send("POST", path, toJson(body), Map.of());
     }
 
     /**
@@ -63,7 +70,7 @@ public abstract class ApiClient {
      * @return the raw response
      */
     protected APIResponse postJson(String path, String json) {
-        return send("POST", path, json);
+        return send("POST", path, json, Map.of());
     }
 
     /**
@@ -74,7 +81,7 @@ public abstract class ApiClient {
      * @return the raw response
      */
     protected APIResponse put(String path, Object body) {
-        return send("PUT", path, toJson(body));
+        return send("PUT", path, toJson(body), Map.of());
     }
 
     /**
@@ -85,7 +92,7 @@ public abstract class ApiClient {
      * @return the raw response
      */
     protected APIResponse putJson(String path, String json) {
-        return send("PUT", path, json);
+        return send("PUT", path, json, Map.of());
     }
 
     /**
@@ -95,7 +102,7 @@ public abstract class ApiClient {
      * @return the raw response
      */
     protected APIResponse delete(String path) {
-        return send("DELETE", path, null);
+        return send("DELETE", path, null, Map.of());
     }
 
     /**
@@ -123,36 +130,54 @@ public abstract class ApiClient {
      * @throws UncheckedIOException if the body does not match the type
      */
     public static <T> T read(APIResponse response, Class<T> type) {
+        return read(response.text(), type);
+    }
+
+    /**
+     * Parses a JSON text into a typed object (record or bean).
+     *
+     * @param json the JSON text
+     * @param type the target type
+     * @param <T>  the target type
+     * @return the parsed object
+     * @throws UncheckedIOException if the text does not match the type
+     */
+    public static <T> T read(String json, Class<T> type) {
         try {
-            return MAPPER.readValue(response.text(), type);
+            return MAPPER.readValue(json, type);
         } catch (JsonProcessingException e) {
-            throw new UncheckedIOException("Cannot read " + type.getSimpleName() + " from: " + response.text(), e);
+            throw new UncheckedIOException("Cannot read " + type.getSimpleName() + " from: " + json, e);
         }
     }
 
     /**
-     * Sends one request with the configured timeout and logs one line per call.
+     * Sends one request with the service's timeout and headers, logs one line and records the call in the
+     * session's API call log (attached to the report when the scenario fails).
      *
-     * @param method HTTP verb: GET, POST, PUT or DELETE
-     * @param path   path of the endpoint, appended to the base URL
-     * @param json   the JSON body as text, or null for none
+     * @param method  HTTP verb: GET, POST, PUT, PATCH, DELETE, HEAD or OPTIONS
+     * @param path    path of the endpoint, appended to the base URL
+     * @param json    the JSON body as text, or null for none
+     * @param headers extra headers for this request; they win over the service's default headers
      * @return the raw response
      */
-    private APIResponse send(String method, String path, String json) {
+    protected APIResponse send(String method, String path, String json, Map<String, String> headers) {
+        String verb = method.trim().toUpperCase();
         String url = baseUrl + path;
-        RequestOptions options = RequestOptions.create().setTimeout(session.settings().api().timeoutMs());
-        if (json != null) {
-            options.setHeader("Content-Type", "application/json").setData(json);
-        }
+        Map<String, String> allHeaders = new LinkedHashMap<>(defaultHeaders);
+        if (json != null) allHeaders.putIfAbsent("Content-Type", "application/json");
+        allHeaders.putAll(headers);
+
+        RequestOptions options = RequestOptions.create().setMethod(verb).setTimeout(timeoutMs);
+        allHeaders.forEach(options::setHeader);
+        if (json != null) options.setData(json);
+
         APIRequestContext api = session.api();
-        APIResponse response = switch (method) {
-            case "GET" -> api.get(url, options);
-            case "POST" -> api.post(url, options);
-            case "PUT" -> api.put(url, options);
-            case "DELETE" -> api.delete(url, options);
-            default -> throw new IllegalArgumentException("Unsupported HTTP method: " + method);
-        };
-        System.out.printf("[API] %s %s -> %d%n", method, url, response.status());
+        long started = System.nanoTime();
+        APIResponse response = api.fetch(url, options);
+        long ms = (System.nanoTime() - started) / 1_000_000;
+
+        System.out.printf("[API] %s %s -> %d (%d ms)%n", verb, url, response.status(), ms);
+        session.recordApiCall(new ApiCall(verb, url, allHeaders, json, response.status(), response.text(), ms));
         return response;
     }
 

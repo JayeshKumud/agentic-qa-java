@@ -1,14 +1,39 @@
 package com.agenticqa.config;
 
+import java.util.Map;
+import java.util.TreeMap;
+
 /**
  * Typed view of one environment file (config/env/NAME.yaml).
  * Kept minimal on purpose: new sections (healing, reporting, ...) are added in the step that needs them.
  *
  * @param ui      browser and GUI settings
  * @param api     REST API settings
- * @param healing self-healing locator settings; defaults apply when the section is missing
+ * @param healing  self-healing locator settings; defaults apply when the section is missing
+ * @param services the HTTP services (microservices) tests talk to, by name, for example "customers" or "orders"
  */
-public record Settings(Ui ui, Api api, Healing healing) {
+public record Settings(Ui ui, Api api, Healing healing, Map<String, Service> services) {
+
+    /**
+     * Settings of one named service. The base URL can be overridden per run with
+     * {@code -Dservices.NAME.baseUrl=http://...}, for example to point one service at another host.
+     *
+     * @param name the service name
+     * @return the service settings; a missing timeout falls back to api.timeoutMs
+     * @throws IllegalArgumentException if no service with that name is configured
+     */
+    public Service service(String name) {
+        Service service = services == null ? null : services.get(name);
+        if (service == null) {
+            throw new IllegalArgumentException("Unknown service '" + name + "'. Configured services: "
+                    + (services == null ? "none" : new TreeMap<>(services).keySet())
+                    + ". Add it under 'services:' in config/env/" + EnvConfig.envName() + ".yaml");
+        }
+        String override = System.getProperty("services." + name + ".baseUrl");
+        String baseUrl = override == null || override.isBlank() ? service.baseUrl() : override.trim();
+        int timeout = service.timeoutMs() != null ? service.timeoutMs() : (api != null ? api.timeoutMs() : 15000);
+        return new Service(baseUrl, timeout, service.headers() == null ? Map.of() : Map.copyOf(service.headers()));
+    }
 
     /**
      * Healing settings, never null.
@@ -38,6 +63,15 @@ public record Settings(Ui ui, Api api, Healing healing) {
      * @param timeoutMs timeout of one API request in milliseconds
      */
     public record Api(String baseUrl, int timeoutMs) {}
+
+    /**
+     * One HTTP service (microservice).
+     *
+     * @param baseUrl   service URL; request paths such as "/orders" resolve against it
+     * @param timeoutMs timeout of one request in milliseconds; null uses api.timeoutMs
+     * @param headers   headers sent with every request to this service, for example an API key; may be null
+     */
+    public record Service(String baseUrl, Integer timeoutMs, Map<String, String> headers) {}
 
     /**
      * Self-healing locator settings.

@@ -7,6 +7,18 @@ ui:
 api:
   baseUrl: http://127.0.0.1:8000
   timeoutMs: 15000
+# Every HTTP service the tests talk to, by name. Feature files address a service by this name, for example
+# 'on the "customers" service'. Override a URL per run with -Dservices.customers.baseUrl=http://...
+services:
+  customers:
+    baseUrl: http://127.0.0.1:8000
+    headers:
+      Accept: application/json
+  # orders:
+  #   baseUrl: http://127.0.0.1:8001
+  #   timeoutMs: 30000
+  #   headers:
+  #     X-Api-Key: change-me
 healing:
   enabled: true
   probeTimeoutMs: 2000

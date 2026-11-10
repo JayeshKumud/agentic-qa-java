@@ -9,15 +9,18 @@ import com.microsoft.playwright.APIResponse;
  */
 public class CustomerApi extends ApiClient {
 
+    /** Name of the service under {@code services:} in the environment file. */
+    public static final String SERVICE = "customers";
+
     private static final String CUSTOMERS = "/customers";
 
     /**
-     * Creates the client for the sample app's API.
+     * Creates the client for the "customers" service of the active environment.
      *
      * @param session the per-scenario session
      */
     public CustomerApi(TestSession session) {
-        super(session, session.settings().api().baseUrl());
+        super(session, session.settings().service(SERVICE));
     }
 
     /**

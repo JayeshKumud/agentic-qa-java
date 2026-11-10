@@ -41,6 +41,7 @@ flowchart TD
         S2 --> S3["Healer records HealEvents<br/>prints [HEAL], appends heals.jsonl"]
         S2 --> S4["@After hook"]
         S4 --> A1["attach 'self-healing' (text)<br/>if anything healed"]
+        S4 --> A5["attach 'api-calls' (text)<br/>if failed and HTTP calls were made"]
         S4 --> A2["attach 'failure-screenshot' (PNG)<br/>if failed and a page was opened"]
         S4 --> A3["session.close(failed):<br/>save trace zip if failed"]
         A3 --> A4["attach 'trace' (path text)"]
@@ -48,7 +49,7 @@ flowchart TD
 
     A1 & A2 & A4 -->|EmbedEvent| P["RunSummaryPlugin<br/>(listens to Cucumber events)"]
     S2 -->|TestCaseStarted / Finished| P
-    A1 & A2 & A4 --> C["cucumber.html / cucumber.json"]
+    A1 & A2 & A4 & A5 --> C["cucumber.html / cucumber.json"]
 
     P -->|TestRunFinished| R1["run-summary.html"]
     P --> R2["run-summary.json"]
@@ -82,6 +83,7 @@ The hook runs after every scenario, in this order, and attaches evidence with `s
 | Attachment name | Media type | When | Content |
 |---|---|---|---|
 | `self-healing` | `text/plain` | at least one locator healed | `Locators healed - update the page object:` followed by one `HealEvent.summary()` per line |
+| `api-calls` | `text/plain` | scenario failed **and** made HTTP calls | every call in order: method, URL, status, time, request and response body (cut to 4000 characters each); see [api-requests.md](api-requests.md) |
 | `failure-screenshot` | `image/png` | scenario failed **and** a page was opened (`session.hasPage()`) | full-page screenshot. If it fails, the error is ignored so the real failure stays visible. |
 | `trace` | `text/plain` | a trace zip was saved (failure with a browser context) | absolute path of the zip |
 

@@ -1,0 +1,639 @@
+{
+  "name": "Hedy Lamarr {unique}",
+  "email": "hedy.lamarr.{unique}@example.test",
+  "status": "active",
+  "profile": {
+    "title": "Dr.",
+    "birthDate": "1914-11-09",
+    "language": "de",
+    "segment": "enterprise",
+    "addresses": [
+      {
+        "type": "billing",
+        "lines": [
+          "1 Frequency Lane"
+        ],
+        "city": "Vienna",
+        "zip": "1010",
+        "country": "AT"
+      },
+      {
+        "type": "shipping",
+        "lines": [
+          "2 Spread Spectrum Road",
+          "Building B"
+        ],
+        "city": "Los Angeles",
+        "zip": "90001",
+        "country": "US"
+      }
+    ],
+    "contacts": [
+      {
+        "kind": "phone",
+        "value": "+43 1 000000"
+      },
+      {
+        "kind": "fax",
+        "value": "+43 1 000001"
+      }
+    ],
+    "preferences": {
+      "newsletter": true,
+      "channels": [
+        "email",
+        "post"
+      ],
+      "limits": {
+        "creditEur": 5000,
+        "discountPercent": 5
+      }
+    },
+    "tags": [
+      "inventor",
+      "vip"
+    ]
+  },
+  "orderHistory": [
+    {
+      "orderNo": "ORD-1000",
+      "placedOn": "2026-01-01",
+      "total": 19.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-0-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-0-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-0-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1001",
+      "placedOn": "2026-02-02",
+      "total": 27.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-1-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-1-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-1-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1002",
+      "placedOn": "2026-03-03",
+      "total": 34.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-2-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-2-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-2-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1003",
+      "placedOn": "2026-04-04",
+      "total": 42.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-3-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-3-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-3-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1004",
+      "placedOn": "2026-05-05",
+      "total": 49.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-4-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-4-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-4-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1005",
+      "placedOn": "2026-06-06",
+      "total": 57.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-5-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-5-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-5-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1006",
+      "placedOn": "2026-07-07",
+      "total": 64.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-6-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-6-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-6-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1007",
+      "placedOn": "2026-08-08",
+      "total": 72.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-7-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-7-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-7-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1008",
+      "placedOn": "2026-09-09",
+      "total": 79.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-8-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-8-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-8-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1009",
+      "placedOn": "2026-10-10",
+      "total": 87.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-9-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-9-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-9-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1010",
+      "placedOn": "2026-11-11",
+      "total": 94.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-10-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-10-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-10-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1011",
+      "placedOn": "2026-12-12",
+      "total": 102.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-11-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-11-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-11-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1012",
+      "placedOn": "2026-01-13",
+      "total": 109.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-12-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-12-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-12-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1013",
+      "placedOn": "2026-02-14",
+      "total": 117.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-13-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-13-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-13-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1014",
+      "placedOn": "2026-03-15",
+      "total": 124.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-14-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-14-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-14-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1015",
+      "placedOn": "2026-04-16",
+      "total": 132.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-15-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-15-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-15-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1016",
+      "placedOn": "2026-05-17",
+      "total": 139.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-16-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-16-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-16-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1017",
+      "placedOn": "2026-06-18",
+      "total": 147.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-17-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-17-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-17-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1018",
+      "placedOn": "2026-07-19",
+      "total": 154.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-18-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-18-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-18-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1019",
+      "placedOn": "2026-08-20",
+      "total": 162.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-19-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-19-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-19-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1020",
+      "placedOn": "2026-09-21",
+      "total": 169.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-20-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-20-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-20-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1021",
+      "placedOn": "2026-10-22",
+      "total": 177.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-21-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-21-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-21-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1022",
+      "placedOn": "2026-11-23",
+      "total": 184.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-22-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-22-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-22-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1023",
+      "placedOn": "2026-12-24",
+      "total": 192.49,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-23-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-23-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-23-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    },
+    {
+      "orderNo": "ORD-1024",
+      "placedOn": "2026-01-25",
+      "total": 199.99,
+      "currency": "EUR",
+      "lines": [
+        {
+          "sku": "SKU-24-0",
+          "quantity": 1,
+          "unitPrice": 4.5
+        },
+        {
+          "sku": "SKU-24-1",
+          "quantity": 2,
+          "unitPrice": 6.75
+        },
+        {
+          "sku": "SKU-24-2",
+          "quantity": 3,
+          "unitPrice": 9.0
+        }
+      ]
+    }
+  ],
+  "audit": {
+    "source": "api-test",
+    "correlationId": "{unique}",
+    "createdBy": "agentic-qa"
+  }
+}

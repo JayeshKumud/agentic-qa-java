@@ -1,13 +1,14 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.api.ApiClient;
+import com.agenticqa.api.ApiState;
+import com.agenticqa.api.ApiState.Reply;
 import com.agenticqa.api.Customer;
 import com.agenticqa.api.CustomerApi;
+import com.agenticqa.core.JsonPaths;
 import com.agenticqa.core.TestData;
 import com.agenticqa.core.TestSession;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.agenticqa.core.Variables;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.microsoft.playwright.APIResponse;
 import io.cucumber.datatable.DataTable;
@@ -15,34 +16,28 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static com.agenticqa.steps.Keys.CUSTOMER;
-import static com.agenticqa.steps.Keys.REQUEST;
 import static com.agenticqa.steps.Keys.RESPONSE;
-import static com.agenticqa.steps.Keys.TOKEN;
 
 /**
- * Steps that build a customer request in the feature file, change it in later steps, and then send it.
+ * Customer-specific request steps, plus the bridge between the generic {@link HttpSteps} and the customer steps
+ * of the API and the GUI.
  * <p>
- * The request body lives in the scenario's TestSession under {@link Keys#REQUEST} as JSON text. It can start from
- * a table, from a JSON file under src/test/resources/testdata, or from a raw JSON doc string; any number of later
- * steps can set or remove fields before it is sent. Sending it stores the API's answer under {@link Keys#CUSTOMER}
- * and {@link Keys#RESPONSE}, the same keys the other API and UI steps use, so any later step (for example a
- * browser search) works on the customer the request created.
- * <p>
- * Values, files and raw bodies may contain {@code {unique}}: it is replaced by one random token per scenario, the
- * same token everywhere, so names and emails stay related and parallel scenarios never collide.
- * <p>
- * Field steps accept any field name, so a request can also carry fields the API does not know. A raw body is sent
- * exactly as written; field steps only work while the body is a JSON object.
+ * The customer request is the named request {@value #REQUEST} of {@link ApiState}, so the generic steps can
+ * change it too ({@code the "customer" request field "status" is set to ...}) and its response can be read as
+ * {@code the "customer" response}. Field names are paths (nested fields, {@code json:} values) as in HttpSteps.
+ * Sending it stores the API's answer under {@link Keys#CUSTOMER} and {@link Keys#RESPONSE}, the keys the other
+ * API and UI steps use, so a later browser step works on the customer the request created.
  */
 public class CustomerRequestSteps {
 
-    private static final String UNIQUE = "{unique}";
-    private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+    /** Name of the customer request and its response in {@link ApiState}. */
+    static final String REQUEST = "customer";
 
     private final TestSession session;
+    private final ApiState api;
+    private final Variables vars;
     private final CustomerApi customers;
     private final CustomerCleanup cleanup;
 
@@ -50,169 +45,152 @@ public class CustomerRequestSteps {
      * Receives this scenario's objects from PicoContainer.
      *
      * @param session the per-scenario session
+     * @param api     the scenario's named requests and responses
+     * @param vars    the scenario's variables
      * @param cleanup the per-scenario cleanup tracker
      */
-    public CustomerRequestSteps(TestSession session, CustomerCleanup cleanup) {
+    public CustomerRequestSteps(TestSession session, ApiState api, Variables vars, CustomerCleanup cleanup) {
         this.session = session;
+        this.api = api;
+        this.vars = vars;
         this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
     }
 
     /**
-     * Starts a new request from a two-column table of field and value:
+     * Starts a new customer request from a two-column table of field and value:
      * <pre>
      *   | name  | Mary Jackson {unique}              |
      *   | email | mary.jackson.{unique}@example.test |
      * </pre>
-     * Fields not given are not sent (status then gets the server default, "active"). Values are sent as strings.
+     * Fields not given are not sent (status then gets the server default, "active").
      *
      * @param table field/value rows
      */
     @Given("a new customer request:")
     public void newRequest(DataTable table) {
-        ObjectNode body = MAPPER.createObjectNode();
-        table.asMap(String.class, String.class).forEach((field, value) -> body.put(field.trim(), unique(value)));
-        session.put(REQUEST, write(body));
+        api.start(REQUEST, "{}");
+        updateFields(table);
     }
 
     /**
-     * Starts a new request from a JSON file, for example
-     * {@code Given a new customer request from "customers/new_customer.json"}.
+     * Starts a new customer request from a JSON file under src/test/resources/testdata.
      *
-     * @param path path inside src/test/resources/testdata
+     * @param path for example "customers/new_customer.json"
      */
     @Given("a new customer request from {string}")
     public void newRequestFromFile(String path) {
-        session.put(REQUEST, unique(TestData.file(path)));
+        api.start(REQUEST, vars.resolve(TestData.file(path)));
     }
 
     /**
-     * Starts a new request from a raw JSON doc string. The text is sent exactly as written (after {unique} is
-     * replaced), so it may hold wrong types, extra fields or even be malformed:
-     * <pre>
-     *   Given the customer request body is:
-     *     """
-     *     { "name": 42, "email": "x.{unique}@example.test" }
-     *     """
-     * </pre>
+     * Starts a new customer request from a raw JSON doc string, sent exactly as written (after placeholders are
+     * filled in), so it may hold wrong types, extra fields or even be malformed.
      *
      * @param body the request body
      */
     @Given("the customer request body is:")
     public void rawBody(String body) {
-        session.put(REQUEST, unique(body));
+        api.start(REQUEST, vars.resolve(body));
     }
 
     /**
-     * Changes one field of the request, or adds it.
+     * Changes or adds one field of the customer request.
      *
-     * @param field the field name
-     * @param value the new value (sent as a string), may contain {unique}
+     * @param field the field path
+     * @param value the new value; text unless prefixed with json:
      */
     @Given("the request field {string} is set to {string}")
     public void setField(String field, String value) {
-        edit(body -> body.put(field.trim(), unique(value)));
+        var resolved = JsonPaths.value(vars.resolve(value));
+        api.edit(REQUEST, body -> JsonPaths.set(body, field.trim(), resolved));
     }
 
     /**
-     * Changes several fields of the request; the others keep their values.
+     * Changes several fields of the customer request; the others keep their values.
      *
      * @param table field/value rows
      */
     @Given("the request fields are updated:")
     public void updateFields(DataTable table) {
         Map<String, String> rows = table.asMap(String.class, String.class);
-        edit(body -> rows.forEach((field, value) -> body.put(field.trim(), unique(value))));
+        api.edit(REQUEST, body -> rows.forEach((field, value) ->
+                JsonPaths.set(body, field.trim(), JsonPaths.value(vars.resolve(value)))));
     }
 
     /**
      * Removes a field, so it is not sent at all (for example to test a missing required field).
      *
-     * @param field the field name
-     * @throws IllegalStateException if the request has no such field, which is almost always a typo
+     * @param field the field path
      */
     @Given("the request field {string} is removed")
     public void removeField(String field) {
-        edit(body -> {
-            if (body.remove(field.trim()) == null) {
-                throw new IllegalStateException("The request has no field '" + field + "' to remove. Body: "
-                        + body);
-            }
-        });
+        api.edit(REQUEST, body -> JsonPaths.remove(body, field.trim()));
     }
 
     /** POST /customers with the request; on success the created customer becomes "the customer". */
     @When("I send the create customer request")
     public void sendCreate() {
-        APIResponse response = customers.createFromJson(session.get(REQUEST));
-        session.put(RESPONSE, response);
+        APIResponse response = customers.createFromJson(api.request(REQUEST).body());
+        remember(response);
         if (response.status() == 201) {
             Customer created = CustomerApi.asCustomer(response);
             cleanup.track(created.id());
             session.put(CUSTOMER, created);
             // later edits start from what the server stored, including defaults such as status
-            session.put(REQUEST, write(MAPPER.valueToTree(created.withId(null))));
+            ObjectNode stored = (ObjectNode) JsonPaths.parse(response.text());
+            stored.remove("id");
+            api.start(REQUEST, JsonPaths.write(stored));
         }
     }
 
     /** PUT /customers/{id} of "the customer" with the request; on success the answer becomes "the customer". */
     @When("I send the update request for the customer")
     public void sendUpdate() {
-        APIResponse response = customers.updateFromJson(session.get(CUSTOMER).id(), session.get(REQUEST));
-        session.put(RESPONSE, response);
+        APIResponse response = customers.updateFromJson(session.get(CUSTOMER).id(), api.request(REQUEST).body());
+        remember(response);
         if (response.status() == 200) {
             session.put(CUSTOMER, CustomerApi.asCustomer(response));
         }
     }
 
     /**
-     * Parses the request, applies a change and stores it again.
+     * Bridge from the generic steps: a customer created or read with {@link HttpSteps} becomes "the customer",
+     * so the customer API and GUI steps (search the page, compare rows, ...) work on it. It is also deleted
+     * after the scenario.
      *
-     * @param change what to do with the JSON object
-     * @throws IllegalStateException if the current body is not a JSON object
+     * @param response the name of a response whose body is one customer
      */
-    private void edit(Consumer<ObjectNode> change) {
-        String text = session.get(REQUEST);
-        JsonNode node;
-        try {
-            node = MAPPER.readTree(text);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("The request body is not valid JSON, so its fields cannot be changed. "
-                    + "Body: " + text, e);
-        }
-        if (!(node instanceof ObjectNode body)) {
-            throw new IllegalStateException("The request body is not a JSON object, so its fields cannot be "
-                    + "changed. Body: " + text);
-        }
-        change.accept(body);
-        session.put(REQUEST, write(body));
-    }
-
-    private static String write(JsonNode body) {
-        try {
-            return MAPPER.writeValueAsString(body);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException(e);
-        }
+    @Given("the {string} response is the customer")
+    public void responseIsTheCustomer(String response) {
+        Customer customer = ApiClient.read(api.reply(response).body(), Customer.class);
+        cleanup.track(customer.id());
+        session.put(CUSTOMER, customer);
     }
 
     /**
-     * Replaces {unique} by the scenario's token.
+     * Bridge the other way: a value of "the customer" (for example one added through the GUI) becomes a
+     * variable for the generic steps, such as {@code "/customers/${customerId}"}.
      *
-     * @param raw text from the feature file or a test data file
-     * @return the text with the token filled in
+     * @param field    id, name, email or status
+     * @param variable the variable name
      */
-    private String unique(String raw) {
-        return raw.contains(UNIQUE) ? raw.replace(UNIQUE, token()) : raw;
+    @Given("I save the customer's {word} as {string}")
+    public void saveCustomerField(String field, String variable) {
+        Customer customer = session.get(CUSTOMER);
+        String value = switch (field.toLowerCase()) {
+            case "id" -> String.valueOf(customer.id());
+            case "name" -> customer.name();
+            case "email" -> customer.email();
+            case "status" -> customer.status();
+            default -> throw new IllegalArgumentException("Unknown customer field '" + field
+                    + "'. Use id, name, email or status.");
+        };
+        vars.put(variable, value);
     }
 
-    /**
-     * The scenario's token, created on first use.
-     *
-     * @return 8 hex characters, the same for the whole scenario
-     */
-    private String token() {
-        if (!session.has(TOKEN)) session.put(TOKEN, TestData.token());
-        return session.get(TOKEN);
+    private void remember(APIResponse response) {
+        session.put(RESPONSE, response);
+        api.store(REQUEST, Reply.of(response));
     }
 }

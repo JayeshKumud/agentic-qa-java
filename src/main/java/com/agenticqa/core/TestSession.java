@@ -1,5 +1,6 @@
 package com.agenticqa.core;
 
+import com.agenticqa.api.ApiCall;
 import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
 import com.agenticqa.ui.healing.HealEvent;
@@ -17,6 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,7 @@ public class TestSession {
 
     private final Settings settings = EnvConfig.get();
     private final Map<DataKey<?>, Object> store = new HashMap<>();
+    private final List<ApiCall> apiCalls = new ArrayList<>();
 
     private Playwright playwright;
     private Browser browser;
@@ -107,6 +110,24 @@ public class TestSession {
      */
     public synchronized APIRequestContext api() {
         return context().request();
+    }
+
+    /**
+     * Adds an HTTP call to this scenario's call log. Called by every API client.
+     *
+     * @param call the finished call
+     */
+    public synchronized void recordApiCall(ApiCall call) {
+        apiCalls.add(call);
+    }
+
+    /**
+     * HTTP calls of this scenario so far, oldest first.
+     *
+     * @return a copy of the call log
+     */
+    public synchronized List<ApiCall> apiCalls() {
+        return List.copyOf(apiCalls);
     }
 
     /**

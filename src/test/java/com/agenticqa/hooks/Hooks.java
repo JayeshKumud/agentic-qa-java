@@ -1,5 +1,6 @@
 package com.agenticqa.hooks;
 
+import com.agenticqa.api.ApiCall;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.healing.HealEvent;
 import com.microsoft.playwright.Page;
@@ -38,8 +39,8 @@ public class Hooks {
     }
 
     /**
-     * Runs after each scenario. Healed locators are attached to the report. If it failed and a page was used,
-     * a full-page screenshot is attached too.
+     * Runs after each scenario. Healed locators are attached to the report. If it failed, the log of its HTTP
+     * calls is attached, and if a page was used, a full-page screenshot too.
      * Then it always closes everything; for failed scenarios the trace zip is kept and its path attached.
      *
      * @param scenario the finished Cucumber scenario
@@ -53,6 +54,14 @@ public class Hooks {
                     "text/plain", "self-healing");
         }
         boolean failed = scenario.isFailed();
+        List<ApiCall> calls = session.apiCalls();
+        if (failed && !calls.isEmpty()) {
+            StringBuilder log = new StringBuilder();
+            for (int i = 0; i < calls.size(); i++) {
+                log.append(i + 1).append(". ").append(calls.get(i).describe()).append(System.lineSeparator());
+            }
+            scenario.attach(log.toString(), "text/plain", "api-calls");
+        }
         if (failed && session.hasPage()) {
             try {
                 byte[] png = session.page().screenshot(new Page.ScreenshotOptions().setFullPage(true));
