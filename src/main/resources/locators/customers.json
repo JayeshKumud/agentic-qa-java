@@ -1,8 +1,14 @@
 {
-  "_comment": "Customers page (CustomersPage): search and results table. The add form is in customer-form.json, paging in pagination.json, the heading in common.json. Name -> selector, or an object with selector, description (used in logs and heal reports) and heal (default true; false for elements that may legitimately be absent, such as result rows or an empty-result message). Keys starting with _ are ignored.",
+  "_comment": "Locators of the customers page (CustomersPage). Name -> selector, or an object with selector, description (used in logs and heal reports) and heal (default true; false for elements that may legitimately be absent, such as result rows or an empty-result message). Keys starting with _ are ignored.",
 
-  "searchInput":   { "selector": "#search-input",  "description": "search input" },
-  "searchButton":  { "selector": "#search-button", "description": "search button" },
+  "searchInput":   { "selector": "#search-input",        "description": "search input" },
+  "searchButton":  { "selector": "#search-button",       "description": "search button" },
+  "pageIndicator": { "selector": "#page-indicator",      "description": "page indicator" },
+  "nextLink":      { "selector": "#next-page-link",      "description": "next page link" },
+  "previousLink":  { "selector": "#prev-page-link",      "description": "previous page link" },
+  "newName":       { "selector": "#new-customer-name",   "description": "new customer name input" },
+  "newEmail":      { "selector": "#new-customer-email",  "description": "new customer email input" },
+  "addButton":     { "selector": "#add-customer-button", "description": "add customer button" },
 
   "rows":      { "selector": "#customers-table tr.customer-row", "heal": false },
   "noResults": { "selector": "#no-results",                     "heal": false },

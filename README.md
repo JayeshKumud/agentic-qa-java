@@ -34,7 +34,7 @@ scenarios. One scenario can call several REST services, drive a real browser and
   called by name (`When I call "customers.get" ...`). In Java, `Payload` builds any body, so no request class
   or method is needed per endpoint. See [docs/api-requests.md](docs/api-requests.md).
 - **Locators in JSON.** Page objects hold no selectors. They look elements up by name in
-  `locators/*.json`, several files per page if needed, and extend a common `BasePage`. See [docs/locators.md](docs/locators.md).
+  `locators/<page>.json`. See [docs/locators.md](docs/locators.md).
 - **Self-healing locators.** When a selector stops matching (for example, an id is renamed), the framework
   finds the element from a stored fingerprint, keeps the test running and reports the heal so someone
   updates the page object. See [docs/healing.md](docs/healing.md).
@@ -63,12 +63,12 @@ agentic-qa-java/
     │   ├── core/                        TestSession, BrowserPool, DataKey, Variables, JsonPaths, TestData
     │   ├── api/                         Endpoints, EndpointClient, Payload, ApiClient, ServiceClient,
     │   │                                CustomerApi, ApiState, ApiCall
-    │   └── ui/                          BasePage, CustomersPage (page object), LocatorRepository, PageElements
+    │   └── ui/                          CustomersPage (page object), LocatorRepository, PageElements
     │       └── healing/                 SmartLocator, Healer, HealingScorer, Fingerprint(Store), HealEvent
     ├── main/resources/
     │   ├── config/common.yaml           shared: browser, waits, endpoint catalog, execution, cleanup, retry
     │   ├── config/env/                  per environment: URLs, client ids and secrets (dev, test, uat, ci)
-    │   └── locators/                    locator JSON files: per page area, shared (pagination, common)
+    │   └── locators/                    locators, one JSON file per page
     ├── test/java/com/agenticqa/
     │   ├── runner/                      TestRunner (Cucumber + TestNG, parallel), ScenarioRetry
     │   ├── hooks/Hooks.java             @Before / @After around every scenario
@@ -242,18 +242,9 @@ per endpoint. See
    ```
    Elements heal by default. Use `"heal": false` for elements that can legitimately be missing (result rows,
    empty states).
-   A page can use several files: its own, plus shared ones such as `pagination.json`. `common.json` (elements
-   every page has) is always added.
-2. Create a page object in `src/main/java/com/agenticqa/ui/` that extends `BasePage`:
-   ```java
-   public class OrdersPage extends BasePage<OrdersPage> {
-       public OrdersPage(Page page, Healer healer) { super(page, healer, "orders", "pagination"); }
-       @Override protected String path() { return "/orders"; }
-       public OrdersPage search(String text) { fill("searchInput", text); return submit("searchButton"); }
-   }
-   ```
-   Elements are used by name (`"searchInput"`, or `"pagination.nextLink"` for one file). Steps call page object
-   methods and never use selectors themselves. See [docs/locators.md](docs/locators.md).
+2. Create a page object in `src/main/java/com/agenticqa/ui/` with `new PageElements(page, healer, "<page>")` and
+   use elements by name: `el.get("searchInput").fill(text)`. Steps call page object methods and never use
+   selectors themselves. See [docs/locators.md](docs/locators.md).
 3. Commit `healing/fingerprints.json` after the first green run, because it is the baseline healing compares against.
 
 ### 4. New step definitions

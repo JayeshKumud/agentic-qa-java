@@ -1,7 +1,0 @@
-{
-  "_comment": "The add-customer form of the customers page.",
-
-  "newName":   { "selector": "#new-customer-name",   "description": "new customer name input" },
-  "newEmail":  { "selector": "#new-customer-email",  "description": "new customer email input" },
-  "addButton": { "selector": "#add-customer-button", "description": "add customer button" }
-}

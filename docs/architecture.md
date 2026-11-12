@@ -127,11 +127,6 @@ classDiagram
     class EndpointClient {
         +call(name, pathParams, body) APIResponse
     }
-    class BasePage {
-        +open() T
-        #fill(name, text)
-        #submit(name)
-    }
     class CustomersPage
     class PageElements {
         +get(name) Locator
@@ -145,8 +140,7 @@ classDiagram
     EndpointClient --> ServiceClient : per call
     CustomerApi --> EndpointClient
     ApiClient --> TestSession : api(), recordApiCall()
-    BasePage <|-- CustomersPage
-    BasePage --> PageElements : locator files + common
+    CustomersPage --> PageElements
     PageElements --> SmartLocator : heal true
     SmartLocator --> Healer : resolve()
     TestSession --> Healer : creates lazily
@@ -311,7 +305,7 @@ doesn't cancel the other. A newer push to the same branch cancels the run that i
 | Test a new endpoint | One line under `endpoints:` in `config/common.yaml`, then the generic steps (`When I call "..."`) |
 | Talk to a new microservice | Add an entry under `services:` (URL, auth) in each `config/env/*.yaml` and a group under `endpoints:` in `config/common.yaml` |
 | Add business-level API steps | A step class using `EndpointClient` and `Payload`, taking `TestSession` in its constructor |
-| Test a new page | Add its `locators/*.json` file(s), a page object extending `BasePage`, plus a step class |
+| Test a new page | Add `locators/<page>.json`, a page object using `PageElements`, plus a step class |
 | Share data between step classes | Add a `DataKey` in `steps/Keys.java` and use `session.put` / `get` |
 | Add an environment | Add `config/env/<name>.yaml` (copy `test.yaml`) and run with `-Denv=<name>` |
 | Retry more or fewer scenarios | `retry.count` / `retry.tags` in the env file, or `-Dretry.count` / `-Dretry.tags` |

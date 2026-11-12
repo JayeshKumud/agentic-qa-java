@@ -134,16 +134,6 @@ public class CustomerUiSteps {
     }
 
     /**
-     * Checks the page heading (the "heading" locator of common.json, which every page object has).
-     *
-     * @param heading the expected text
-     */
-    @Then("the page heading is {string}")
-    public void headingIs(String heading) {
-        assertThat(page().heading()).hasText(heading);
-    }
-
-    /**
      * Checks the number of rows and the page indicator.
      *
      * @param count     expected rows on this page

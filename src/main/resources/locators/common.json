@@ -1,5 +1,0 @@
-{
-  "_comment": "Elements every page has. BasePage adds this file to every page object, after the page's own files, so a page file can override an entry by using the same name.",
-
-  "heading": { "selector": "h1", "description": "page heading" }
-}

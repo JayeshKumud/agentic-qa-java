@@ -1,27 +1,38 @@
 {
-  "common.heading" : {
-    "tag" : "h1",
-    "text" : "Customers"
-  },
-  "customer-form.addButton" : {
+  "customers.addButton" : {
     "tag" : "button",
     "id" : "add-customer-button",
     "type" : "submit",
     "text" : "Add Customer"
   },
-  "customer-form.newEmail" : {
+  "customers.newEmail" : {
     "tag" : "input",
     "id" : "new-customer-email",
     "name" : "email",
     "type" : "email",
     "placeholder" : "Email"
   },
-  "customer-form.newName" : {
+  "customers.newName" : {
     "tag" : "input",
     "id" : "new-customer-name",
     "name" : "name",
     "type" : "text",
     "placeholder" : "Name"
+  },
+  "customers.nextLink" : {
+    "tag" : "a",
+    "id" : "next-page-link",
+    "text" : "Next"
+  },
+  "customers.pageIndicator" : {
+    "tag" : "span",
+    "id" : "page-indicator",
+    "text" : "Page 1 of 2"
+  },
+  "customers.previousLink" : {
+    "tag" : "a",
+    "id" : "prev-page-link",
+    "text" : "Previous"
   },
   "customers.searchButton" : {
     "tag" : "button",
@@ -35,20 +46,5 @@
     "name" : "q",
     "type" : "text",
     "placeholder" : "Search by name"
-  },
-  "pagination.nextLink" : {
-    "tag" : "a",
-    "id" : "next-page-link",
-    "text" : "Next"
-  },
-  "pagination.pageIndicator" : {
-    "tag" : "span",
-    "id" : "page-indicator",
-    "text" : "Page 1 of 2"
-  },
-  "pagination.previousLink" : {
-    "tag" : "a",
-    "id" : "prev-page-link",
-    "text" : "Previous"
   }
 }
