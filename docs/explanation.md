@@ -329,3 +329,128 @@ class needs belongs in one of the shared objects above.
    `public static final DataKey<String> ORDER_ID = DataKey.of("orderId", String.class);`
 2. Make sure each step class that needs it takes `TestSession` in its constructor.
 3. Store it with `session.put(Keys.ORDER_ID, id)` and read it with `session.get(Keys.ORDER_ID)`.
+
+---
+
+## Q5. Can we change the name of `TestSession` to something else?
+
+Yes, you can give it any name. Nothing in Cucumber or PicoContainer depends on the name `TestSession`.
+
+### Why the name doesn't matter
+
+PicoContainer works out what to inject from the parameter **type** in a constructor, not from the name of the class
+or the parameter. If the class were renamed to `ScenarioContext`, this would work just like before:
+
+```java
+public Hooks(ScenarioContext session) { ... }
+```
+
+PicoContainer would still create one `ScenarioContext` per scenario and give it to every class that asks for one.
+The only requirements are the ones it already meets: a concrete class with a public constructor that PicoContainer
+can call.
+
+### Names commonly used for this kind of class
+
+`ScenarioContext`, `World` (the classic Cucumber name), `TestContext`, `ScenarioState`, `SharedContext`.
+
+### What a rename involves
+
+The name appears in about 21 files:
+
+- **Java (must change or it won't compile):** `TestSession.java` itself (the file name has to match the class),
+  `Hooks`, the step and cleanup classes (`CustomerApiSteps`, `CustomerRequestSteps`, `CustomerUiSteps`,
+  `HttpSteps`, `CustomerCleanup`, `ServiceCleanup`), and the API clients (`ApiClient`, `CustomerApi`,
+  `EndpointClient`, `ServiceClient`).
+- **Docs and comments (won't break anything if missed, but would be out of date):** `README.md`, the files in
+  `docs/` (including this one), and comments in two feature files.
+
+### How to do it safely
+
+1. In IntelliJ, put the cursor on the class name and use **Refactor → Rename** (Shift+F6). It renames the file,
+   updates every Java reference, and offers to update comments and text too.
+2. Run `mvn test-compile` to confirm everything still compiles.
+
+You can also rename the field and parameter, which are called `session` everywhere, but that's optional. Code
+compiles fine with `ScenarioContext session`.
+
+---
+
+## Q6. If I have a new API endpoint, do I need to create another class like `CustomerApi`?
+
+Usually not. In this framework a new endpoint is **one line of YAML**, not a new Java class. `CustomerApi` is an
+optional convenience wrapper. It isn't something every endpoint needs.
+
+### What `CustomerApi` actually is
+
+Here's a simplified version of `src/main/java/com/agenticqa/api/CustomerApi.java`:
+
+```java
+public APIResponse create(Object body)          { return api.call("customers.create", body); }
+public APIResponse getById(long id)             { return api.call("customers.get", Map.of("id", id)); }
+public APIResponse update(long id, Object body) { return api.call("customers.update", Map.of("id", id), body); }
+```
+
+Each method is just a named shortcut to `EndpointClient.call(...)`. The method, path and service are not in Java at
+all. They come from the endpoint catalog, `src/main/resources/endpoints/customers.yaml`:
+
+```yaml
+service: customers
+endpoints:
+  create: { method: POST, path: /customers, body: customers/new_customer.json }
+  get:    { method: GET,  path: "/customers/{id}" }
+```
+
+### What to do for a new endpoint
+
+**An endpoint on an existing service (e.g. customers):** add one line to `customers.yaml`:
+
+```yaml
+  search: { method: GET, path: /customers/search }
+```
+
+**A new service (e.g. orders):**
+
+1. Add it under `services:` in each environment file (`config/env/dev.yaml`, `test.yaml`, ...) with its `baseUrl`
+   and headers.
+2. Create `src/main/resources/endpoints/orders.yaml` with its endpoints.
+3. Optionally, add a typical request body as a JSON file under `src/test/resources/testdata/orders/`.
+
+Feature files can then use it straight away with the generic steps, with no Java at all:
+
+```gherkin
+Given a new "order" request for "orders.create"
+And the "order" request field "items[0].quantity" is set to "3"
+When I call "orders.create" with the "order" request
+Then the "order" response status is 201
+And I save the "order" response field "id" as "orderId"
+When I call "orders.get" as "read" with:
+  | id | ${orderId} |
+```
+
+### When Java *is* worth writing
+
+Only when you want a **readable business step** used in many scenarios, like `When I place an order for 3 items`.
+Even then you don't need an `OrderApi` class. A step class can call `EndpointClient` directly:
+
+```java
+APIResponse response = api.call("orders.create",
+        Payload.file("orders/new_order.json").set("items[0].quantity", items));
+```
+
+An `OrderApi` class like `CustomerApi` makes sense only if many step classes call the same order endpoints and you'd
+like `orders.create(body)` rather than `api.call("orders.create", body)`. That's purely a readability choice, not a
+requirement.
+
+### Summary
+
+| You need                                       | Write                                                                 |
+|------------------------------------------------|-----------------------------------------------------------------------|
+| a new endpoint                                 | one line in `endpoints/<service>.yaml`                                |
+| a new service                                  | an entry under `services:` per env file plus a new `endpoints/<service>.yaml` |
+| a default request body                         | a JSON file under `testdata/`                                         |
+| field variations (missing, wrong type, nested) | nothing: field steps in the feature file, or `Payload.set/remove`     |
+| a business-readable step                       | a step method using `EndpointClient` and `Payload`                    |
+| an `XxxApi` wrapper class                      | optional, only for convenience                                        |
+
+More detail: `docs/api-steps.md` (section "Adding API steps for a new service") and `docs/api-requests.md`
+(section "Endpoint catalog").
