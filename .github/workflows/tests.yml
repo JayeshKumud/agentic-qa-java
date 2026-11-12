@@ -86,6 +86,13 @@ jobs:
       - name: Run ${{ matrix.suite }} tests
         run: mvn -B test -Denv=ci -Dcucumber.filter.tags="@${{ matrix.suite }}"
 
+      # Allure HTML from target/allure-results into target/reports/allure (the plugin downloads the Allure CLI).
+      # Extent (target/reports/extent) and the run summary are written by the test run itself.
+      - name: Build Allure report
+        if: always()
+        continue-on-error: true
+        run: mvn -B -q allure:report
+
       - name: Write job summary
         if: always()
         run: python3 .github/scripts/job_summary.py target/reports/run-summary.json "${{ matrix.suite }}"
@@ -97,6 +104,7 @@ jobs:
           name: reports-${{ matrix.suite }}
           path: |
             target/reports/
+            target/allure-results/
             target/healing/
             healing/fingerprints.json
           if-no-files-found: ignore

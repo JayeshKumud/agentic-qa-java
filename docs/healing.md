@@ -17,7 +17,7 @@ Healing does not replace fixing selectors. It keeps one renamed id from failing 
 
 ## Configuration
 
-Each environment file (`src/main/resources/config/env/dev.yaml`, `ci.yaml`) has a `healing` section. If the section is missing, `Settings.Healing.defaults()` gives the same values:
+Each environment file (`src/main/resources/config/env/dev.yaml`, `test.yaml`, `uat.yaml`, `ci.yaml`) has a `healing` section. If the section is missing, `Settings.Healing.defaults()` gives the same values:
 
 ```yaml
 healing:
@@ -57,7 +57,7 @@ flowchart TD
 
 ### 1. Resolving a locator (`Healer.resolve`)
 
-Page objects call `locator()` every time they use an element, for example `searchInput.locator().fill(text)`. They never call it once in a constructor, because the lookup must run against the page as it is now.
+Page objects look an element up every time they use it, for example `el.get("searchInput").fill(text)`. `PageElements.get` creates the `SmartLocator` from [`locators/customers.json`](../src/main/resources/locators/customers.json) and calls `locator()`. Nothing is resolved once in a constructor, because the lookup must run against the page as it is now. See [locators.md](locators.md).
 
 1. **Healing off.** The plain `page.locator(selector)` is returned. Nothing is captured.
 2. **Already healed in this scenario.** The cached replacement selector is returned at once, so the probe wait is paid only once per element per scenario. The cache lives in the `Healer`, so the next scenario starts clean.
@@ -195,7 +195,7 @@ Healer ──► console            [HEAL] HEALED …
        ──► target/healing/heals.jsonl        (one JSON line per heal, whole run)
        ──► Healer.events() ──► TestSession.healEvents()
                                    │
-              Hooks @After ────────┘  attaches "Locators healed - update the page object: …"
+              Hooks @After ────────┘  attaches "Locators healed - update the locator file (src/main/resources/locators): …"
                                       to the scenario (text/plain, name "self-healing")
                                    │
               RunSummaryPlugin ────┘  reads that attachment:
@@ -216,15 +216,22 @@ Steps can also assert on heals: `no locator was healed` and `the "<description>"
 
 ## Using it in a page object
 
-```java
-this.searchInput = new SmartLocator(page, healer, "customers.searchInput", "search input", "#search-input");
-// ...
-searchInput.locator().fill(text);   // resolve on every use
+Healing is switched on per element in the page's locator file
+([`locators/customers.json`](../src/main/resources/locators/customers.json)), so page objects contain no
+`SmartLocator` code:
+
+```json
+"searchInput": { "selector": "#search-input", "description": "search input" },
+"rows":        { "selector": "#customers-table tr.customer-row", "heal": false }
 ```
 
-- **Key:** stable and unique (`<page>.<element>`). It names the stored fingerprint, so if you rename the key you start over without a baseline.
+```java
+el.get("searchInput").fill(text);   // PageElements creates the SmartLocator and resolves it on every use
+```
+
+- **Key:** `<page>.<name>` from the file (`customers.searchInput`). It names the stored fingerprint, so if you rename the entry you start over without a baseline.
 - **Description:** what people read in logs and reports.
-- **Use it only for elements that are always present:** inputs, buttons, links, headings. Things that can legitimately be missing, such as result rows or the "No customers found." message, stay plain Playwright locators (see `CustomersPage.rows` and `noResults`). Otherwise their absence would start a search for a look-alike, and a wrong element could pass an assertion.
+- **Use it only for elements that are always present:** inputs, buttons, links, headings. Things that can legitimately be missing, such as result rows or the "No customers found." message, get `"heal": false` and stay plain Playwright locators. Otherwise their absence would start a search for a look-alike, and a wrong element could pass an assertion.
 
 ## Limits and things to know
 
@@ -233,4 +240,4 @@ searchInput.locator().fill(text);   // resolve on every use
 - **Cached heals are not re-checked:** a healed selector is reused for the rest of the scenario without checking it again.
 - **Changing text:** for elements like `customers.pageIndicator` ("Page 1 of 2") the text is part of the fingerprint, so the baseline is rewritten whenever the text differs. That is harmless, but it shows up as churn in `fingerprints.json`.
 - **Local runs rewrite the baseline:** `fingerprints.json` changes in your working tree when elements change. Review those diffs like code. They show what the UI looked like when the tests last passed.
-- **A heal is a to-do, not a fix:** after a heal, update the selector in the page object. The next green run then refreshes the baseline with the new fingerprint.
+- **A heal is a to-do, not a fix:** after a heal, update the selector in the page's locator file. The next green run then refreshes the baseline with the new fingerprint.

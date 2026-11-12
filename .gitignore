@@ -7,3 +7,6 @@ cp.txt
 
 # personal Claude Code settings
 .claude/settings.local.json
+
+# Allure command line, downloaded by allure-maven (mvn allure:report)
+.allure/

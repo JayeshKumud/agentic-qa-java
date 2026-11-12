@@ -28,24 +28,27 @@ flowchart TB
     end
 
     subgraph Glue["Glue (src/test/java)"]
-        R["TestRunner<br/>Cucumber + TestNG, parallel"]
+        R["TestRunner<br/>Cucumber + TestNG, parallel<br/>ScenarioRetry"]
         H["Hooks<br/>@Before / @After"]
         ST["Step definitions<br/>CustomerApiSteps · CustomerUiSteps<br/>CustomerRequestSteps · HttpSteps"]
         CL["Cleanup<br/>CustomerCleanup · ServiceCleanup"]
-        RP["RunSummaryPlugin"]
+        RP["RunSummaryPlugin · ReportSetupPlugin<br/>+ Allure · Extent"]
     end
 
     subgraph Core["Framework (src/main/java)"]
         S["TestSession<br/>per-scenario state"]
+        BP["BrowserPool<br/>one browser per thread"]
         AS["ApiState<br/>named requests / responses"]
         V["Variables · JsonPaths · TestData"]
         subgraph API["api"]
+            EP["Endpoints (catalog)<br/>EndpointClient · Payload"]
             AC["ApiClient (base)"]
             CA["CustomerApi"]
             SC["ServiceClient"]
         end
         subgraph UI["ui"]
             PO["CustomersPage"]
+            LR["PageElements<br/>LocatorRepository"]
             SL["SmartLocator"]
             HE["Healer · HealingScorer<br/>FingerprintStore"]
         end
@@ -55,7 +58,7 @@ flowchart TB
     subgraph Ext["Outside the JVM"]
         PW["Playwright<br/>browser + APIRequestContext"]
         APP["Application under test<br/>(sample-target-app :8000)"]
-        YAML["config/env/*.yaml"]
+        YAML["config/env/*.yaml<br/>endpoints/*.yaml · locators/*.json"]
         FP["healing/fingerprints.json"]
         OUT["target/reports · traces · healing"]
     end
@@ -121,22 +124,32 @@ classDiagram
     }
     class CustomerApi
     class ServiceClient
+    class EndpointClient {
+        +call(name, pathParams, body) APIResponse
+    }
     class CustomersPage
+    class PageElements {
+        +get(name) Locator
+    }
     class SmartLocator {
         key, description, selector
         +locator() Locator
     }
     class Healer
-    ApiClient <|-- CustomerApi
     ApiClient <|-- ServiceClient
+    EndpointClient --> ServiceClient : per call
+    CustomerApi --> EndpointClient
     ApiClient --> TestSession : api(), recordApiCall()
-    CustomersPage --> SmartLocator
+    CustomersPage --> PageElements
+    PageElements --> SmartLocator : heal true
     SmartLocator --> Healer : resolve()
     TestSession --> Healer : creates lazily
 ```
 
-- **The browser starts lazily.** `page()` or `api()` launches Playwright the first time it is called. A pure
-  API scenario still creates a browser *context*, because the API context comes from it, but it never opens a page.
+- **The context starts lazily.** `page()` or `api()` opens a new browser context the first time it is called,
+  in the browser of the current worker thread (`BrowserPool`). Each worker thread launches its browser once and
+  reuses it for all its scenarios, while every scenario still gets its own context (cookies, storage, trace).
+  A pure API scenario also creates a context, because the API context comes from it, but it never opens a page.
 - **Tracing** starts with the context and is saved to `target/artifacts/traces/` only when the scenario fails.
 - **The typed store** (`put`/`get` with a `DataKey<T>`) lets step classes share values such as "the current
   customer" without static fields.
@@ -151,12 +164,15 @@ classDiagram
 3. It records an `ApiCall` (method, URL, status, time, request and response bodies) in the session's call log.
    If the scenario fails, the log is attached to the report.
 
-There are two kinds of client:
+Clients on top of it:
 
-- **Typed clients** (`CustomerApi`) offer business operations such as `create(Customer)` and `getById(id)`, used by the
-  readable customer steps.
-- **`ServiceClient`** sends any method to any configured service. It is used by the generic `HttpSteps`
-  together with `ApiState` (named requests and responses), `JsonPaths` and `Variables`.
+- **`EndpointClient`** calls any endpoint of the catalog (`src/main/resources/endpoints/<service>.yaml`) by
+  name, for example `call("customers.get", Map.of("id", 42))`. Bodies are `Payload`s (any JSON, edited by
+  path), so no request class or method is needed per endpoint.
+- **`CustomerApi`** is an optional facade of one-line methods over `EndpointClient`, for the operations the
+  readable customer steps use many times.
+- **`ServiceClient`** sends any method to any path of a configured service. It is used by the generic
+  `HttpSteps` together with `ApiState` (named requests and responses), `JsonPaths` and `Variables`.
 
 ### UI access and self-healing
 
@@ -207,8 +223,8 @@ sequenceDiagram
         C->>H: @Before → session.scenarioName()
         loop each step
             C->>St: step method
-            St->>S: page() / api() (starts browser lazily)
-            S->>P: launch browser, new context, start tracing
+            St->>S: page() / api() (starts context lazily)
+            S->>P: thread's browser (launched once per thread), new context, start tracing
             St->>A: HTTP calls (ApiClient) / page actions (page objects)
             A-->>St: responses / DOM
             St->>St: assertions
@@ -216,11 +232,14 @@ sequenceDiagram
         C->>St: cleanup @After(order = 20000): DELETE created resources
         C->>H: @After (default order, runs after cleanup)
         H->>H: attach heals, api-calls (failed), screenshot (failed)
-        H->>S: close(failed) → save trace if failed
+        H->>S: close(failed) → save trace if failed, close context
         C->>Rep: TestCaseFinished (status, attachments)
+        opt failed and retry.count / retry.tags allow it
+            C->>C: ScenarioRetry: run the same scenario again (new objects)
+        end
     end
     C->>Rep: TestRunFinished
-    Rep->>Rep: write run-summary.html + .json, print [REPORT]
+    Rep->>Rep: write run-summary.html + .json, failed-scenarios.txt, print [REPORT]
 ```
 
 ### Scenario lifecycle in words
@@ -283,12 +302,13 @@ doesn't cancel the other. A newer push to the same branch cancels the run that i
 
 | You want to… | Change |
 |---|---|
-| Test a new endpoint | Usually nothing. Write a scenario with the generic `HttpSteps` |
-| Talk to a new microservice | Add an entry under `services:` in each `config/env/*.yaml` |
-| Add business-level API steps | Subclass `ApiClient` and add a step class that takes it, or `TestSession`, in its constructor |
-| Test a new page | Add a page object with `SmartLocator`s, plus a step class |
+| Test a new endpoint | One line in `endpoints/<service>.yaml`, then the generic steps (`When I call "..."`) |
+| Talk to a new microservice | Add an entry under `services:` in each `config/env/*.yaml` and an `endpoints/<service>.yaml` |
+| Add business-level API steps | A step class using `EndpointClient` and `Payload`, taking `TestSession` in its constructor |
+| Test a new page | Add `locators/<page>.json`, a page object using `PageElements`, plus a step class |
 | Share data between step classes | Add a `DataKey` in `steps/Keys.java` and use `session.put` / `get` |
-| Add an environment | Add `config/env/<name>.yaml` and run with `-Denv=<name>` |
+| Add an environment | Add `config/env/<name>.yaml` (copy `test.yaml`) and run with `-Denv=<name>` |
+| Retry more or fewer scenarios | `retry.count` / `retry.tags` in the env file, or `-Dretry.count` / `-Dretry.tags` |
 | Add a report output | Add a plugin to `@CucumberOptions(plugin = …)` in `TestRunner` |
 | Add a CI suite | Add the tag to `matrix.suite` in `tests.yml` |
 
@@ -296,6 +316,8 @@ doesn't cancel the other. A newer push to the same branch cancels the run that i
 
 - Bodies are JSON only. Form-encoded, multipart and XML bodies would need their own steps.
 - JSON paths use a small, strict syntax, not full JSONPath (no filters or wildcards).
-- Each scenario launches its own browser process. This gives strong isolation but costs startup time. Use
-  `-Dthreads` to match the machine.
+- One browser runs per worker thread. Scenarios are isolated by browser contexts, not by processes, so a
+  browser crash affects the scenario running in it (the next scenario gets a new browser). Use `-Dthreads` to
+  match the machine.
+- Extent and `cucumber.html` show each retry attempt as its own entry. The run summary and Allure group them.
 - The sample app is a single service, so the multi-service features are shown with only the `customers` service.

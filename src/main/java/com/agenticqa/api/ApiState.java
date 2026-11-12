@@ -22,10 +22,11 @@ public class ApiState {
     private final Map<String, Request> requests = new LinkedHashMap<>();
     private final Map<String, Reply> replies = new LinkedHashMap<>();
 
-    /** A request being built: its body text and headers of its own. */
+    /** A request being built: its body text, headers of its own, and path parameters for catalog endpoints. */
     public static final class Request {
         private String body;
         private final Map<String, String> headers = new LinkedHashMap<>();
+        private final Map<String, String> pathParams = new LinkedHashMap<>();
 
         private Request(String body) {
             this.body = body;
@@ -39,6 +40,11 @@ public class ApiState {
         /** @return headers sent with this request only (changeable) */
         public Map<String, String> headers() {
             return headers;
+        }
+
+        /** @return values for the {name} parts of a catalog endpoint's path (changeable) */
+        public Map<String, String> pathParams() {
+            return pathParams;
         }
     }
 

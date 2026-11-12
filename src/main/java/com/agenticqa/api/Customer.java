@@ -4,46 +4,19 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * A customer of the sample app. The same record is used for requests and responses: when creating or updating,
- * leave {@code id} null and it is not sent; responses always carry the id assigned by the server.
+ * A typed view of a customer response, used where steps compare a customer field by field (for example a
+ * table row on the page with what the API returned). It is only for reading: request bodies are
+ * {@link Payload}s, so there are no factory or {@code withX} methods to maintain, and unknown response fields
+ * are ignored.
+ * <p>
+ * Most endpoints need no such record at all: read responses by path ({@code Payload.of(response).get("id")}
+ * in Java, {@code the "x" response field "id" is ...} in feature files).
  *
- * @param id     server-assigned id, null in requests
+ * @param id     server-assigned id
  * @param name   display name
  * @param email  email address
- * @param status for example "active"; null lets the server apply its default ("active")
+ * @param status for example "active"
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record Customer(Long id, String name, String email, String status) {
-
-    /**
-     * Builds a request body for a new customer with the server's default status.
-     *
-     * @param name  display name
-     * @param email email address
-     * @return a customer without id and status
-     */
-    public static Customer newCustomer(String name, String email) {
-        return new Customer(null, name, email, null);
-    }
-
-    /**
-     * Copy of this customer with another id; null removes the id from the JSON.
-     *
-     * @param newId the id to set, or null
-     * @return the changed copy
-     */
-    public Customer withId(Long newId) {
-        return new Customer(newId, name, email, status);
-    }
-
-    /**
-     * Copy of this customer with another status, for update requests.
-     *
-     * @param newStatus the status to set
-     * @return the changed copy
-     */
-    public Customer withStatus(String newStatus) {
-        return new Customer(id, name, email, newStatus);
-    }
-}
+public record Customer(Long id, String name, String email, String status) {}

@@ -1,18 +1,51 @@
 package com.agenticqa.config;
 
+import io.cucumber.tagexpressions.Expression;
+import io.cucumber.tagexpressions.TagExpressionParser;
+
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 /**
  * Typed view of one environment file (config/env/NAME.yaml).
- * Kept minimal on purpose: new sections (healing, reporting, ...) are added in the step that needs them.
+ * Some values can be overridden for one run with system properties, without editing the file:
+ * {@code -Dui.baseUrl}, {@code -Dui.browser}, {@code -Dui.headless}, {@code -Dservices.NAME.baseUrl},
+ * {@code -Dretry.count} and {@code -Dretry.tags}.
  *
- * @param ui      browser and GUI settings
- * @param api     REST API settings
+ * @param ui       browser and GUI settings
+ * @param api      REST API settings
  * @param healing  self-healing locator settings; defaults apply when the section is missing
  * @param services the HTTP services (microservices) tests talk to, by name, for example "customers" or "orders"
+ * @param retry    which failed scenarios are run again, and how often; no retries when the section is missing
  */
-public record Settings(Ui ui, Api api, Healing healing, Map<String, Service> services) {
+public record Settings(Ui ui, Api api, Healing healing, Map<String, Service> services, Retry retry) {
+
+    /**
+     * Browser settings with the run's overrides applied.
+     *
+     * @return the ui section; -Dui.baseUrl, -Dui.browser and -Dui.headless win over the file
+     */
+    @Override
+    public Ui ui() {
+        String baseUrl = override("ui.baseUrl", ui.baseUrl());
+        String browser = override("ui.browser", ui.browser());
+        boolean headless = Boolean.parseBoolean(override("ui.headless", String.valueOf(ui.headless())));
+        return new Ui(baseUrl, browser, headless, ui.slowMoMs(), ui.timeoutMs());
+    }
+
+    /**
+     * Retry settings with the run's overrides applied, never null.
+     *
+     * @return the retry section; -Dretry.count and -Dretry.tags win over the file
+     */
+    @Override
+    public Retry retry() {
+        Retry base = retry != null ? retry : Retry.none();
+        int count = Integer.parseInt(override("retry.count", String.valueOf(base.count())).trim());
+        return new Retry(count, override("retry.tags", base.tags()));
+    }
 
     /**
      * Settings of one named service. The base URL can be overridden per run with
@@ -43,6 +76,11 @@ public record Settings(Ui ui, Api api, Healing healing, Map<String, Service> ser
     @Override
     public Healing healing() {
         return healing != null ? healing : Healing.defaults();
+    }
+
+    private static String override(String property, String value) {
+        String override = System.getProperty(property);
+        return override == null || override.isBlank() ? value : override.trim();
     }
 
     /**
@@ -93,6 +131,40 @@ public record Settings(Ui ui, Api api, Healing healing, Map<String, Service> ser
          */
         public static Healing defaults() {
             return new Healing(true, 2000, 0.6, "healing/fingerprints.json", "target/healing/heals.jsonl");
+        }
+    }
+
+    /**
+     * Retry of failed scenarios. Only the scenario that failed runs again, immediately, in a new session (new
+     * browser context, new {@code {unique}} token); passed scenarios never run twice.
+     *
+     * @param count how often a failed scenario may run again; 0 switches retries off
+     * @param tags  Cucumber tag expression choosing which scenarios may be retried, for example
+     *              {@code "@api and not @noretry"}; empty means every scenario
+     */
+    public record Retry(int count, String tags) {
+
+        /**
+         * No retries.
+         *
+         * @return count 0
+         */
+        public static Retry none() {
+            return new Retry(0, "");
+        }
+
+        /**
+         * Tells whether a scenario with these tags may be retried.
+         *
+         * @param scenarioTags the scenario's tags, including those inherited from the feature
+         * @return true if retries are on and the tag expression matches
+         * @throws IllegalArgumentException if the tag expression is malformed
+         */
+        public boolean appliesTo(Collection<String> scenarioTags) {
+            if (count <= 0) return false;
+            if (tags == null || tags.isBlank()) return true;
+            Expression expression = TagExpressionParser.parse(tags);
+            return expression.evaluate(List.copyOf(scenarioTags));
         }
     }
 }

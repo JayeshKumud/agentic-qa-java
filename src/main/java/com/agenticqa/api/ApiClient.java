@@ -14,7 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Base class of every service client (CustomerApi, ServiceClient, ...). It sends requests through the scenario's
+ * Base class of the HTTP clients (ServiceClient, which EndpointClient uses). It sends requests through the scenario's
  * Playwright API context, so API calls share cookies with the browser. Subclasses only describe business
  * operations; URL building, timeout, default headers, JSON, logging and the call log live here, once.
  */
@@ -176,7 +176,8 @@ public abstract class ApiClient {
         APIResponse response = api.fetch(url, options);
         long ms = (System.nanoTime() - started) / 1_000_000;
 
-        System.out.printf("[API] %s %s -> %d (%d ms)%n", verb, url, response.status(), ms);
+        System.out.printf("[API] [%s] %s %s -> %d (%d ms)%n", Thread.currentThread().getName(), verb, url,
+                response.status(), ms);
         session.recordApiCall(new ApiCall(verb, url, allHeaders, json, response.status(), response.text(), ms));
         return response;
     }

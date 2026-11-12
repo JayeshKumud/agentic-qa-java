@@ -26,10 +26,19 @@ def main() -> None:
     icon = "❌" if run["failed"] else "✅"
     seconds = run["durationMs"] / 1000
     out.append(f"### {icon} {suite} tests on `{run['environment']}`\n")
-    out.append("| Scenarios | Passed | Failed | Skipped | Healed locators | Time |")
-    out.append("|---:|---:|---:|---:|---:|---:|")
-    out.append(f"| {run['total']} | {run['passed']} | {run['failed']} | {run['skipped']} "
+    out.append("| Scenarios | Passed | Passed after retry | Failed | Skipped | Healed locators | Time |")
+    out.append("|---:|---:|---:|---:|---:|---:|---:|")
+    out.append(f"| {run['total']} | {run['passed']} | {run.get('flaky', 0)} | {run['failed']} | {run['skipped']} "
                f"| {run['heals']} | {seconds:.1f} s |\n")
+
+    # Passed in the end, but only on a retry: worth a look before they turn into real failures.
+    flaky = [s for s in run["scenarios"] if s["status"] == "passed" and s.get("attempts", 1) > 1]
+    if flaky:
+        out.append("#### Passed after retry (flaky)\n")
+        for s in flaky:
+            out.append(f"- {cell(s['scenario'])} (`{s['location']}`, {s['attempts']} attempts)")
+            print(f"::warning title=Flaky scenario::{s['scenario']} passed only after {s['attempts']} attempts")
+        out.append("")
 
     failed = [s for s in run["scenarios"] if s["status"] not in ("passed", "skipped", "pending", "unused")]
     if failed:
@@ -47,7 +56,7 @@ def main() -> None:
     expected = [(s, h) for s, h in healed if EXPECTED_TAG in s.get("tags", [])]
     if real:
         out.append("#### ⚠️ Healed locators\n")
-        out.append("The tests kept running, but these selectors no longer match the app. Update the page objects.\n")
+        out.append("The tests kept running, but these selectors no longer match the app. Update the selectors in src/main/resources/locators.\n")
         for s, h in real:
             out.append(f"- `{h}` ({cell(s['scenario'])})")
             # One annotation per heal, shown on the run page and in the PR checks.

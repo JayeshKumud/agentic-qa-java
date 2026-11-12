@@ -46,12 +46,16 @@ import java.util.stream.Collectors;
  * Register it in {@code @CucumberOptions(plugin = "com.agenticqa.reporting.RunSummaryPlugin:target/reports/run-summary.html")}.
  * Next to the HTML file it writes the same data as JSON (for CI) and prints a one-line summary to the console.
  * Events arrive from parallel threads, so all state is kept in concurrent maps keyed by test case id.
+ * A retried scenario is one test case per attempt; only the last attempt counts, and a scenario that passed on
+ * retry is reported as such. The scenarios that still failed are also written to {@value #FAILED_FILE}.
  */
 public class RunSummaryPlugin implements ConcurrentEventListener {
 
     private static final DateTimeFormatter STAMP =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
     private static final String HEAL_HEADER = "Locators healed";
+    /** Written next to the HTML summary: the scenarios that failed after all retries, in rerun format. */
+    static final String FAILED_FILE = "failed-scenarios.txt";
 
     private final Path htmlFile;
     private final Map<URI, String> featureNames = new ConcurrentHashMap<>();
@@ -116,7 +120,7 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
 
     /** Writes the HTML and JSON files and prints the console line. */
     private void onRunFinished(TestRunFinished event) {
-        List<ScenarioResult> all = new ArrayList<>(scenarios.values());
+        List<ScenarioResult> all = lastAttempts();
         all.sort(Comparator.comparing((ScenarioResult s) -> s.testCase.getUri().toString())
                 .thenComparing(s -> s.testCase.getLocation().getLine()));
         Duration wallClock = Duration.between(runStarted, event.getInstant());
@@ -126,16 +130,60 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
             if (htmlFile.getParent() != null) Files.createDirectories(htmlFile.getParent());
             Files.writeString(htmlFile, html(all, totals, wallClock), StandardCharsets.UTF_8);
             Files.writeString(jsonFile(), json(all, totals, wallClock), StandardCharsets.UTF_8);
+            Files.writeString(htmlFile.resolveSibling(FAILED_FILE), failedList(all), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot write run summary " + htmlFile, e);
         }
-        System.out.printf("%n[REPORT] %d scenarios: %d passed, %d failed, %d skipped, %d locator(s) healed, %s"
-                        + " -> %s%n",
-                totals.total, totals.passed, totals.failed, totals.skipped, totals.heals,
+        System.out.printf("%n[REPORT] %d scenarios: %d passed (%d after retry), %d failed, %d skipped, "
+                        + "%d locator(s) healed, %s -> %s%n",
+                totals.total, totals.passed, totals.flaky, totals.failed, totals.skipped, totals.heals,
                 format(wallClock), htmlFile.toAbsolutePath());
     }
 
+    /**
+     * One entry per scenario: a retried scenario ran several times, and only its last attempt counts. Earlier
+     * attempts are kept as the attempt count, so a scenario that passed on retry is reported as flaky.
+     *
+     * @return the last attempt of every scenario
+     */
+    private List<ScenarioResult> lastAttempts() {
+        Map<String, List<ScenarioResult>> byScenario = scenarios.values().stream().collect(Collectors.groupingBy(
+                s -> s.testCase.getUri() + ":" + s.testCase.getLocation().getLine()));
+        List<ScenarioResult> last = new ArrayList<>();
+        for (List<ScenarioResult> attempts : byScenario.values()) {
+            ScenarioResult latest = attempts.stream().max(Comparator.comparing(s -> s.started)).orElseThrow();
+            latest.attempts = attempts.size();
+            last.add(latest);
+        }
+        return last;
+    }
+
     // ---------------------------------------------------------------------------------------------- JSON
+
+    /**
+     * The scenarios that still failed after their retries, in Cucumber's rerun format (one feature file per line
+     * with the scenario lines), so exactly those can be run again:
+     * {@code mvn test -Dcucumber.features=@target/reports/failed-scenarios.txt}. Unlike Cucumber's own rerun
+     * plugin, a scenario that passed on retry is not listed. Empty when everything passed.
+     *
+     * @param all the last attempt of every scenario
+     * @return the file content
+     */
+    private static String failedList(List<ScenarioResult> all) {
+        Map<String, List<Integer>> byFile = new java.util.TreeMap<>();
+        for (ScenarioResult s : all) {
+            if (s.status() == Status.PASSED || s.status() == Status.SKIPPED) continue;
+            byFile.computeIfAbsent(s.testCase.getUri().toString(), uri -> new ArrayList<>())
+                    .add(s.testCase.getLocation().getLine());
+        }
+        StringBuilder out = new StringBuilder();
+        byFile.forEach((uri, lines) -> {
+            out.append(uri);
+            lines.stream().sorted().forEach(line -> out.append(':').append(line));
+            out.append(System.lineSeparator());
+        });
+        return out.toString();
+    }
 
     private Path jsonFile() {
         String name = htmlFile.getFileName().toString().replaceFirst("\\.html?$", "") + ".json";
@@ -152,6 +200,7 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
         root.put("failed", totals.failed);
         root.put("skipped", totals.skipped);
         root.put("heals", totals.heals);
+        root.put("flaky", totals.flaky);
         List<Map<String, Object>> rows = new ArrayList<>();
         for (ScenarioResult s : all) {
             Map<String, Object> row = new LinkedHashMap<>();
@@ -161,6 +210,7 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
             row.put("tags", s.testCase.getTags());
             row.put("status", s.status().name().toLowerCase());
             row.put("durationMs", s.duration().toMillis());
+            row.put("attempts", s.attempts);
             if (s.error() != null) row.put("error", firstLine(s.error()));
             if (s.trace != null) row.put("trace", s.trace);
             if (!s.heals.isEmpty()) row.put("heals", s.heals);
@@ -191,6 +241,7 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
                 .append(tile("Passed", totals.passed, "passed"))
                 .append(tile("Failed", totals.failed, totals.failed > 0 ? "failed" : ""))
                 .append(tile("Skipped", totals.skipped, totals.skipped > 0 ? "skipped" : ""))
+                .append(tile("Passed after retry", totals.flaky, totals.flaky > 0 ? "skipped" : ""))
                 .append(tile("Locators healed", totals.heals, totals.heals > 0 ? "healed" : ""))
                 .append("</section>");
 
@@ -205,7 +256,7 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
         List<ScenarioResult> healed = all.stream().filter(s -> !s.heals.isEmpty()).toList();
         if (!healed.isEmpty()) {
             out.append("<section><h2>Healed locators</h2><p class=\"hint\">The tests kept running, but these "
-                    + "selectors no longer match the app. Update the page objects.</p><ul class=\"heals\">");
+                    + "selectors no longer match the app. Update the selectors in src/main/resources/locators.</p><ul class=\"heals\">");
             for (ScenarioResult s : healed) {
                 for (String heal : s.heals) {
                     out.append("<li><code>").append(esc(heal)).append("</code><span class=\"muted\"> in ")
@@ -229,6 +280,9 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
                 if (!s.heals.isEmpty()) {
                     out.append(" <span class=\"chip healed\">healed ").append(s.heals.size()).append("</span>");
                 }
+                if (s.attempts > 1) {
+                    out.append(" <span class=\"chip skipped\">").append(s.attempts).append(" attempts</span>");
+                }
                 out.append("<div class=\"muted\">").append(esc(fileName(s.testCase.getUri()))).append(':')
                         .append(s.testCase.getLocation().getLine()).append("</div></td><td>")
                         .append(esc(String.join(" ", s.testCase.getTags()))).append("</td><td class=\"num\">")
@@ -249,6 +303,7 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
                 .append(" <span class=\"chip failed\">").append(s.status().name().toLowerCase())
                 .append("</span></h3><p class=\"muted\">").append(esc(featureOf(s))).append(" &middot; ")
                 .append(esc(fileName(s.testCase.getUri()))).append(':').append(s.testCase.getLocation().getLine())
+                .append(s.attempts > 1 ? " &middot; failed in all " + s.attempts + " attempts" : "")
                 .append("</p>");
         if (s.error() != null) {
             out.append("<pre class=\"error\">").append(esc(stack(s.error()))).append("</pre>");
@@ -354,6 +409,7 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
         final List<String> heals = new java.util.concurrent.CopyOnWriteArrayList<>();
         volatile String trace;
         volatile Result result;
+        volatile int attempts = 1;
 
         ScenarioResult(TestCase testCase, Instant started) {
             this.testCase = testCase;
@@ -374,13 +430,14 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
     }
 
     /** Counts of one run. */
-    private record Totals(long total, long passed, long failed, long skipped, long heals) {
+    private record Totals(long total, long passed, long failed, long skipped, long heals, long flaky) {
         static Totals of(List<ScenarioResult> all) {
             long passed = all.stream().filter(s -> s.status() == Status.PASSED).count();
+            long flaky = all.stream().filter(s -> s.status() == Status.PASSED && s.attempts > 1).count();
             long skipped = all.stream().filter(s -> s.status() == Status.SKIPPED
                     || s.status() == Status.PENDING || s.status() == Status.UNUSED).count();
             long heals = all.stream().mapToLong(s -> s.heals.size()).sum();
-            return new Totals(all.size(), passed, all.size() - passed - skipped, skipped, heals);
+            return new Totals(all.size(), passed, all.size() - passed - skipped, skipped, heals, flaky);
         }
     }
 

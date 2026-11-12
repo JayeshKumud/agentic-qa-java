@@ -8,25 +8,35 @@ scenarios. One scenario can call several REST services, drive a real browser and
 | Language | Java 17, Maven |
 | Browser and HTTP | [Playwright for Java](https://playwright.dev/java/) 1.48 |
 | BDD | Cucumber 7 (Gherkin feature files), PicoContainer for dependency injection |
-| Runner | TestNG, with scenarios running in parallel |
-| Config | One YAML file per environment |
+| Runner | TestNG, with scenarios running in parallel and configurable retries |
+| Config | One YAML file per environment (dev, test, uat, ci), with `${VAR}` placeholders for URLs and secrets |
+| Reports | Run summary, Cucumber, Allure and Extent |
 | CI | GitHub Actions, one job per test suite |
 
 ## What the framework does
 
-- **Each scenario is isolated.** Every scenario gets its own `TestSession` with its own browser, API context
-  and data store. Scenarios can therefore run in parallel (4 threads by default) without sharing state.
+- **Several environments.** `dev`, `test`, `uat` and `ci` each have their own YAML file. Choose one with `-Denv=uat`.
+  URLs and secrets can come from environment variables. See [docs/running-tests.md](docs/running-tests.md).
+- **Parallel and isolated.** Scenarios run on several threads (4 by default, `-Dthreads=N`). Each worker thread
+  keeps one browser, and each scenario gets its own browser context, API context and data store, so
+  scenarios never share state.
+- **Retries of failed scenarios.** Only the failed scenario runs again, up to `retry.count` times, and only if it
+  matches the `retry.tags` expression. A list of scenarios that still failed lets you re-run exactly those.
 - **API and UI work in one scenario.** API calls go through the browser context, so they share cookies and
   login state with the page. Bridge steps pass a customer created through the API to the UI steps, and back.
 - **Generic HTTP steps.** You can build named requests from JSON files, tables or raw text, change them over
   many steps (set, remove, deep-merge), send them to any configured service, save values from the response
-  (`${id}`) and use those values in later requests. None of this needs Java per endpoint.
-  See [docs/api-requests.md](docs/api-requests.md).
+  (`${id}`) and use those values in later requests. Endpoints are declared once, one line of YAML each, and
+  called by name (`When I call "customers.get" ...`). In Java, `Payload` builds any body, so no request class
+  or method is needed per endpoint. See [docs/api-requests.md](docs/api-requests.md).
+- **Locators in JSON.** Page objects hold no selectors. They look elements up by name in
+  `locators/<page>.json`. See [docs/locators.md](docs/locators.md).
 - **Self-healing locators.** When a selector stops matching (for example, an id is renamed), the framework
   finds the element from a stored fingerprint, keeps the test running and reports the heal so someone
   updates the page object. See [docs/healing.md](docs/healing.md).
-- **Clear reporting.** You get a one-page HTML run summary, the full Cucumber reports, a failure screenshot,
-  a Playwright trace and the HTTP call log for every failed scenario, plus a GitHub job summary in CI.
+- **Clear reporting.** You get a one-page HTML run summary, **Allure** and **Extent** reports, the full Cucumber
+  reports, a failure screenshot, a Playwright trace and the HTTP call log for every failed scenario, plus a
+  GitHub job summary in CI.
   See [docs/reporting.md](docs/reporting.md).
 - **Automatic cleanup.** Customers and other resources a scenario creates are deleted after it, whether it
   passed or failed.
@@ -39,25 +49,30 @@ The architecture and the flow of a test run are described in [docs/architecture.
 agentic-qa-java/
 ├── pom.xml                              dependencies, Surefire config, -Denv / -Dthreads defaults
 ├── healing/fingerprints.json            healing baseline (kept in git)
-├── docs/                                architecture, API requests, healing, reporting
+├── docs/                                architecture, running, API, locators, healing, reporting
 ├── .github/
 │   ├── workflows/tests.yml              CI: starts the sample app, runs the api and ui suites
 │   └── scripts/job_summary.py           turns run-summary.json into a GitHub job summary
 └── src/
     ├── main/java/com/agenticqa/
     │   ├── config/                      EnvConfig (loads the YAML), Settings (typed config)
-    │   ├── core/                        TestSession, DataKey, Variables, JsonPaths, TestData
-    │   ├── api/                         ApiClient (base), CustomerApi, ServiceClient, ApiState, ApiCall
-    │   └── ui/                          CustomersPage (page object)
+    │   ├── core/                        TestSession, BrowserPool, DataKey, Variables, JsonPaths, TestData
+    │   ├── api/                         Endpoints, EndpointClient, Payload, ApiClient, ServiceClient,
+    │   │                                CustomerApi, ApiState, ApiCall
+    │   └── ui/                          CustomersPage (page object), LocatorRepository, PageElements
     │       └── healing/                 SmartLocator, Healer, HealingScorer, Fingerprint(Store), HealEvent
-    ├── main/resources/config/env/       dev.yaml, ci.yaml
+    ├── main/resources/
+    │   ├── config/env/                  dev.yaml, test.yaml, uat.yaml, ci.yaml
+    │   ├── endpoints/                   endpoint catalog, one YAML file per service
+    │   └── locators/                    locators, one JSON file per page
     ├── test/java/com/agenticqa/
-    │   ├── runner/TestRunner.java       Cucumber + TestNG entry point (parallel)
+    │   ├── runner/                      TestRunner (Cucumber + TestNG, parallel), ScenarioRetry
     │   ├── hooks/Hooks.java             @Before / @After around every scenario
     │   ├── steps/                       step definitions and cleanup
-    │   ├── reporting/RunSummaryPlugin   run-summary.html / .json
-    │   └── core/, healing/              unit tests (JsonPaths, Variables, HealingScorer)
-    └── test/resources/
+    │   ├── reporting/                   RunSummaryPlugin (run summary), ReportSetupPlugin (Allure/Extent)
+    │   └── core/, api/, ui/, config/,   unit tests (JsonPaths, Variables, Payload, Endpoints,
+    │       healing/                     LocatorRepository, Settings, HealingScorer)
+    └── test/resources/                  features/, testdata/, allure.properties, extent.properties
         ├── features/{api,ui,e2e}/       Gherkin feature files
         └── testdata/                    JSON payloads used by the steps
 ```
@@ -101,7 +116,7 @@ browser is missing, Playwright downloads it on first use.
 mvn -q compile exec:java -Dexec.mainClass=com.agenticqa.ConfigCheck -Denv=dev
 ```
 
-This prints the active environment and the settings loaded from it.
+This prints the active environment and the settings it will use, with placeholders and `-D` overrides applied.
 
 ## Running tests
 
@@ -111,13 +126,17 @@ This prints the active environment and the settings loaded from it.
 | One suite, by tag | `mvn test -Dcucumber.filter.tags="@api"` |
 | Combined tags | `mvn test -Dcucumber.filter.tags="@ui and not @healing"` |
 | Smoke tests | `mvn test -Dcucumber.filter.tags="@smoke"` |
-| Another environment | `mvn test -Denv=ci` (reads `config/env/ci.yaml`) |
-| More or fewer threads | `mvn test -Dthreads=8` |
+| Another environment | `mvn test -Denv=test` or `-Denv=uat` (reads `config/env/<name>.yaml`) |
+| More or fewer threads | `mvn test -Dthreads=8` (`-Dthreads=1` runs one scenario at a time) |
+| Retry failed scenarios | `mvn test -Dretry.count=2 -Dretry.tags="@ui"` (default: the `retry` section of the env file) |
+| Re-run what failed last time | `mvn test -Dcucumber.features=@target/reports/failed-scenarios.txt` |
+| Allure HTML report | `mvn allure:report` after the run (`mvn allure:serve` opens it) |
 | Point one service elsewhere | `mvn test -Dservices.customers.baseUrl=http://localhost:9000` |
 | Unit tests only | `mvn test -Dtest='*Test'` |
 
 The environment can also be set with the `ENV` environment variable. The default is `dev`, which shows the
-browser window (`headless: false`). `ci` runs headless.
+browser window (`headless: false`). `test`, `uat` and `ci` run headless. Environments, threads and retries are
+described in [docs/running-tests.md](docs/running-tests.md).
 
 ### Tags in use
 
@@ -128,13 +147,17 @@ browser window (`headless: false`). `ci` runs headless.
 | `@e2e` | API and UI together in one scenario |
 | `@healing` | Scenarios that rename ids on purpose to show self-healing |
 | `@smoke` | A small, fast subset |
+| `@noretry` | Never retried, even when retries are on |
 
 ### Where to look after a run
 
 | File | What it shows |
 |---|---|
 | `target/reports/run-summary.html` | **Start here.** Totals, failures with screenshots, healed locators |
+| `target/reports/extent/index.html` | Extent Spark report (one file, screenshots embedded) |
+| `target/reports/allure/index.html` | Allure report, after `mvn allure:report` |
 | `target/reports/cucumber.html` | Every step of every scenario, with attachments |
+| `target/reports/failed-scenarios.txt` | Scenarios that still failed after retries, ready to re-run |
 | `target/artifacts/traces/*.zip` | Playwright trace of each failed scenario. Open it with `npx playwright show-trace <zip>` or at <https://trace.playwright.dev> |
 | `target/healing/heals.jsonl` | One line per healed locator |
 
@@ -175,18 +198,32 @@ services:
       X-Api-Key: change-me    # sent with every request
 ```
 
-For business-level steps (such as `I create a customer named "Ada"`), add a typed client that extends
-`ApiClient`, as `CustomerApi` does. `ApiClient` takes care of URLs, timeouts, headers, JSON and the call log.
+Then declare its endpoints in `src/main/resources/endpoints/orders.yaml`, one line each:
+
+```yaml
+service: orders
+endpoints:
+  create: { method: POST, path: /orders, body: orders/new_order.json }
+  get:    { method: GET,  path: "/orders/{id}" }
+```
+
+Feature files call them by name (`When I call "orders.get" as "read" with:` plus a table of path parameters),
+and Java code uses `new EndpointClient(session).call("orders.create", Payload.file("orders/new_order.json").set(...))`.
+No client class, request record or `withX` method is needed per endpoint. See
+[docs/api-requests.md](docs/api-requests.md#endpoint-catalog-call-endpoints-by-name).
 
 ### 3. A new page
 
-1. Create a page object in `src/main/java/com/agenticqa/ui/`. Declare each element that is always on the page
-   as a `SmartLocator` with a stable key, a readable description and its selector:
-   ```java
-   searchInput = new SmartLocator(page, healer, "customers.searchInput", "search input", "#search-input");
+1. Put its locators in `src/main/resources/locators/<page>.json`:
+   ```json
+   { "searchInput": { "selector": "#search-input", "description": "search input" },
+     "rows":        { "selector": "#customers-table tr.customer-row", "heal": false } }
    ```
-   Use plain Playwright `Locator`s for elements that can legitimately be missing (result rows, empty states).
-2. Steps call page object methods and never use selectors themselves.
+   Elements heal by default. Use `"heal": false` for elements that can legitimately be missing (result rows,
+   empty states).
+2. Create a page object in `src/main/java/com/agenticqa/ui/` with `new PageElements(page, healer, "<page>")` and
+   use elements by name: `el.get("searchInput").fill(text)`. Steps call page object methods and never use
+   selectors themselves. See [docs/locators.md](docs/locators.md).
 3. Commit `healing/fingerprints.json` after the first green run, because it is the baseline healing compares against.
 
 ### 4. New step definitions
@@ -211,7 +248,8 @@ To share data between step classes, use `session.put(key, value)` / `session.get
 
 ### 5. A new environment
 
-Copy `src/main/resources/config/env/dev.yaml` to `<name>.yaml`, change the URLs and run with `-Denv=<name>`.
+Copy `src/main/resources/config/env/test.yaml` to `<name>.yaml`, change the URLs (or the variable names) and run
+with `-Denv=<name>`. Reference secrets as `${NAME}` instead of writing them in the file.
 
 ## CI
 
@@ -223,7 +261,8 @@ and on demand. For each suite in the matrix (`api`, `ui`) it:
 2. starts the app on port 8000 and waits for it,
 3. installs Chromium (UI suite only, cached),
 4. runs `mvn test -Denv=ci -Dcucumber.filter.tags="@<suite>"`,
-5. writes a job summary and uploads reports, heal logs, traces and the app log.
+5. builds the Allure report, writes a job summary (including scenarios that passed only after a retry), and
+   uploads reports (run summary, Allure, Extent, Cucumber), heal logs, traces and the app log.
 
 To add a suite, add its tag to `matrix.suite`.
 
@@ -232,6 +271,9 @@ To add a suite, add its tag to `matrix.suite`.
 | Document | Contents |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | Layers, components, the scenario lifecycle and the workflow from start to finish |
+| [docs/running-tests.md](docs/running-tests.md) | Environments and placeholders, parallel threads, retries, re-running failed scenarios |
 | [docs/api-requests.md](docs/api-requests.md) | Named requests, payload editing, chaining, services, all HTTP steps |
+| [docs/api-steps.md](docs/api-steps.md) | How the API steps work inside: wiring, shared state, the life of a request, cleanup, adding steps |
+| [docs/locators.md](docs/locators.md) | Locators in JSON files and how page objects use them |
 | [docs/healing.md](docs/healing.md) | How self-healing locators and fingerprints work |
-| [docs/reporting.md](docs/reporting.md) | Every report, attachment and CI artifact |
+| [docs/reporting.md](docs/reporting.md) | Every report (run summary, Allure, Extent, Cucumber), attachment and CI artifact |

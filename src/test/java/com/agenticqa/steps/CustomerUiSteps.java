@@ -2,6 +2,7 @@ package com.agenticqa.steps;
 
 import com.agenticqa.api.Customer;
 import com.agenticqa.api.CustomerApi;
+import com.agenticqa.api.Payload;
 import com.agenticqa.core.TestData;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.CustomersPage;
@@ -54,7 +55,7 @@ public class CustomerUiSteps {
         String tag = "Batch " + TestData.token();
         for (int i = 1; i <= count; i++) {
             String name = tag + " #" + i;
-            APIResponse response = customers.create(Customer.newCustomer(name, TestData.emailFor(name)));
+            APIResponse response = customers.create(Payload.empty().set("name", name).set("email", TestData.emailFor(name)));
             assertEquals(response.status(), 201, "Create failed: " + response.text());
             cleanup.track(CustomerApi.asCustomer(response).id());
         }

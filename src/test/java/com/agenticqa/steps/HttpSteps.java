@@ -2,6 +2,8 @@ package com.agenticqa.steps;
 
 import com.agenticqa.api.ApiState;
 import com.agenticqa.api.ApiState.Reply;
+import com.agenticqa.api.EndpointClient;
+import com.agenticqa.api.Endpoints;
 import com.agenticqa.api.ServiceClient;
 import com.agenticqa.core.JsonPaths;
 import com.agenticqa.core.TestData;
@@ -36,6 +38,8 @@ import static org.testng.Assert.fail;
  *       Both work in values, files, bodies, URLs, headers and expectations.</li>
  *   <li>A response is stored under the name of the request that produced it (or the name given for calls
  *       without body), and also as the last response for {@code the API responds with status ...}.</li>
+ *   <li>Endpoints of the catalog (src/main/resources/endpoints) are called by name, {@code "customers.get"}:
+ *       method, path and service come from the catalog, so feature files hold no URLs.</li>
  * </ul>
  */
 public class HttpSteps {
@@ -124,6 +128,31 @@ public class HttpSteps {
         JsonNode part = JsonPaths.get(api.reply(response).json(), path);
         assertNotNull(part, "The '" + response + "' response has no field '" + path + "'");
         api.start(name, JsonPaths.write(part));
+    }
+
+    /**
+     * Starts a request from the default body of a catalog endpoint, or from {} if it has none:
+     * {@code Given a new "ada" request for "customers.create"}.
+     *
+     * @param name     the request name
+     * @param endpoint FILE.KEY, for example customers.create
+     */
+    @Given("a new {string} request for {string}")
+    public void forEndpoint(String name, String endpoint) {
+        String template = Endpoints.get(endpoint).body();
+        api.start(name, template == null ? "{}" : vars.resolve(TestData.file(template)));
+    }
+
+    /**
+     * Sets a path parameter of a request for a catalog endpoint, for example the {id} of /customers/{id}.
+     *
+     * @param name  the request name
+     * @param param the parameter name
+     * @param value the value, may contain ${variables}
+     */
+    @Given("the {string} request path parameter {string} is {string}")
+    public void pathParam(String name, String param, String value) {
+        api.request(name).pathParams().put(param, vars.resolve(value));
     }
 
     /**
@@ -235,6 +264,52 @@ public class HttpSteps {
     public void sendWithoutBody(String method, String path, String service, String name) {
         APIResponse response = new ServiceClient(session, service).request(method, vars.resolve(path), null, Map.of());
         remember(name, response);
+    }
+
+    /**
+     * Calls a catalog endpoint with a named request: {@code When I call "customers.update" with the "ada" request}.
+     * Path parameters come from the request, else from variables of the same name. The response is stored
+     * under the request's name.
+     *
+     * @param endpoint FILE.KEY
+     * @param name     the request name
+     */
+    @When("I call {string} with the {string} request")
+    public void callWithRequest(String endpoint, String name) {
+        ApiState.Request request = api.request(name);
+        APIResponse response = new EndpointClient(session)
+                .call(endpoint, request.pathParams(), request.body(), request.headers(), vars::find);
+        remember(name, response);
+    }
+
+    /**
+     * Calls a catalog endpoint without body: {@code When I call "customers.list" as "all"}. Path parameters come
+     * from variables of the same name.
+     *
+     * @param endpoint FILE.KEY
+     * @param name     the name to store the response under
+     */
+    @When("I call {string} as {string}")
+    public void call(String endpoint, String name) {
+        remember(name, new EndpointClient(session).call(endpoint, Map.of(), null, Map.of(), vars::find));
+    }
+
+    /**
+     * Calls a catalog endpoint without body, with path parameters from a table:
+     * <pre>
+     * When I call "customers.get" as "adaRead" with:
+     *   | id | ${adaId} |
+     * </pre>
+     *
+     * @param endpoint FILE.KEY
+     * @param name     the name to store the response under
+     * @param table    parameter/value rows
+     */
+    @When("I call {string} as {string} with:")
+    public void callWithParams(String endpoint, String name, DataTable table) {
+        Map<String, String> params = new java.util.LinkedHashMap<>();
+        table.asMap(String.class, String.class).forEach((param, value) -> params.put(param.trim(), vars.resolve(value)));
+        remember(name, new EndpointClient(session).call(endpoint, params, null, Map.of(), vars::find));
     }
 
     /**

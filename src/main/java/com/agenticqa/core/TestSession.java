@@ -8,9 +8,7 @@ import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.APIRequestContext;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
-import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.Tracing;
 import com.microsoft.playwright.assertions.PlaywrightAssertions;
 
@@ -29,7 +27,11 @@ import java.util.Map;
  * so parallel scenarios never share a browser or data.
  * <p>
  * The page and the API calls come from the same browser context, so they share cookies and login state.
- * The browser starts lazily, the first time a step asks for the page or the API.
+ * The context is created lazily, the first time a step asks for the page or the API, in the browser of the
+ * current worker thread ({@link BrowserPool}); closing the session closes the context, not the browser.
+ * <p>
+ * Thread safety: a scenario runs on one thread from its first hook to its last, and nothing in a session is
+ * shared with other scenarios, so parallel scenarios are isolated by construction.
  */
 public class TestSession {
 
@@ -39,8 +41,6 @@ public class TestSession {
     private final Map<DataKey<?>, Object> store = new HashMap<>();
     private final List<ApiCall> apiCalls = new ArrayList<>();
 
-    private Playwright playwright;
-    private Browser browser;
     private BrowserContext context;
     private Page page;
     private Healer healer;
@@ -134,6 +134,7 @@ public class TestSession {
      * Stores a value for later steps of the same scenario.
      *
      * @param key   the typed key
+     *
      * @param value the value to keep
      * @param <T>   the type of the value
      */
@@ -179,23 +180,10 @@ public class TestSession {
         return context;
     }
 
-    /** Launches the configured browser and creates the context with tracing switched on. */
+    /** Opens a new context in this thread's browser, with tracing switched on. */
     private void startBrowser() {
         Settings.Ui ui = settings.ui();
-        String name = ui.browser() == null ? "chromium" : ui.browser().toLowerCase();
-        playwright = Playwright.create();
-        BrowserType type = switch (name) {
-            case "firefox" -> playwright.firefox();
-            case "webkit" -> playwright.webkit();
-            default -> playwright.chromium();
-        };
-        BrowserType.LaunchOptions launch = new BrowserType.LaunchOptions()
-                .setHeadless(ui.headless())
-                .setSlowMo(ui.slowMoMs());
-        if (name.equals("chromium")) {
-            launch.setArgs(List.of("--disable-dev-shm-usage")); // needed inside containers
-        }
-        browser = type.launch(launch);
+        Browser browser = BrowserPool.browser(ui);
         context = browser.newContext(new Browser.NewContextOptions()
                 .setBaseURL(ui.baseUrl())
                 .setViewportSize(1366, 768));
@@ -206,7 +194,8 @@ public class TestSession {
     }
 
     /**
-     * Stops tracing (the zip is kept only when the scenario failed) and closes everything.
+     * Stops tracing (the zip is kept only when the scenario failed) and closes the context. The browser stays
+     * open for the next scenario on this thread.
      * Each close is attempted separately so cleanup never hides the real test result.
      *
      * @param failed true if the scenario failed
@@ -229,8 +218,8 @@ public class TestSession {
             }
         }
         quietly(() -> { if (context != null) context.close(); });
-        quietly(() -> { if (browser != null) browser.close(); });
-        quietly(() -> { if (playwright != null) playwright.close(); });
+        context = null;
+        page = null;
         return saved;
     }
 
@@ -242,8 +231,10 @@ public class TestSession {
      */
     private Path traceFile() {
         String slug = scenarioName.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+        // thread name keeps the files of parallel (or retried) scenarios with the same name apart
+        String thread = Thread.currentThread().getName().replaceAll("[^A-Za-z0-9]+", "-");
         return Paths.get("target", "artifacts", "traces",
-                LocalDateTime.now().format(FILE_STAMP) + "_" + slug + ".zip");
+                LocalDateTime.now().format(FILE_STAMP) + "_" + slug + "_" + thread + ".zip");
     }
 
     /**

@@ -131,7 +131,7 @@ public class CustomerRequestSteps {
     /** POST /customers with the request; on success the created customer becomes "the customer". */
     @When("I send the create customer request")
     public void sendCreate() {
-        APIResponse response = customers.createFromJson(api.request(REQUEST).body());
+        APIResponse response = customers.create(api.request(REQUEST).body());
         remember(response);
         if (response.status() == 201) {
             Customer created = CustomerApi.asCustomer(response);
@@ -147,7 +147,7 @@ public class CustomerRequestSteps {
     /** PUT /customers/{id} of "the customer" with the request; on success the answer becomes "the customer". */
     @When("I send the update request for the customer")
     public void sendUpdate() {
-        APIResponse response = customers.updateFromJson(session.get(CUSTOMER).id(), api.request(REQUEST).body());
+        APIResponse response = customers.update(session.get(CUSTOMER).id(), api.request(REQUEST).body());
         remember(response);
         if (response.status() == 200) {
             session.put(CUSTOMER, CustomerApi.asCustomer(response));

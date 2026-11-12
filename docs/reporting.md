@@ -3,11 +3,11 @@
 A test run produces evidence at four levels. Each level builds on the one before it:
 
 1. **Per scenario.** The `@After` hook adds healed locators, a failure screenshot and the trace path to the scenario.
-2. **Per run.** Cucumber's built-in reports plus our own `RunSummaryPlugin` (`run-summary.html` / `.json` and a console line).
+2. **Per run.** Cucumber's built-in reports, our own `RunSummaryPlugin` (`run-summary.html` / `.json`, the failed-scenario list and a console line), and the **Allure** and **Extent** reports.
 3. **Per CI job.** `job_summary.py` turns the JSON into a GitHub job summary and warning annotations.
 4. **Artifacts.** The workflow uploads reports, heal logs, fingerprints, traces and the app log.
 
-Everything is local files under `target/`. No reporting server or extra dependency is involved.
+Everything is local files under `target/`. No reporting server is involved.
 
 ## Output at a glance
 
@@ -16,8 +16,12 @@ Everything is local files under `target/`. No reporting server or extra dependen
 | `target/reports/run-summary.html` | `RunSummaryPlugin` | **Start here.** One self-contained page with totals, failures (error, screenshot, trace path), healed locators and every scenario grouped by feature. |
 | `target/reports/run-summary.json` | `RunSummaryPlugin` | The same data, machine-readable. Read by CI. |
 | `target/reports/cucumber.html` | Cucumber `html` plugin | Every step of every scenario, with all attachments and full stack traces. |
-| `target/reports/cucumber.json` | Cucumber `json` plugin | Standard Cucumber JSON for other tools (Allure, Xray, …). |
-| `target/artifacts/traces/<time>_<scenario>.zip` | `TestSession.close` | Playwright trace, **failed scenarios only**. |
+| `target/reports/cucumber.json` | Cucumber `json` plugin | Standard Cucumber JSON for other tools (Xray, …). |
+| `target/reports/failed-scenarios.txt` | `RunSummaryPlugin` | Scenarios that still failed after retries, in rerun format: `-Dcucumber.features=@target/reports/failed-scenarios.txt` runs exactly those (see [running-tests.md](running-tests.md#re-running-only-the-failed-scenarios-later)). |
+| `target/reports/extent/index.html` | Extent Cucumber adapter | **Extent Spark** report: dashboard, features and scenarios with steps, tags as categories, screenshots embedded. One file. |
+| `target/allure-results/` | Allure Cucumber plugin | Raw **Allure** results, plus `environment.properties`. Turn them into HTML with `mvn allure:report`. |
+| `target/reports/allure/index.html` | `mvn allure:report` | **Allure** report: overview, suites, timeline, retries, categories, environment. |
+| `target/artifacts/traces/<time>_<scenario>_<thread>.zip` | `TestSession.close` | Playwright trace, **failed scenarios only**. |
 | `target/healing/heals.jsonl` | `Healer` | One JSON line per healed locator (see [healing.md](healing.md)). |
 | `target/surefire-reports/` | Maven Surefire | Plain TestNG results, including unit tests such as `HealingScorerTest`. |
 | console | `pretty` plugin, `Healer`, `RunSummaryPlugin` | Steps as they run, `[HEAL]` lines, `Trace saved: …`, and the final `[REPORT]` line. |
@@ -26,8 +30,13 @@ All of these are configured in [`TestRunner`](../src/test/java/com/agenticqa/run
 
 ```java
 @CucumberOptions(
-        plugin = {"pretty", "html:target/reports/cucumber.html", "json:target/reports/cucumber.json",
-                "com.agenticqa.reporting.RunSummaryPlugin:target/reports/run-summary.html"}, ...)
+        plugin = {"pretty",
+                "com.agenticqa.reporting.ReportSetupPlugin",
+                "html:target/reports/cucumber.html",
+                "json:target/reports/cucumber.json",
+                "com.agenticqa.reporting.RunSummaryPlugin:target/reports/run-summary.html",
+                "io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm",
+                "com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:"}, ...)
 ```
 
 The text after the colon is passed to the plugin's constructor, so you change the output location there. The JSON file is always written next to the HTML file, with the same base name.
@@ -69,7 +78,7 @@ When a step first needs the page or the API, [`TestSession`](../src/main/java/co
 
 At the end `session.close(failed)` does one of two things:
 
-- **On failure:** it stops tracing into `target/artifacts/traces/2026-11-09_14-05-09_create-and-find-a-customer.zip`, built from a timestamp and a slug of the scenario name. It prints `Trace saved: …` and returns the path.
+- **On failure:** it stops tracing into `target/artifacts/traces/2026-11-09_14-05-09_create-and-find-a-customer_TestNG-PoolService-1.zip`, built from a timestamp, a slug of the scenario name and the thread name (so parallel or retried scenarios with the same name do not overwrite each other). It prints `Trace saved: …` and returns the path.
 - **On a pass:** it stops tracing and throws the trace away, so passing runs leave no zip files behind.
 
 Each close step is wrapped separately, so a cleanup error can never hide the real test result.
@@ -82,7 +91,7 @@ The hook runs after every scenario, in this order, and attaches evidence with `s
 
 | Attachment name | Media type | When | Content |
 |---|---|---|---|
-| `self-healing` | `text/plain` | at least one locator healed | `Locators healed - update the page object:` followed by one `HealEvent.summary()` per line |
+| `self-healing` | `text/plain` | at least one locator healed | `Locators healed - update the locator file (src/main/resources/locators):` followed by one `HealEvent.summary()` per line |
 | `api-calls` | `text/plain` | scenario failed **and** made HTTP calls | every call in order: method, URL, status, time, request and response body (cut to 4000 characters each); see [api-requests.md](api-requests.md) |
 | `failure-screenshot` | `image/png` | scenario failed **and** a page was opened (`session.hasPage()`) | full-page screenshot. If it fails, the error is ignored so the real failure stays visible. |
 | `trace` | `text/plain` | a trace zip was saved (failure with a browser context) | absolute path of the zip |
@@ -104,7 +113,7 @@ The `hasPage()` check makes sure the hook never opens a browser only to take a s
 | `TestCaseStarted` | Creates a `ScenarioResult` for the scenario. |
 | `EmbedEvent` | Sorts each attachment: images become base64 `data:` URIs (embedded, so the HTML is one self-contained file), `trace` stores the path, and `self-healing` is split into lines with the header line dropped. One line is one heal. |
 | `TestCaseFinished` | Stores the Cucumber `Result`: status, duration and error. |
-| `TestRunFinished` | Sorts scenarios by file and line, computes totals, writes the HTML and JSON files and prints the console line. |
+| `TestRunFinished` | Keeps the **last attempt** of each scenario (a retried scenario is one test case per attempt) and remembers how many attempts it took. Then it sorts scenarios by file and line, computes totals, writes the HTML, JSON and `failed-scenarios.txt` files and prints the console line. |
 
 ### How totals are counted
 
@@ -114,6 +123,10 @@ The `hasPage()` check makes sure the hook never opens a browser only to take a s
 | skipped | `SKIPPED`, `PENDING`, `UNUSED` (a scenario with no result also counts as `UNUSED`) |
 | failed | everything else: `FAILED`, `UNDEFINED` (missing step definition), `AMBIGUOUS` |
 | heals | sum of heal lines over all scenarios |
+| flaky ("passed after retry") | `PASSED` on the last attempt after more than one attempt |
+
+Totals count each scenario once, by its last attempt. Each row in the JSON has `attempts`, and the HTML shows
+an "N attempts" chip on retried scenarios.
 
 ### `run-summary.html`
 
@@ -158,6 +171,43 @@ At the end of every run:
 [REPORT] 12 scenarios: 11 passed, 1 failed, 0 skipped, 2 locator(s) healed, 18.7 s -> D:\…\target\reports\run-summary.html
 ```
 
+## Allure and Extent
+
+Both are standard Cucumber plugins, so every scenario, step, tag and attachment from the hooks (screenshot,
+`api-calls`, `self-healing`, trace path) appears in them with no extra code. Both handle parallel scenarios.
+
+### Allure
+
+| | |
+|---|---|
+| Dependency | `io.qameta.allure:allure-cucumber7-jvm` |
+| Results | `target/allure-results`, set in [`allure.properties`](../src/test/resources/allure.properties) |
+| HTML | `mvn allure:report` writes `target/reports/allure/index.html`. `mvn allure:serve` builds it and opens it in the browser. The `allure-maven` plugin downloads the Allure command line itself, so nothing needs installing. |
+| Retries | Attempts of a retried scenario are grouped under one test (**Retries** tab). |
+
+Open the generated report through a web server (`allure:serve` does this), not straight from disk. The
+browser blocks the report's data files on `file://`.
+
+### Extent
+
+| | |
+|---|---|
+| Dependency | `tech.grasshopper:extentreports-cucumber7-adapter` |
+| Settings | [`extent.properties`](../src/test/resources/extent.properties) (output path, base64 screenshots) and [`extent-config.xml`](../src/test/resources/extent-config.xml) (title, theme, time format) |
+| HTML | `target/reports/extent/index.html`, written at the end of `mvn test`. It is a single file, because screenshots are embedded as base64. |
+| Retries | Each attempt is its own entry. |
+
+### `ReportSetupPlugin`
+
+[`ReportSetupPlugin`](../src/test/java/com/agenticqa/reporting/ReportSetupPlugin.java) runs when the run
+starts, before any result is written:
+
+- It **empties `target/allure-results`**. Allure would otherwise merge every earlier run it finds there (when
+  `mvn clean` was not run) into one report.
+- It writes the run's **environment** to both reports: environment name, UI URL, browser, threads, retry
+  settings, tag filter and Java version. In Allure this is the *Environment* widget, in Extent the *System info*
+  on the dashboard.
+
 ## 3. Per CI job: `job_summary.py`
 
 [`.github/workflows/tests.yml`](../.github/workflows/tests.yml) runs one job per suite (`api` and `ui`, filtered by Cucumber tag). After the tests, and **even if they failed** (`if: always()`), it runs:
@@ -180,7 +230,7 @@ The script **never fails the job**. If the JSON is missing, for example because 
 
 | Artifact | When | Contents |
 |---|---|---|
-| `reports-<suite>` | always | `target/reports/` (both HTML reports and both JSON files), `target/healing/heals.jsonl` and `healing/fingerprints.json` (the baseline as it was after the run) |
+| `reports-<suite>` | always | `target/reports/` (run summary, Cucumber, Extent and Allure HTML, JSON files, failed-scenario list), `target/allure-results/`, `target/healing/heals.jsonl` and `healing/fingerprints.json` (the baseline as it was after the run) |
 | `traces-<suite>` | job failed | `target/artifacts/traces/*.zip` |
 | `app-log-<suite>` | job failed | the sample app's server log |
 
@@ -197,13 +247,14 @@ Usual triage when a CI run fails:
 mvn test                                           # all scenarios, env dev
 mvn test -Dcucumber.filter.tags="@ui"              # one suite
 mvn test -Denv=ci -Dthreads=2                      # other environment / parallelism
+mvn allure:report                                  # Allure HTML from the last run (allure:serve opens it)
 python .github/scripts/job_summary.py target/reports/run-summary.json local   # preview the CI summary
 ```
 
-Then open `target/reports/run-summary.html`. `target/` is git-ignored and cleaned by `mvn clean`, so old traces and reports disappear with it. `heals.jsonl` is only appended to, so it keeps adding lines across runs until you clean.
+Then open `target/reports/run-summary.html` or `target/reports/extent/index.html`. `target/` is git-ignored and cleaned by `mvn clean`, so old traces and reports disappear with it. `heals.jsonl` is only appended to, so it keeps adding lines across runs until you clean.
 
 ## Extending
 
 - **New evidence for every scenario** (for example console logs or a HAR file): attach it in `Hooks.after` with a distinct name. It appears in `cucumber.html` automatically. To show it in the run summary, add a branch for that name in `RunSummaryPlugin.onEmbed`, add a field to `ScenarioResult`, and render it in `failureCard` or `json`.
 - **New fields for CI:** add them in `RunSummaryPlugin.json` first, then read them in `job_summary.py`. The JSON file is the only interface between the two.
-- **A third-party report** (Allure and similar): add its Cucumber plugin to `@CucumberOptions.plugin`. The existing reports keep working next to it.
+- **Another report** (Xray, ReportPortal, …): add its Cucumber plugin to `@CucumberOptions.plugin`, as was done for Allure and Extent. The existing reports keep working next to it.

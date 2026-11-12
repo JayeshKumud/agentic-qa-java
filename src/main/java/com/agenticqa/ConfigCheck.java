@@ -2,7 +2,10 @@ package com.agenticqa;
 
 import com.agenticqa.config.EnvConfig;
 
-/** Throwaway check for step 1: prints the active environment and its settings. */
+/**
+ * Prints the active environment and its effective settings (file, placeholders and -D overrides applied):
+ * {@code mvn -q exec:java -Dexec.mainClass=com.agenticqa.ConfigCheck -Denv=uat}
+ */
 public class ConfigCheck {
 
     /**
@@ -12,6 +15,10 @@ public class ConfigCheck {
      */
     public static void main(String[] args) {
         System.out.println("env      : " + EnvConfig.envName());
-        System.out.println("settings : " + EnvConfig.get());
+        var settings = EnvConfig.get();
+        System.out.println("ui       : " + settings.ui());
+        System.out.println("services : " + settings.services().keySet().stream()
+                .map(name -> name + "=" + settings.service(name)).toList());
+        System.out.println("retry    : " + settings.retry());
     }
 }

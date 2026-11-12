@@ -54,6 +54,16 @@ public class Variables {
     }
 
     /**
+     * Reads a value if it exists.
+     *
+     * @param name the variable name
+     * @return the value, or null if nothing was saved under that name
+     */
+    public synchronized String find(String name) {
+        return values.get(name);
+    }
+
+    /**
      * The scenario's token, created on first use.
      *
      * @return 8 hex characters, the same for the whole scenario

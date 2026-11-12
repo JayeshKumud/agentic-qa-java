@@ -50,8 +50,8 @@ public class Hooks {
         List<HealEvent> heals = session.healEvents();
         if (!heals.isEmpty()) {
             String text = heals.stream().map(HealEvent::summary).collect(Collectors.joining(System.lineSeparator()));
-            scenario.attach("Locators healed - update the page object:" + System.lineSeparator() + text,
-                    "text/plain", "self-healing");
+            scenario.attach("Locators healed - update the locator file (src/main/resources/locators):"
+                    + System.lineSeparator() + text, "text/plain", "self-healing");
         }
         boolean failed = scenario.isFailed();
         List<ApiCall> calls = session.apiCalls();

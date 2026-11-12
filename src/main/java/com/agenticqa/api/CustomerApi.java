@@ -3,24 +3,30 @@ package com.agenticqa.api;
 import com.agenticqa.core.TestSession;
 import com.microsoft.playwright.APIResponse;
 
+import java.util.Map;
+
 /**
- * Business operations of the customers endpoint of the sample app. Steps call these methods and never build
- * URLs or requests themselves.
+ * Shortcuts for the customers endpoints that many steps use. It holds no URLs, request classes or per-field
+ * methods: the endpoints are declared in {@code src/main/resources/endpoints/customers.yaml} and bodies are
+ * {@link Payload}s, so a new endpoint needs no change here.
+ * <p>
+ * Such a facade is optional. Code that calls an endpoint once can use {@link EndpointClient} directly, and
+ * feature files use the generic steps ({@code When I call "customers.get" as ...}).
  */
-public class CustomerApi extends ApiClient {
+public class CustomerApi {
 
     /** Name of the service under {@code services:} in the environment file. */
     public static final String SERVICE = "customers";
 
-    private static final String CUSTOMERS = "/customers";
+    private final EndpointClient api;
 
     /**
-     * Creates the client for the "customers" service of the active environment.
+     * Creates the shortcuts for one scenario.
      *
      * @param session the per-scenario session
      */
     public CustomerApi(TestSession session) {
-        super(session, session.settings().service(SERVICE));
+        this.api = new EndpointClient(session);
     }
 
     /**
@@ -29,7 +35,7 @@ public class CustomerApi extends ApiClient {
      * @return the response (200 with a JSON array)
      */
     public APIResponse list() {
-        return get(CUSTOMERS);
+        return api.call("customers.list");
     }
 
     /**
@@ -39,50 +45,38 @@ public class CustomerApi extends ApiClient {
      * @return the response (200 with the customer, 404 if it does not exist)
      */
     public APIResponse getById(long id) {
-        return get(CUSTOMERS + "/" + id);
+        return api.call("customers.get", Map.of("id", id));
     }
 
     /**
      * POST /customers: creates a customer.
      *
-     * @param customer the customer to create (id is ignored)
+     * @param body a {@link Payload}, a map, a record, or JSON text sent exactly as written
      * @return the response (201 with the created customer, 422 if invalid)
      */
-    public APIResponse create(Customer customer) {
-        return post(CUSTOMERS, customer.withId(null));
-    }
-
-    /**
-     * POST /customers with a body written as JSON text, sent exactly as given (for requests built in feature
-     * files and for negative tests).
-     *
-     * @param json the request body
-     * @return the response (201 with the created customer, 422 if invalid)
-     */
-    public APIResponse createFromJson(String json) {
-        return postJson(CUSTOMERS, json);
-    }
-
-    /**
-     * PUT /customers/{id} with a body written as JSON text, sent exactly as given.
-     *
-     * @param id   the customer id
-     * @param json the request body
-     * @return the response (200 with the updated customer, 422 if invalid)
-     */
-    public APIResponse updateFromJson(long id, String json) {
-        return putJson(CUSTOMERS + "/" + id, json);
+    public APIResponse create(Object body) {
+        return api.call("customers.create", body);
     }
 
     /**
      * PUT /customers/{id}: replaces a customer's name, email and status.
      *
-     * @param id       the customer id
-     * @param customer the new values (its id is ignored)
-     * @return the response (200 with the updated customer)
+     * @param id   the customer id
+     * @param body a {@link Payload}, a map, a record, or JSON text sent exactly as written
+     * @return the response (200 with the updated customer, 422 if invalid)
      */
-    public APIResponse update(long id, Customer customer) {
-        return put(CUSTOMERS + "/" + id, customer.withId(null));
+    public APIResponse update(long id, Object body) {
+        return api.call("customers.update", Map.of("id", id), body);
+    }
+
+    /**
+     * DELETE /customers/{id}: deletes one customer.
+     *
+     * @param id the customer id
+     * @return the response (204 when deleted)
+     */
+    public APIResponse deleteById(long id) {
+        return api.call("customers.delete", Map.of("id", id));
     }
 
     /**
@@ -93,15 +87,5 @@ public class CustomerApi extends ApiClient {
      */
     public static Customer asCustomer(APIResponse response) {
         return ApiClient.read(response, Customer.class);
-    }
-
-    /**
-     * DELETE /customers/{id}: deletes one customer.
-     *
-     * @param id the customer id
-     * @return the response (204 when deleted)
-     */
-    public APIResponse deleteById(long id) {
-        return delete(CUSTOMERS + "/" + id);
     }
 }

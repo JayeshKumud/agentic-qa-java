@@ -3,6 +3,7 @@ package com.agenticqa.steps;
 import com.agenticqa.api.ApiClient;
 import com.agenticqa.api.Customer;
 import com.agenticqa.api.CustomerApi;
+import com.agenticqa.api.Payload;
 import com.agenticqa.core.TestData;
 import com.agenticqa.core.TestSession;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,7 +49,7 @@ public class CustomerApiSteps {
     @When("I create a customer named {string}")
     public void createCustomer(String name) {
         String unique = TestData.uniqueName(name);
-        APIResponse response = customers.create(Customer.newCustomer(unique, TestData.emailFor(unique)));
+        APIResponse response = customers.create(Payload.empty().set("name", unique).set("email", TestData.emailFor(unique)));
         session.put(RESPONSE, response);
         assertEquals(response.status(), 201, "Create failed: " + response.text());
         Customer customer = CustomerApi.asCustomer(response);
@@ -64,7 +65,7 @@ public class CustomerApiSteps {
     @When("I change the customer status to {string}")
     public void changeStatus(String status) {
         Customer current = session.get(CUSTOMER);
-        APIResponse response = customers.update(current.id(), current.withStatus(status));
+        APIResponse response = customers.update(current.id(), Payload.of(current).remove("id").set("status", status));
         session.put(RESPONSE, response);
         assertEquals(response.status(), 200, "Update failed: " + response.text());
         session.put(CUSTOMER, CustomerApi.asCustomer(response));

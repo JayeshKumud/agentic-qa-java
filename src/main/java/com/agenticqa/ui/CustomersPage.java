@@ -1,7 +1,6 @@
 package com.agenticqa.ui;
 
 import com.agenticqa.ui.healing.Healer;
-import com.agenticqa.ui.healing.SmartLocator;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
@@ -10,30 +9,26 @@ import java.util.List;
 
 /**
  * Page object of the customers page ("/"): search form, results table, pagination and the add-customer form.
- * Steps talk to this class and never use selectors themselves, so a changed id is fixed in one place.
+ * Steps talk to this class and never use selectors themselves.
+ * <p>
+ * The selectors live in {@code src/main/resources/locators/customers.json}, not in this class: a changed id is
+ * fixed in that file, and elements are looked up by name when they are used ({@code el.get("searchInput")}).
+ * Elements marked to heal there are self-healing locators; the result rows and the empty-result message can
+ * legitimately be absent, so they are plain locators.
  * <p>
  * Every action that reloads the page (search, add, paging) waits for the new page to finish loading, so the
  * next read never sees the old document.
- * <p>
- * Elements that are always on the page are {@link SmartLocator}s and heal themselves if their id changes;
- * the result rows and the empty-result message can legitimately be absent, so they stay plain locators.
  */
 public class CustomersPage {
 
     /** Rows shown per page by the sample app. */
     public static final int PAGE_SIZE = 5;
 
+    /** Name of the locator file, locators/customers.json. */
+    public static final String LOCATORS = "customers";
+
     private final Page page;
-    private final SmartLocator searchInput;
-    private final SmartLocator searchButton;
-    private final Locator rows;
-    private final Locator noResults;
-    private final SmartLocator pageIndicator;
-    private final SmartLocator nextLink;
-    private final SmartLocator previousLink;
-    private final SmartLocator newName;
-    private final SmartLocator newEmail;
-    private final SmartLocator addButton;
+    private final PageElements el;
 
     /**
      * Wraps the scenario's browser page.
@@ -43,16 +38,7 @@ public class CustomersPage {
      */
     public CustomersPage(Page page, Healer healer) {
         this.page = page;
-        this.searchInput = new SmartLocator(page, healer, "customers.searchInput", "search input", "#search-input");
-        this.searchButton = new SmartLocator(page, healer, "customers.searchButton", "search button", "#search-button");
-        this.rows = page.locator("#customers-table tr.customer-row");
-        this.noResults = page.locator("#no-results");
-        this.pageIndicator = new SmartLocator(page, healer, "customers.pageIndicator", "page indicator", "#page-indicator");
-        this.nextLink = new SmartLocator(page, healer, "customers.nextLink", "next page link", "#next-page-link");
-        this.previousLink = new SmartLocator(page, healer, "customers.previousLink", "previous page link", "#prev-page-link");
-        this.newName = new SmartLocator(page, healer, "customers.newName", "new customer name input", "#new-customer-name");
-        this.newEmail = new SmartLocator(page, healer, "customers.newEmail", "new customer email input", "#new-customer-email");
-        this.addButton = new SmartLocator(page, healer, "customers.addButton", "add customer button", "#add-customer-button");
+        this.el = new PageElements(page, healer, LOCATORS);
     }
 
     /**
@@ -72,8 +58,8 @@ public class CustomersPage {
      * @return this page, showing the results
      */
     public CustomersPage search(String text) {
-        searchInput.locator().fill(text);
-        page.waitForNavigation(searchButton.locator()::click);
+        el.get("searchInput").fill(text);
+        page.waitForNavigation(el.get("searchButton")::click);
         return this;
     }
 
@@ -85,9 +71,9 @@ public class CustomersPage {
      * @return this page, after the redirect
      */
     public CustomersPage addCustomer(String name, String email) {
-        newName.locator().fill(name);
-        newEmail.locator().fill(email);
-        page.waitForNavigation(addButton.locator()::click);
+        el.get("newName").fill(name);
+        el.get("newEmail").fill(email);
+        page.waitForNavigation(el.get("addButton")::click);
         return this;
     }
 
@@ -97,7 +83,7 @@ public class CustomersPage {
      * @return this page
      */
     public CustomersPage nextPage() {
-        page.waitForNavigation(nextLink.locator()::click);
+        page.waitForNavigation(el.get("nextLink")::click);
         return this;
     }
 
@@ -107,7 +93,7 @@ public class CustomersPage {
      * @return this page
      */
     public CustomersPage previousPage() {
-        page.waitForNavigation(previousLink.locator()::click);
+        page.waitForNavigation(el.get("previousLink")::click);
         return this;
     }
 
@@ -117,7 +103,7 @@ public class CustomersPage {
      * @return the row locator
      */
     public Locator rows() {
-        return rows;
+        return el.get("rows");
     }
 
     /**
@@ -126,7 +112,7 @@ public class CustomersPage {
      * @return its locator
      */
     public Locator noResultsMessage() {
-        return noResults;
+        return el.get("noResults");
     }
 
     /**
@@ -135,7 +121,7 @@ public class CustomersPage {
      * @return its locator
      */
     public Locator pageIndicator() {
-        return pageIndicator.locator();
+        return el.get("pageIndicator");
     }
 
     /**
@@ -145,12 +131,12 @@ public class CustomersPage {
      */
     public List<CustomerRow> visibleRows() {
         List<CustomerRow> result = new ArrayList<>();
-        for (Locator row : rows.all()) {
+        for (Locator row : el.get("rows").all()) {
             result.add(new CustomerRow(
                     Long.parseLong(row.getAttribute("data-customer-id")),
-                    row.locator(".col-name").innerText().trim(),
-                    row.locator(".col-email").innerText().trim(),
-                    row.locator(".col-status").innerText().trim()));
+                    el.within(row, "rowName").innerText().trim(),
+                    el.within(row, "rowEmail").innerText().trim(),
+                    el.within(row, "rowStatus").innerText().trim()));
         }
         return result;
     }

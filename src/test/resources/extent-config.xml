@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Look of the Extent Spark report (target/reports/extent/index.html). -->
+<extentreports>
+  <configuration>
+    <theme>standard</theme>
+    <encoding>UTF-8</encoding>
+    <documentTitle>agentic-qa-java test report</documentTitle>
+    <reportName>agentic-qa-java</reportName>
+    <timeStampFormat>yyyy-MM-dd HH:mm:ss</timeStampFormat>
+  </configuration>
+</extentreports>

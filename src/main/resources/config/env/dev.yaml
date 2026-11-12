@@ -25,3 +25,9 @@ healing:
   minScore: 0.6
   fingerprintsFile: healing/fingerprints.json
   reportFile: target/healing/heals.jsonl
+# Failed scenarios run again, right away; passed ones never do. count 0 switches retries off.
+# tags is a Cucumber tag expression choosing which scenarios may be retried ("" = all).
+# Override per run: -Dretry.count=2 -Dretry.tags="@api and not @noretry"
+retry:
+  count: 0
+  tags: "not @noretry"

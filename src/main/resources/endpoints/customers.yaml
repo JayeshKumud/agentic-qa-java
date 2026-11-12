@@ -1,0 +1,16 @@
+# Endpoints of the customers service. Feature files and Java code call them by name, FILE.KEY:
+#   When I call "customers.get" as "ada" with:      | id | ${adaId} |
+#   endpoints.call("customers.update", Map.of("id", 42), payload)
+# Adding an endpoint is one line here: no Java class, record or method per request.
+#
+# service: the name under 'services:' in the environment file (base URL, headers, timeout per environment).
+# path:    {name} is a path parameter, filled per call (and URL-encoded).
+# body:    optional default request body, a file under src/test/resources/testdata, used by
+#          'Given a new "x" request for "customers.create"'.
+service: customers
+endpoints:
+  list:   { method: GET,    path: /customers }
+  get:    { method: GET,    path: "/customers/{id}" }
+  create: { method: POST,   path: /customers,        body: customers/new_customer.json }
+  update: { method: PUT,    path: "/customers/{id}", body: customers/new_customer.json }
+  delete: { method: DELETE, path: "/customers/{id}" }
