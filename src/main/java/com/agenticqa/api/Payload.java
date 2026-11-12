@@ -10,8 +10,9 @@ import com.microsoft.playwright.APIResponse;
 import java.util.Map;
 
 /**
- * A JSON request body for any endpoint, built and changed by path, so Java code needs no request class (record,
- * POJO, builder or {@code withX} method) per endpoint:
+ * A JSON request body for any endpoint, built and changed by path, so Java code does not need a request class (record,
+ * POJO, builder or {@code withX} method) per endpoint. Where a typed body helps, a POJO such as
+ * {@link com.agenticqa.api.model.CustomerRequest} works too, and {@code Payload.of(pojo)} edits it further:
  * <pre>
  * Payload body = Payload.file("customers/new_customer.json")    // a template under src/test/resources/testdata
  *         .set("name", "Ada " + token)

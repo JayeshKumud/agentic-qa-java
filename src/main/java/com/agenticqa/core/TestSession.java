@@ -186,9 +186,11 @@ public class TestSession {
         Browser browser = BrowserPool.browser(ui);
         context = browser.newContext(new Browser.NewContextOptions()
                 .setBaseURL(ui.baseUrl())
-                .setViewportSize(1366, 768));
-        context.setDefaultTimeout(ui.timeoutMs());
-        PlaywrightAssertions.setDefaultAssertionTimeout(ui.timeoutMs()); // assertThat would otherwise use 5 s
+                .setViewportSize(ui.viewport().width(), ui.viewport().height()));
+        Settings.Waits waits = ui.waits();
+        context.setDefaultTimeout(waits.actionMs());
+        context.setDefaultNavigationTimeout(waits.navigationMs());
+        PlaywrightAssertions.setDefaultAssertionTimeout(waits.assertionMs()); // assertThat would otherwise use 5 s
         context.tracing().start(new Tracing.StartOptions()
                 .setScreenshots(true).setSnapshots(true).setSources(false));
     }

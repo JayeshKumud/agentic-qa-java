@@ -1,0 +1,7 @@
+{
+  "_comment": "Paging links shared by every list page. Use plain names, or pagination.nextLink when a page has its own nextLink too.",
+
+  "pageIndicator": { "selector": "#page-indicator", "description": "page indicator" },
+  "nextLink":      { "selector": "#next-page-link", "description": "next page link" },
+  "previousLink":  { "selector": "#prev-page-link", "description": "previous page link" }
+}

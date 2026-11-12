@@ -16,6 +16,7 @@ Feature: Customers page
   Scenario: Search shows a message when nothing matches
     When I search the customers page for a name that matches nobody
     Then the page says no customers were found
+    And the page heading is "Customers"
 
   Scenario: Results are shown five per page
     Given 6 customers share a unique name tag

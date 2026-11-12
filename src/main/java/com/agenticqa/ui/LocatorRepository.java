@@ -9,11 +9,13 @@ import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Locators of every page, read from JSON files instead of being written in page objects:
+ * Locators of every page, read from JSON files instead of being written in page objects (a page object may use
+ * several files, see {@link #find}):
  * {@code src/main/resources/locators/PAGE.json}, for example {@code locators/customers.json}.
  * <p>
  * Each entry maps a name to a selector, either short ({@code "searchInput": "#search-input"}) or as an object:
@@ -73,6 +75,37 @@ public final class LocatorRepository {
                     + page(page).keySet());
         }
         return definition;
+    }
+
+    /**
+     * Finds a locator in several files, as a page object that uses more than one locator file does.
+     * <ul>
+     *   <li>{@code "searchInput"}: the files are searched in the order given; the first file that has the
+     *       name wins, so a page's own file can override a shared one listed after it.</li>
+     *   <li>{@code "pagination.nextLink"}: qualified with the file name, only that file is used (it need not
+     *       be in the list). The part before the last dot is the file, so files in subfolders work too:
+     *       {@code "customers/form.addButton"}.</li>
+     * </ul>
+     * Pure lookup, unit tested.
+     *
+     * @param files the locator files of the page, without .json, in search order
+     * @param name  a locator name, plain or qualified as FILE.NAME
+     * @return the definition
+     * @throws IllegalArgumentException if no file has the name (the message lists every file's names)
+     */
+    public static Definition find(List<String> files, String name) {
+        int dot = name.lastIndexOf('.');
+        if (dot > 0) return get(name.substring(0, dot), name.substring(dot + 1));
+        for (String file : files) {
+            Definition definition = page(file).get(name);
+            if (definition != null) return definition;
+        }
+        StringBuilder known = new StringBuilder();
+        for (String file : files) {
+            known.append(System.lineSeparator()).append("  ").append(FOLDER).append(file).append(".json: ")
+                    .append(page(file).keySet());
+        }
+        throw new IllegalArgumentException("No locator '" + name + "' in the locator files of this page." + known);
     }
 
     private static Map<String, Definition> load(String page) {

@@ -1,0 +1,91 @@
+# Settings shared by every environment. The environment file (config/env/NAME.yaml, chosen with -Denv=NAME) is
+# merged on top of this file: a key set there wins, everything else comes from here. So an environment file holds
+# only what differs per environment: URLs, credentials (client id, secrets) and the odd override.
+#
+# Placeholders work here too: ${NAME} is the system property NAME (-DNAME=...) or else the environment variable
+# NAME; ${NAME:-fallback} uses the fallback when neither is set.
+
+# ------------------------------------------------------------------------------------------------ browser
+ui:
+  browser: chromium          # chromium, firefox or webkit; per run: -Dui.browser=firefox
+  headless: true             # per run: -Dui.headless=false
+  slowMoMs: 0                # delay per browser action, for watching a run
+  viewport: { width: 1366, height: 768 }
+  # How long Playwright waits before it gives up (milliseconds). Per run: -Dui.waits.actionMs=30000 and so on.
+  waits:
+    actionMs: 15000          # click, fill, locator waits
+    navigationMs: 30000      # page.navigate, waiting for load
+    assertionMs: 15000       # assertThat(...) web assertions (Playwright's own default is only 5 s)
+
+# ------------------------------------------------------------------------------------------------ API
+api:
+  timeoutMs: 15000           # default timeout of one HTTP request; a service can set its own timeoutMs
+
+# Defaults for every service under 'services:'. Each environment file gives each service its baseUrl and,
+# when it needs one, its auth (client id and secret). Headers here are sent to every service.
+serviceDefaults:
+  headers:
+    Accept: application/json
+
+# ------------------------------------------------------------------------------------------------ endpoints
+# The endpoint catalog. Paths are the same in every environment, so they live here, once; only the service's
+# base URL changes per environment. Feature files and Java code call an endpoint by name, GROUP.KEY:
+#   When I call "customers.get" as "ada" with:      | id | ${adaId} |
+#   new EndpointClient(session).call("customers.update", Map.of("id", 42), payload)
+#
+# service: the name under 'services:' in the environment file (base URL, auth, headers, timeout).
+# path:    {name} is a path parameter, filled per call (and URL-encoded).
+# body:    optional default request body, a file under src/test/resources/testdata, used by
+#          'Given a new "x" request for "customers.create"'.
+endpoints:
+  customers:
+    service: customers
+    endpoints:
+      list:   { method: GET,    path: /customers }
+      get:    { method: GET,    path: "/customers/{id}" }
+      create: { method: POST,   path: /customers,        body: customers/new_customer.json }
+      update: { method: PUT,    path: "/customers/{id}", body: customers/new_customer.json }
+      delete: { method: DELETE, path: "/customers/{id}" }
+  # orders:
+  #   service: orders
+  #   endpoints:
+  #     create: { method: POST, path: /orders, body: orders/new_order.json }
+  #     get:    { method: GET,  path: "/orders/{orderId}" }
+
+# ------------------------------------------------------------------------------------------------ execution
+# Feature or scenario tags choose how scenarios run:
+#   @Parallel    runs in parallel with the other parallel scenarios (-Dthreads=N threads, default 4)
+#   @Sequential  runs alone, one scenario after the other, after the parallel ones (wins over @Parallel)
+# Scenarios with neither tag use defaultMode. Per run: -Dexecution.defaultMode=sequential
+execution:
+  defaultMode: parallel
+
+# ------------------------------------------------------------------------------------------------ cleanup
+# Folders emptied before a run starts, so logs and reports show only the new run. Per run: -Dcleanup.beforeRun=false
+# The rerun file of 'mvn test -Dcucumber.features=@target/reports/failed-scenarios.txt' is kept.
+cleanup:
+  beforeRun: true
+  folders:
+    - target/reports
+    - target/allure-results
+    - target/artifacts
+    - target/healing
+    - target/logs
+  # Everything printed during the run (console output and API/browser logs) is also written here.
+  logFile: target/logs/run.log
+
+# ------------------------------------------------------------------------------------------------ healing
+healing:
+  enabled: true
+  probeTimeoutMs: 2000
+  minScore: 0.6
+  fingerprintsFile: healing/fingerprints.json
+  reportFile: target/healing/heals.jsonl
+
+# ------------------------------------------------------------------------------------------------ retry
+# Failed scenarios run again, right away; passed ones never do. count 0 switches retries off.
+# tags is a Cucumber tag expression choosing which scenarios may be retried ("" = all).
+# Per run: -Dretry.count=2 -Dretry.tags="@api and not @noretry"
+retry:
+  count: 0
+  tags: "not @noretry"

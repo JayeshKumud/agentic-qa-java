@@ -1,58 +1,49 @@
 package com.agenticqa.api;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.agenticqa.config.EnvConfig;
+import com.agenticqa.config.Settings.EndpointGroup;
+import com.agenticqa.config.Settings.EndpointSpec;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * The endpoint catalog: every endpoint of every service, declared in YAML instead of Java, one file per service
- * under {@code src/main/resources/endpoints}. An endpoint is called by name, {@code FILE.KEY}, for example
- * {@code customers.create} is the key {@code create} in {@code endpoints/customers.yaml}:
+ * The endpoint catalog: every endpoint of every service, declared once in YAML instead of Java, under
+ * {@code endpoints:} in {@code src/main/resources/config/common.yaml}. Paths are the same in every environment;
+ * only the service's base URL (and auth) changes, and that comes from the environment file. An endpoint is called
+ * by name, {@code GROUP.KEY}, for example {@code customers.create}:
  * <pre>
- * service: customers
  * endpoints:
- *   create: { method: POST, path: /customers, body: customers/new_customer.json }
- *   get:    { method: GET,  path: "/customers/{id}" }
+ *   customers:
+ *     service: customers
+ *     endpoints:
+ *       create: { method: POST, path: /customers, body: customers/new_customer.json }
+ *       get:    { method: GET,  path: "/customers/{id}" }
  * </pre>
- * A file is read once per JVM and shared by all threads (read-only).
+ * The catalog is part of the settings, read once per JVM and shared by all threads (read-only). An environment
+ * file may override an entry, though that is rarely needed.
  */
 public final class Endpoints {
 
-    /** Classpath folder of the endpoint files. */
-    public static final String FOLDER = "endpoints/";
+    /** Where the catalog lives, for error messages. */
+    public static final String SOURCE = "config/common.yaml (endpoints:)";
 
     private static final Pattern PARAM = Pattern.compile("\\{([A-Za-z0-9_]+)}");
-    private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory())
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    private static final Map<String, Group> FILES = new ConcurrentHashMap<>();
 
     /** Utility class, not instantiable. */
     private Endpoints() {}
 
-    /** The content of one endpoint file. */
-    private record Group(String service, Map<String, Spec> endpoints) {}
-
-    /** One entry of an endpoint file, as written. */
-    private record Spec(String method, String path, String body) {}
-
     /**
      * One endpoint.
      *
-     * @param name    FILE.KEY, for example customers.create
+     * @param name    GROUP.KEY, for example customers.create
      * @param service the service name under 'services:' in the environment file
      * @param method  HTTP verb
      * @param path    path template, for example /customers/{id}
@@ -103,43 +94,34 @@ public final class Endpoints {
     /**
      * Looks up an endpoint.
      *
-     * @param name FILE.KEY, for example customers.create
+     * @param name GROUP.KEY, for example customers.create
      * @return the endpoint
-     * @throws IllegalArgumentException if the file or the key does not exist (the message lists what does)
+     * @throws IllegalArgumentException if the group or the key does not exist (the message lists what does)
      */
     public static Endpoint get(String name) {
         int dot = name.lastIndexOf('.');
         if (dot <= 0 || dot == name.length() - 1) {
-            throw new IllegalArgumentException("Endpoint names are FILE.KEY, for example customers.create: " + name);
+            throw new IllegalArgumentException("Endpoint names are GROUP.KEY, for example customers.create: " + name);
         }
-        String file = name.substring(0, dot);
+        String groupName = name.substring(0, dot);
         String key = name.substring(dot + 1);
-        Group group = FILES.computeIfAbsent(file, Endpoints::load);
-        Spec spec = group.endpoints().get(key);
+        Map<String, EndpointGroup> catalog = EnvConfig.get().endpoints();
+        EndpointGroup group = catalog.get(groupName);
+        if (group == null) {
+            throw new IllegalArgumentException("No endpoint group '" + groupName + "' in " + SOURCE + ". Groups: "
+                    + new TreeMap<>(catalog).keySet());
+        }
+        if (group.service() == null || group.endpoints() == null) {
+            throw new IllegalArgumentException(SOURCE + ": group '" + groupName + "' needs 'service:' and 'endpoints:'");
+        }
+        EndpointSpec spec = group.endpoints().get(key);
         if (spec == null) {
-            throw new IllegalArgumentException("No endpoint '" + key + "' in " + FOLDER + file + ".yaml. Endpoints: "
-                    + new TreeMap<>(group.endpoints()).keySet());
+            throw new IllegalArgumentException("No endpoint '" + key + "' in group '" + groupName + "' of " + SOURCE
+                    + ". Endpoints: " + new TreeMap<>(group.endpoints()).keySet());
         }
         if (spec.method() == null || spec.path() == null) {
-            throw new IllegalArgumentException(FOLDER + file + ".yaml: endpoint '" + key + "' needs method and path");
+            throw new IllegalArgumentException(SOURCE + ": endpoint '" + name + "' needs method and path");
         }
         return new Endpoint(name, group.service(), spec.method().trim().toUpperCase(), spec.path().trim(), spec.body());
-    }
-
-    private static Group load(String file) {
-        String resource = FOLDER + file.replace('.', '/') + ".yaml";
-        try (InputStream in = Endpoints.class.getClassLoader().getResourceAsStream(resource)) {
-            if (in == null) {
-                throw new IllegalArgumentException("Endpoint file not found on the classpath: " + resource
-                        + " (expected under src/main/resources/" + FOLDER + ")");
-            }
-            Group group = YAML.readValue(in, Group.class);
-            if (group == null || group.service() == null || group.endpoints() == null) {
-                throw new IllegalArgumentException(resource + " needs 'service:' and 'endpoints:'");
-            }
-            return group;
-        } catch (IOException e) {
-            throw new UncheckedIOException("Cannot read endpoint file " + resource, e);
-        }
     }
 }

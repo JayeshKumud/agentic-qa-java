@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 /**
  * A typed view of a customer response, used where steps compare a customer field by field (for example a
  * table row on the page with what the API returned). It is only for reading: request bodies are
- * {@link Payload}s, so there are no factory or {@code withX} methods to maintain, and unknown response fields
+ * {@link Payload}s or request POJOs such as {@link com.agenticqa.api.model.CustomerRequest}, and unknown response fields
  * are ignored.
  * <p>
  * Most endpoints need no such record at all: read responses by path ({@code Payload.of(response).get("id")}

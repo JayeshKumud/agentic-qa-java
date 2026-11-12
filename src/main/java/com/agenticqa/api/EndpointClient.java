@@ -41,7 +41,7 @@ public class EndpointClient {
     /**
      * Calls an endpoint without path parameters and without body.
      *
-     * @param endpoint FILE.KEY, for example customers.list
+     * @param endpoint GROUP.KEY, for example customers.list
      * @return the response
      */
     public APIResponse call(String endpoint) {
@@ -51,7 +51,7 @@ public class EndpointClient {
     /**
      * Calls an endpoint without path parameters.
      *
-     * @param endpoint FILE.KEY
+     * @param endpoint GROUP.KEY
      * @param body     the body: a {@link Payload}, JSON text (sent exactly as written), any object Jackson can
      *                 serialize, or null
      * @return the response
@@ -63,7 +63,7 @@ public class EndpointClient {
     /**
      * Calls an endpoint without body.
      *
-     * @param endpoint   FILE.KEY
+     * @param endpoint   GROUP.KEY
      * @param pathParams values for the {name} parts of the path
      * @return the response
      */
@@ -74,7 +74,7 @@ public class EndpointClient {
     /**
      * Calls an endpoint.
      *
-     * @param endpoint   FILE.KEY
+     * @param endpoint   GROUP.KEY
      * @param pathParams values for the {name} parts of the path
      * @param body       the body (see {@link #call(String, Object)}), or null
      * @return the response
@@ -86,7 +86,7 @@ public class EndpointClient {
     /**
      * Calls an endpoint, with every option.
      *
-     * @param endpoint   FILE.KEY
+     * @param endpoint   GROUP.KEY
      * @param pathParams values for the {name} parts of the path
      * @param body       the body (see {@link #call(String, Object)}), or null
      * @param headers    headers for this call only; they win over the service's default headers

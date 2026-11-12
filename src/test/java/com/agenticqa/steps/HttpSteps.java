@@ -38,7 +38,7 @@ import static org.testng.Assert.fail;
  *       Both work in values, files, bodies, URLs, headers and expectations.</li>
  *   <li>A response is stored under the name of the request that produced it (or the name given for calls
  *       without body), and also as the last response for {@code the API responds with status ...}.</li>
- *   <li>Endpoints of the catalog (src/main/resources/endpoints) are called by name, {@code "customers.get"}:
+ *   <li>Endpoints of the catalog (endpoints: in src/main/resources/config/common.yaml) are called by name, {@code "customers.get"}:
  *       method, path and service come from the catalog, so feature files hold no URLs.</li>
  * </ul>
  */
@@ -135,7 +135,7 @@ public class HttpSteps {
      * {@code Given a new "ada" request for "customers.create"}.
      *
      * @param name     the request name
-     * @param endpoint FILE.KEY, for example customers.create
+     * @param endpoint GROUP.KEY, for example customers.create
      */
     @Given("a new {string} request for {string}")
     public void forEndpoint(String name, String endpoint) {
@@ -271,7 +271,7 @@ public class HttpSteps {
      * Path parameters come from the request, else from variables of the same name. The response is stored
      * under the request's name.
      *
-     * @param endpoint FILE.KEY
+     * @param endpoint GROUP.KEY
      * @param name     the request name
      */
     @When("I call {string} with the {string} request")
@@ -286,7 +286,7 @@ public class HttpSteps {
      * Calls a catalog endpoint without body: {@code When I call "customers.list" as "all"}. Path parameters come
      * from variables of the same name.
      *
-     * @param endpoint FILE.KEY
+     * @param endpoint GROUP.KEY
      * @param name     the name to store the response under
      */
     @When("I call {string} as {string}")
@@ -301,7 +301,7 @@ public class HttpSteps {
      *   | id | ${adaId} |
      * </pre>
      *
-     * @param endpoint FILE.KEY
+     * @param endpoint GROUP.KEY
      * @param name     the name to store the response under
      * @param table    parameter/value rows
      */

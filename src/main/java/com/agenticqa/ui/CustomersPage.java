@@ -11,24 +11,27 @@ import java.util.List;
  * Page object of the customers page ("/"): search form, results table, pagination and the add-customer form.
  * Steps talk to this class and never use selectors themselves.
  * <p>
- * The selectors live in {@code src/main/resources/locators/customers.json}, not in this class: a changed id is
- * fixed in that file, and elements are looked up by name when they are used ({@code el.get("searchInput")}).
- * Elements marked to heal there are self-healing locators; the result rows and the empty-result message can
- * legitimately be absent, so they are plain locators.
+ * The selectors live in several locator files under {@code src/main/resources/locators}, one per area of the
+ * page, not in this class:
+ * <ul>
+ *   <li>{@code customers.json}: search and results table</li>
+ *   <li>{@code customer-form.json}: the add-customer form</li>
+ *   <li>{@code pagination.json}: paging links, shared with other list pages</li>
+ *   <li>{@code common.json}: elements every page has (added by {@link BasePage})</li>
+ * </ul>
+ * Elements are looked up by name when they are used. Elements marked to heal there are self-healing locators;
+ * the result rows and the empty-result message can legitimately be absent, so they are plain locators.
  * <p>
- * Every action that reloads the page (search, add, paging) waits for the new page to finish loading, so the
- * next read never sees the old document.
+ * Every action that reloads the page (search, add, paging) waits for the new page to finish loading
+ * ({@link #submit}), so the next read never sees the old document.
  */
-public class CustomersPage {
+public class CustomersPage extends BasePage<CustomersPage> {
 
     /** Rows shown per page by the sample app. */
     public static final int PAGE_SIZE = 5;
 
-    /** Name of the locator file, locators/customers.json. */
-    public static final String LOCATORS = "customers";
-
-    private final Page page;
-    private final PageElements el;
+    /** Locator files of this page, most specific first; {@value BasePage#COMMON}.json is added by BasePage. */
+    public static final List<String> LOCATORS = List.of("customers", "customer-form", "pagination");
 
     /**
      * Wraps the scenario's browser page.
@@ -37,18 +40,12 @@ public class CustomersPage {
      * @param healer this scenario's healer
      */
     public CustomersPage(Page page, Healer healer) {
-        this.page = page;
-        this.el = new PageElements(page, healer, LOCATORS);
+        super(page, healer, LOCATORS.toArray(String[]::new));
     }
 
-    /**
-     * Opens the page.
-     *
-     * @return this page
-     */
-    public CustomersPage open() {
-        page.navigate("/");
-        return this;
+    @Override
+    protected String path() {
+        return "/";
     }
 
     /**
@@ -58,9 +55,8 @@ public class CustomersPage {
      * @return this page, showing the results
      */
     public CustomersPage search(String text) {
-        el.get("searchInput").fill(text);
-        page.waitForNavigation(el.get("searchButton")::click);
-        return this;
+        fill("searchInput", text);
+        return submit("searchButton");
     }
 
     /**
@@ -71,10 +67,9 @@ public class CustomersPage {
      * @return this page, after the redirect
      */
     public CustomersPage addCustomer(String name, String email) {
-        el.get("newName").fill(name);
-        el.get("newEmail").fill(email);
-        page.waitForNavigation(el.get("addButton")::click);
-        return this;
+        fill("newName", name);
+        fill("newEmail", email);
+        return submit("addButton");
     }
 
     /**
@@ -83,8 +78,7 @@ public class CustomersPage {
      * @return this page
      */
     public CustomersPage nextPage() {
-        page.waitForNavigation(el.get("nextLink")::click);
-        return this;
+        return submit("pagination.nextLink");
     }
 
     /**
@@ -93,8 +87,7 @@ public class CustomersPage {
      * @return this page
      */
     public CustomersPage previousPage() {
-        page.waitForNavigation(el.get("previousLink")::click);
-        return this;
+        return submit("pagination.previousLink");
     }
 
     /**
@@ -103,7 +96,7 @@ public class CustomersPage {
      * @return the row locator
      */
     public Locator rows() {
-        return el.get("rows");
+        return find("rows");
     }
 
     /**
@@ -112,7 +105,7 @@ public class CustomersPage {
      * @return its locator
      */
     public Locator noResultsMessage() {
-        return el.get("noResults");
+        return find("noResults");
     }
 
     /**
@@ -121,7 +114,7 @@ public class CustomersPage {
      * @return its locator
      */
     public Locator pageIndicator() {
-        return el.get("pageIndicator");
+        return find("pageIndicator");
     }
 
     /**
@@ -131,7 +124,7 @@ public class CustomersPage {
      */
     public List<CustomerRow> visibleRows() {
         List<CustomerRow> result = new ArrayList<>();
-        for (Locator row : el.get("rows").all()) {
+        for (Locator row : find("rows").all()) {
             result.add(new CustomerRow(
                     Long.parseLong(row.getAttribute("data-customer-id")),
                     el.within(row, "rowName").innerText().trim(),

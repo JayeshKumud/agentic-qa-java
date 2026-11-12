@@ -22,7 +22,7 @@ public class ServiceClient extends ApiClient {
      * @throws IllegalArgumentException if the service is not configured
      */
     public ServiceClient(TestSession session, String name) {
-        super(session, session.settings().service(name));
+        super(session, name, session.settings().service(name));
         this.name = name;
     }
 

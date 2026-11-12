@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Generates test data that is unique per call, so scenarios running in parallel against the same app never
@@ -28,6 +29,19 @@ public final class TestData {
     public static String token() {
         return UUID.randomUUID().toString().substring(0, 8);
     }
+
+    /**
+     * A number that no other call returns in this run, even from parallel threads, and that is larger than any
+     * number of earlier runs on this machine (it starts at the current time in milliseconds), for ids such as a
+     * zone id.
+     *
+     * @return for example 1762950712345
+     */
+    public static long uniqueNumber() {
+        return NUMBERS.updateAndGet(last -> Math.max(last + 1, System.currentTimeMillis()));
+    }
+
+    private static final AtomicLong NUMBERS = new AtomicLong();
 
     /**
      * Makes a readable name unique.

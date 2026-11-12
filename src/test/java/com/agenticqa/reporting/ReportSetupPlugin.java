@@ -13,19 +13,17 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
- * Prepares the Allure and Extent reports when the run starts, before any scenario writes a result:
- * <ul>
- *   <li>empties {@value #ALLURE_RESULTS}, so the Allure report shows this run only, also without
- *       {@code mvn clean} (Allure itself would merge every run it finds there),</li>
- *   <li>writes the run's environment (env name, URLs, browser, threads, retries) to Allure's
- *       {@code environment.properties} and to the Extent report's system info.</li>
- * </ul>
+ * Prepares the Allure and Extent reports when the run starts, before any scenario writes a result: it writes the
+ * run's environment (env name, URLs, browser, threads, execution mode, retries) to Allure's
+ * {@code environment.properties} and to the Extent report's system info.
+ * <p>
+ * The results of earlier runs are already gone by then: {@code TestRunner} empties the report folders, including
+ * {@value #ALLURE_RESULTS}, before Cucumber starts (see {@code cleanup} in config/common.yaml). Without that,
+ * Allure would merge every run it finds there.
  * Listed before the Allure and Extent plugins in {@code @CucumberOptions}, so it runs first.
  */
 public class ReportSetupPlugin implements ConcurrentEventListener {
@@ -42,7 +40,6 @@ public class ReportSetupPlugin implements ConcurrentEventListener {
         Map<String, String> info = environment();
         Path results = Paths.get(ALLURE_RESULTS);
         try {
-            clear(results);
             Files.createDirectories(results);
             StringBuilder properties = new StringBuilder();
             info.forEach((key, value) -> properties.append(key.replace(' ', '.')).append('=')
@@ -67,17 +64,11 @@ public class ReportSetupPlugin implements ConcurrentEventListener {
         info.put("UI URL", String.valueOf(settings.ui().baseUrl()));
         info.put("Browser", settings.ui().browser() + (settings.ui().headless() ? " (headless)" : ""));
         info.put("Threads", System.getProperty("threads", System.getProperty("dataproviderthreadcount", "?")));
+        info.put("Default mode", settings.execution().defaultMode() + " (@Parallel / @Sequential tags win)");
         info.put("Retries", retry.count() == 0 ? "off" : retry.count() + " for " + (retry.tags().isBlank()
                 ? "all scenarios" : retry.tags()));
         info.put("Tags", System.getProperty("cucumber.filter.tags", "all"));
         info.put("Java", System.getProperty("java.version"));
         return info;
-    }
-
-    private static void clear(Path folder) throws IOException {
-        if (!Files.exists(folder)) return;
-        try (Stream<Path> files = Files.walk(folder)) {
-            for (Path file : files.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(file);
-        }
     }
 }

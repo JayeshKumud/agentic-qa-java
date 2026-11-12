@@ -58,7 +58,7 @@ flowchart TB
     subgraph Ext["Outside the JVM"]
         PW["Playwright<br/>browser + APIRequestContext"]
         APP["Application under test<br/>(sample-target-app :8000)"]
-        YAML["config/env/*.yaml<br/>endpoints/*.yaml · locators/*.json"]
+        YAML["config/common.yaml + config/env/*.yaml<br/>(endpoint catalog in common.yaml) · locators/*.json"]
         FP["healing/fingerprints.json"]
         OUT["target/reports · traces · healing"]
     end
@@ -127,6 +127,11 @@ classDiagram
     class EndpointClient {
         +call(name, pathParams, body) APIResponse
     }
+    class BasePage {
+        +open() T
+        #fill(name, text)
+        #submit(name)
+    }
     class CustomersPage
     class PageElements {
         +get(name) Locator
@@ -140,7 +145,8 @@ classDiagram
     EndpointClient --> ServiceClient : per call
     CustomerApi --> EndpointClient
     ApiClient --> TestSession : api(), recordApiCall()
-    CustomersPage --> PageElements
+    BasePage <|-- CustomersPage
+    BasePage --> PageElements : locator files + common
     PageElements --> SmartLocator : heal true
     SmartLocator --> Healer : resolve()
     TestSession --> Healer : creates lazily
@@ -166,7 +172,7 @@ classDiagram
 
 Clients on top of it:
 
-- **`EndpointClient`** calls any endpoint of the catalog (`src/main/resources/endpoints/<service>.yaml`) by
+- **`EndpointClient`** calls any endpoint of the catalog (`endpoints:` in `src/main/resources/config/common.yaml`) by
   name, for example `call("customers.get", Map.of("id", 42))`. Bodies are `Payload`s (any JSON, edited by
   path), so no request class or method is needed per endpoint.
 - **`CustomerApi`** is an optional facade of one-line methods over `EndpointClient`, for the operations the
@@ -302,10 +308,10 @@ doesn't cancel the other. A newer push to the same branch cancels the run that i
 
 | You want to… | Change |
 |---|---|
-| Test a new endpoint | One line in `endpoints/<service>.yaml`, then the generic steps (`When I call "..."`) |
-| Talk to a new microservice | Add an entry under `services:` in each `config/env/*.yaml` and an `endpoints/<service>.yaml` |
+| Test a new endpoint | One line under `endpoints:` in `config/common.yaml`, then the generic steps (`When I call "..."`) |
+| Talk to a new microservice | Add an entry under `services:` (URL, auth) in each `config/env/*.yaml` and a group under `endpoints:` in `config/common.yaml` |
 | Add business-level API steps | A step class using `EndpointClient` and `Payload`, taking `TestSession` in its constructor |
-| Test a new page | Add `locators/<page>.json`, a page object using `PageElements`, plus a step class |
+| Test a new page | Add its `locators/*.json` file(s), a page object extending `BasePage`, plus a step class |
 | Share data between step classes | Add a `DataKey` in `steps/Keys.java` and use `session.put` / `get` |
 | Add an environment | Add `config/env/<name>.yaml` (copy `test.yaml`) and run with `-Denv=<name>` |
 | Retry more or fewer scenarios | `retry.count` / `retry.tags` in the env file, or `-Dretry.count` / `-Dretry.tags` |

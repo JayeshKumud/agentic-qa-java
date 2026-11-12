@@ -391,28 +391,32 @@ public APIResponse update(long id, Object body) { return api.call("customers.upd
 ```
 
 Each method is just a named shortcut to `EndpointClient.call(...)`. The method, path and service are not in Java at
-all. They come from the endpoint catalog, `src/main/resources/endpoints/customers.yaml`:
+all. They come from the endpoint catalog, under `endpoints:` in `src/main/resources/config/common.yaml` (paths are
+the same in every environment, so they are written once):
 
 ```yaml
-service: customers
 endpoints:
-  create: { method: POST, path: /customers, body: customers/new_customer.json }
-  get:    { method: GET,  path: "/customers/{id}" }
+  customers:
+    service: customers
+    endpoints:
+      create: { method: POST, path: /customers, body: customers/new_customer.json }
+      get:    { method: GET,  path: "/customers/{id}" }
 ```
 
 ### What to do for a new endpoint
 
-**An endpoint on an existing service (e.g. customers):** add one line to `customers.yaml`:
+**An endpoint on an existing service (e.g. customers):** add one line under `endpoints.customers.endpoints` in
+`common.yaml`:
 
 ```yaml
-  search: { method: GET, path: /customers/search }
+      search: { method: GET, path: /customers/search }
 ```
 
 **A new service (e.g. orders):**
 
 1. Add it under `services:` in each environment file (`config/env/dev.yaml`, `test.yaml`, ...) with its `baseUrl`
-   and headers.
-2. Create `src/main/resources/endpoints/orders.yaml` with its endpoints.
+   and, if it needs a login, its `auth` (client id and secret as `${NAME}` placeholders).
+2. Add an `orders` group with its endpoints under `endpoints:` in `config/common.yaml`.
 3. Optionally, add a typical request body as a JSON file under `src/test/resources/testdata/orders/`.
 
 Feature files can then use it straight away with the generic steps, with no Java at all:
@@ -445,8 +449,8 @@ requirement.
 
 | You need                                       | Write                                                                 |
 |------------------------------------------------|-----------------------------------------------------------------------|
-| a new endpoint                                 | one line in `endpoints/<service>.yaml`                                |
-| a new service                                  | an entry under `services:` per env file plus a new `endpoints/<service>.yaml` |
+| a new endpoint                                 | one line under `endpoints:` in `config/common.yaml`                   |
+| a new service                                  | an entry under `services:` per env file plus a group under `endpoints:` in `common.yaml` |
 | a default request body                         | a JSON file under `testdata/`                                         |
 | field variations (missing, wrong type, nested) | nothing: field steps in the feature file, or `Payload.set/remove`     |
 | a business-readable step                       | a step method using `EndpointClient` and `Payload`                    |
