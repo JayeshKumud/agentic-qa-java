@@ -12,7 +12,8 @@ public CustomersPage(Page page, Healer healer) {
 
 public CustomersPage search(String text) {
     el.get("searchInput").fill(text);
-    page.waitForNavigation(el.get("searchButton")::click);
+    el.get("searchButton").click();
+    page.waitForLoadState();       // the click waits for the navigation; this waits for the new page to load
     return this;
 }
 ```

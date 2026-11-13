@@ -59,7 +59,7 @@ public class CustomersPage {
      */
     public CustomersPage search(String text) {
         el.get("searchInput").fill(text);
-        page.waitForNavigation(el.get("searchButton")::click);
+        clickAndWait("searchButton");
         return this;
     }
 
@@ -73,7 +73,7 @@ public class CustomersPage {
     public CustomersPage addCustomer(String name, String email) {
         el.get("newName").fill(name);
         el.get("newEmail").fill(email);
-        page.waitForNavigation(el.get("addButton")::click);
+        clickAndWait("addButton");
         return this;
     }
 
@@ -83,7 +83,7 @@ public class CustomersPage {
      * @return this page
      */
     public CustomersPage nextPage() {
-        page.waitForNavigation(el.get("nextLink")::click);
+        clickAndWait("nextLink");
         return this;
     }
 
@@ -93,8 +93,21 @@ public class CustomersPage {
      * @return this page
      */
     public CustomersPage previousPage() {
-        page.waitForNavigation(el.get("previousLink")::click);
+        clickAndWait("previousLink");
         return this;
+    }
+
+    /**
+     * Clicks an element that loads a new page and waits until that page has loaded.
+     * The click itself waits for the navigation it starts; waitForLoadState then waits for the new document's
+     * load event. This replaces the deprecated {@code page.waitForNavigation(Runnable)}; waitForURL would not
+     * work here because adding a customer can redirect back to the same URL.
+     *
+     * @param name the locator name in customers.json
+     */
+    private void clickAndWait(String name) {
+        el.get(name).click();
+        page.waitForLoadState();
     }
 
     /**
