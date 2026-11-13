@@ -51,6 +51,31 @@ public final class PageElements {
     }
 
     /**
+     * Finds an element whose selector has a placeholder, for example {@code button.role_login_ROLE}, so one
+     * entry in the file serves every role or row: {@code el.get("roleLogin", "ROLE", "COE")}.
+     * The healing key includes the value, so each role keeps its own fingerprint and a healed lookup can
+     * never return another role's element.
+     *
+     * @param name        the locator name in the file
+     * @param placeholder the text in the selector to replace, for example "ROLE" or "MYROW"
+     * @param value       what to put in its place
+     * @return the locator, healed if needed
+     * @throws IllegalArgumentException if the file has no locator with that name, or its selector does not
+     *                                  contain the placeholder
+     */
+    public Locator get(String name, String placeholder, String value) {
+        Definition definition = LocatorRepository.get(pageName, name);
+        if (!definition.selector().contains(placeholder)) {
+            throw new IllegalArgumentException("Locator '" + name + "' in locators/" + pageName
+                    + ".json has no placeholder '" + placeholder + "': " + definition.selector());
+        }
+        String selector = definition.selector().replace(placeholder, value);
+        if (!definition.heal()) return page.locator(selector);
+        return new SmartLocator(page, healer, definition.key() + "." + value,
+                definition.description().replace(placeholder, value), selector).locator();
+    }
+
+    /**
      * Finds an element inside another one, for example a cell inside a table row.
      *
      * @param parent the outer element

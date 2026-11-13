@@ -52,8 +52,8 @@
     "heal": false
   },
   "roleLogin": {
-    "selector": ".role_login_",
-    "description": "role login option"
+    "selector": "[data-testid='modal-box'] button.role_login_ROLE",
+    "description": "Select button of the ROLE role"
   },
   "logInField": {
     "selector": "#kc-form-login",
