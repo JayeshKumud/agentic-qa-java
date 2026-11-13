@@ -26,18 +26,27 @@ public abstract class ApiClient {
     private final String baseUrl;
     private final int timeoutMs;
     private final Map<String, String> defaultHeaders;
+    private final String serviceName;
+    private final Settings.Auth auth;
 
     /**
      * Creates a client for one configured service.
      *
-     * @param session the per-scenario session that provides the API context
-     * @param service the service settings (base URL, timeout, default headers)
+     * @param session     the per-scenario session that provides the API context
+     * @param serviceName the service name, for log and error messages
+     * @param service     the service settings (base URL, timeout, default headers, auth)
      */
-    protected ApiClient(TestSession session, Settings.Service service) {
+    protected ApiClient(TestSession session, String serviceName, Settings.Service service) {
+        if (service.baseUrl() == null || service.baseUrl().isBlank()) {
+            throw new IllegalStateException("Service '" + serviceName + "' has no baseUrl. Set services."
+                    + serviceName + ".baseUrl in the environment file.");
+        }
         this.session = session;
+        this.serviceName = serviceName;
         this.baseUrl = service.baseUrl();
         this.timeoutMs = service.timeoutMs();
         this.defaultHeaders = service.headers();
+        this.auth = service.auth();
     }
 
     /**
@@ -165,7 +174,8 @@ public abstract class ApiClient {
         String url = baseUrl + path;
         Map<String, String> allHeaders = new LinkedHashMap<>(defaultHeaders);
         if (json != null) allHeaders.putIfAbsent("Content-Type", "application/json");
-        allHeaders.putAll(headers);
+        allHeaders.putAll(ServiceAuth.headers(serviceName, auth));
+        allHeaders.putAll(headers); // a step's own Authorization header wins, for negative tests
 
         RequestOptions options = RequestOptions.create().setMethod(verb).setTimeout(timeoutMs);
         allHeaders.forEach(options::setHeader);
@@ -178,7 +188,8 @@ public abstract class ApiClient {
 
         System.out.printf("[API] [%s] %s %s -> %d (%d ms)%n", Thread.currentThread().getName(), verb, url,
                 response.status(), ms);
-        session.recordApiCall(new ApiCall(verb, url, allHeaders, json, response.status(), response.text(), ms));
+        session.recordApiCall(new ApiCall(verb, url, ServiceAuth.mask(allHeaders), json, response.status(),
+                response.text(), ms));
         return response;
     }
 

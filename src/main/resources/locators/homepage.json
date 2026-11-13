@@ -1,0 +1,103 @@
+{
+  "_comment": "Locators of the homepage (HomePage). Name -> selector, or an object with selector, description and heal (default true; false for elements that may legitimately be absent). Keys starting with _ are ignored.",
+  "addToolButton": {
+    "selector": ".add-tool-button-wrapper",
+    "description": "add tool button"
+  },
+  "saveLayoutButton": {
+    "selector": "Save Layout",
+    "description": "save layout button"
+  },
+  "loadLayoutButton": {
+    "selector": "Load Layout",
+    "description": "load layout button"
+  },
+  "layoutSavedBanner": {
+    "selector": "Layout saved",
+    "description": "layout saved confirmation banner",
+    "heal": false
+  },
+  "roleTitle": {
+    "selector": "//*[@data-testid='change-role']",
+    "description": "change role title"
+  },
+  "notificationTableFirstRow": {
+    "selector": "[row-index='0']",
+    "description": "first row in notifications table",
+    "heal": false
+  },
+  "notificationTableFirstRowTitle": {
+    "selector": "[row-index='0'] div[col-id='title']",
+    "description": "title in the first notifications table row",
+    "heal": false
+  },
+  "notificationTableFirstRowDescription": {
+    "selector": "[row-index='0'] div[col-id='description']",
+    "description": "description in the first notifications table row",
+    "heal": false
+  },
+  "notificationTableFirstRowTime": {
+    "selector": "[row-index='0'] div[col-id='time']",
+    "description": "time in the first notifications table row",
+    "heal": false
+  },
+  "modalBox": {
+    "selector": "[data-testid='modal-box']",
+    "description": "modal dialog box",
+    "heal": false
+  },
+  "trBody": {
+    "selector": "tbody tr",
+    "description": "table body row",
+    "heal": false
+  },
+  "roleLogin": {
+    "selector": ".role_login_",
+    "description": "role login option"
+  },
+  "logInField": {
+    "selector": "#kc-form-login",
+    "description": "login form"
+  },
+  "usernameField": {
+    "selector": "Username or email",
+    "description": "username or email field"
+  },
+  "signInButton": {
+    "selector": "#kc-login",
+    "description": "sign in button"
+  },
+  "invalidLoginError": {
+    "selector": "//*[contains(text(),'Invalid username or password')]",
+    "description": "invalid username or password error message",
+    "heal": false
+  },
+  "btnLogOut": {
+    "selector": "//*[contains(text(),'Log out')]",
+    "description": "log out button"
+  },
+  "lblSign": {
+    "selector": "//*[@id='kc-header-wrapper' and text()='Open Balancing Platform']",
+    "description": "Open Balancing Platform sign-in heading"
+  },
+  "notiTableRowSeverity": {
+    "selector": "[row-index='MYROW'] div[col-id='severity']",
+    "description": "severity cell in the notification table row",
+    "heal": false
+  },
+  "notiTableRowTime": {
+    "selector": "[row-index='MYROW'] div[col-id='time']",
+    "description": "time cell in the notification table row",
+    "heal": false
+  },
+  "notiTableRowTitle": {
+    "selector": "[row-index='MYROW'] div[col-id='title']",
+    "description": "title cell in the notification table row",
+    "heal": false
+  },
+  "notiTableRowDesc": {
+    "selector": "[row-index='MYROW'] div[col-id='description']",
+    "description": "description cell in the notification table row",
+    "heal": false
+  }
+}

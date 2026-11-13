@@ -3,7 +3,8 @@ package com.agenticqa;
 import com.agenticqa.config.EnvConfig;
 
 /**
- * Prints the active environment and its effective settings (file, placeholders and -D overrides applied):
+ * Prints the active environment and its effective settings (common.yaml and the environment file merged,
+ * placeholders and -D overrides applied; secrets masked):
  * {@code mvn -q exec:java -Dexec.mainClass=com.agenticqa.ConfigCheck -Denv=uat}
  */
 public class ConfigCheck {
@@ -14,11 +15,14 @@ public class ConfigCheck {
      * @param args not used
      */
     public static void main(String[] args) {
-        System.out.println("env      : " + EnvConfig.envName());
+        System.out.println("env       : " + EnvConfig.envName());
         var settings = EnvConfig.get();
-        System.out.println("ui       : " + settings.ui());
-        System.out.println("services : " + settings.services().keySet().stream()
+        System.out.println("ui        : " + settings.ui());
+        System.out.println("services  : " + settings.services().keySet().stream()
                 .map(name -> name + "=" + settings.service(name)).toList());
-        System.out.println("retry    : " + settings.retry());
+        System.out.println("endpoints : " + settings.endpoints().keySet());
+        System.out.println("execution : " + settings.execution());
+        System.out.println("cleanup   : " + settings.cleanup());
+        System.out.println("retry     : " + settings.retry());
     }
 }

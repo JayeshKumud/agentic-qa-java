@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * Shortcuts for the customers endpoints that many steps use. It holds no URLs, request classes or per-field
- * methods: the endpoints are declared in {@code src/main/resources/endpoints/customers.yaml} and bodies are
+ * methods: the endpoints are declared under {@code endpoints:} in {@code src/main/resources/config/common.yaml} and bodies are
  * {@link Payload}s, so a new endpoint needs no change here.
  * <p>
  * Such a facade is optional. Code that calls an endpoint once can use {@link EndpointClient} directly, and

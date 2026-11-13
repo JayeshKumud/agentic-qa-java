@@ -16,7 +16,9 @@ for smaller examples.
 | [`Variables`](../src/main/java/com/agenticqa/core/Variables.java) | Scenario variables: `${name}` and the `{unique}` token. |
 | [`JsonPaths`](../src/main/java/com/agenticqa/core/JsonPaths.java) | Reads and changes values deep inside JSON by path. Handles merge patches and typed values. Unit tested. |
 | [`ServiceClient`](../src/main/java/com/agenticqa/api/ServiceClient.java) | Sends any method to any configured service. |
-| [`Endpoints`](../src/main/java/com/agenticqa/api/Endpoints.java) | The endpoint catalog: endpoints declared in YAML, called by name (`customers.get`). |
+| [`Endpoints`](../src/main/java/com/agenticqa/api/Endpoints.java) | The endpoint catalog: endpoints declared once in `config/common.yaml`, called by name (`customers.get`). |
+| [`ServiceAuth`](../src/main/java/com/agenticqa/api/ServiceAuth.java) | Adds a service's Authorization header from its `auth` settings (OAuth2 client credentials, basic, bearer). |
+| [`CustomerRequest`](../src/main/java/com/agenticqa/api/model/CustomerRequest.java) | An example request POJO; any POJO can be a request body. |
 | [`EndpointClient`](../src/main/java/com/agenticqa/api/EndpointClient.java) | Calls any catalog endpoint from Java: `call("customers.get", Map.of("id", 42))`. |
 | [`Payload`](../src/main/java/com/agenticqa/api/Payload.java) | Any JSON request body in Java, built from a file, map, record or response and edited by path. |
 | [`HttpSteps`](../src/test/java/com/agenticqa/steps/HttpSteps.java) | The generic Gherkin steps listed below. |
@@ -25,24 +27,32 @@ for smaller examples.
 
 ## Services (microservices)
 
-Every service is configured by name in `config/env/<env>.yaml`:
+Every service is configured by name in `config/env/<env>.yaml`, with what differs per environment: its URL
+and its credentials. Headers every service gets (`serviceDefaults.headers`) are in `config/common.yaml`.
 
 ```yaml
 services:
   customers:
     baseUrl: http://127.0.0.1:8000
-    headers:
-      Accept: application/json
   orders:                          # a second microservice is just another entry
-    baseUrl: http://127.0.0.1:8001
+    baseUrl: ${UAT_ORDERS_URL:-https://uat-api.orders.example.com}
     timeoutMs: 30000               # optional, defaults to api.timeoutMs
     headers:
-      X-Api-Key: change-me         # sent with every request to this service
+      X-Tenant: qa                 # sent with every request to this service, on top of serviceDefaults
+    auth:                          # optional: none (default), oauth2, basic or bearer
+      type: oauth2
+      tokenUrl: ${UAT_AUTH_URL}
+      clientId: ${UAT_ORDERS_CLIENT_ID}
+      clientSecret: ${UAT_ORDERS_CLIENT_SECRET}
 ```
+
+With `oauth2`, a token is fetched once per run (client credentials grant), shared by all threads and renewed
+before it expires; every request gets `Authorization: Bearer <token>`. Secrets are masked in logs and reports.
+See [running-tests.md](running-tests.md#urls-client-ids-and-secrets-environment-files).
 
 Steps address a service by its name (`on the "orders" service`). You can override a URL per run with
 `-Dservices.orders.baseUrl=https://orders.staging.example`. An unknown name fails with the list of configured
-services. The endpoint files (below) name their service the same way.
+services. The endpoint catalog (below) names its services the same way.
 
 All services share the scenario's browser context, so cookies set by a login on one service or on the page are
 also sent to the others.
@@ -90,6 +100,32 @@ Every call also becomes the "last response", so `Then the API responds with stat
 | `Then the "list" response field "$" has 3 items` | Size of an array (or object). `$` is the whole body. |
 | `And I save the "order" response field "id" as "orderId"` | Use it later as `${orderId}`. |
 | `And the variable "region" is "eu-{unique}"` | A fixed value that several requests share. |
+| `Given a unique number is saved as "orderNo"` | A number no other call returns in this run, even in parallel. Use it as `${orderNo}`. |
+
+### Set a zone id in one step, read it in the next
+
+[`ZoneSteps`](../src/test/java/com/agenticqa/steps/ZoneSteps.java) sets a unique zone id (a number, unique across
+parallel scenarios) and keeps it in two places: the `TestSession` under `Keys.ZONE_ID` for Java steps in any step
+class, and the variable `${zoneId}` for feature files. See
+[`zone_id.feature`](../src/test/resources/features/api/zone_id.feature).
+
+```gherkin
+Given a unique zone id is set
+When I read the zone id
+Then the zone id read is the one that was set
+And the "zone" request field "zoneId" is set to "json:${zoneId}"
+```
+
+| Step | Notes |
+|---|---|
+| `Given a unique zone id is set` | New number, e.g. `1794511591661`. |
+| `Given the zone id is "${newZone}"` | Sets a given value, for example one a response returned. |
+| `When I read the zone id` | Reads it back from the session; fails clearly if no step set one. |
+| `Then the zone id read is the one that was set` | Same value in the session and in `${zoneId}`. |
+| `Then the zone id should be "..."`, `Then the zone id is not "..."` | Checks. |
+| `And I save the zone id as "firstZone"` | Copies it into another variable. |
+
+In Java, any step class of the scenario reads it with `long zoneId = session.get(Keys.ZONE_ID);`.
 
 ### Bridge to the customer and GUI steps
 
@@ -104,22 +140,26 @@ customer request`) use the named request `"customer"`. The generic steps can the
 ## Endpoint catalog: call endpoints by name
 
 With hundreds of endpoints, a Java class, record or method per request does not scale. Here an endpoint is one
-line of YAML, and feature files and Java code call it by name. File per service:
-[`src/main/resources/endpoints/customers.yaml`](../src/main/resources/endpoints/customers.yaml).
+line of YAML, and feature files and Java code call it by name. Endpoint paths are the same in every
+environment, so the catalog lives once, under `endpoints:` in
+[`src/main/resources/config/common.yaml`](../src/main/resources/config/common.yaml), one group per service:
 
 ```yaml
-service: customers                 # the name under 'services:' in the environment file
 endpoints:
-  list:   { method: GET,    path: /customers }
-  get:    { method: GET,    path: "/customers/{id}" }
-  create: { method: POST,   path: /customers,        body: customers/new_customer.json }
-  update: { method: PUT,    path: "/customers/{id}", body: customers/new_customer.json }
-  delete: { method: DELETE, path: "/customers/{id}" }
+  customers:                         # group name: the part before the dot in "customers.get"
+    service: customers               # the name under 'services:' in the environment file
+    endpoints:
+      list:   { method: GET,    path: /customers }
+      get:    { method: GET,    path: "/customers/{id}" }
+      create: { method: POST,   path: /customers,        body: customers/new_customer.json }
+      update: { method: PUT,    path: "/customers/{id}", body: customers/new_customer.json }
+      delete: { method: DELETE, path: "/customers/{id}" }
 ```
 
-The name is `<file>.<key>`, for example `customers.create`. `{id}` is a path parameter, URL-encoded when it is
-filled. `body` is an optional default body (a file under `src/test/resources/testdata`). The base URL,
-headers and timeout come from the environment file, so one catalog serves dev, test and UAT.
+The name is `<group>.<key>`, for example `customers.create`. `{id}` is a path parameter, URL-encoded when it is
+filled. `body` is an optional default body (a file under `src/test/resources/testdata`). The base URL, auth
+(client id and secret), headers and timeout come from the environment file, so one catalog serves dev, test
+and UAT.
 
 ### Steps
 
@@ -133,7 +173,7 @@ headers and timeout come from the environment file, so one catalog serves dev, t
 
 A path parameter not given explicitly falls back to the variable with the same name: after
 `I save the "x" response field "id" as "id"`, `When I call "customers.get" as "read"` fills `{id}`. A missing
-parameter fails and names it. An unknown endpoint lists the endpoints of that file. See
+parameter fails and names it. An unknown endpoint lists the endpoints of that group. See
 [`endpoint_catalog.feature`](../src/test/resources/features/api/endpoint_catalog.feature).
 
 ### In Java: `EndpointClient` and `Payload`
@@ -159,15 +199,56 @@ APIResponse updated = api.call("customers.update", Map.of("id", id),
 be passed wherever a body object is expected. A typed record such as `Customer` is only worth keeping for the
 few responses that steps compare field by field. It needs no factory or `withX` methods.
 
+### Request POJOs
+
+A request body can also be a plain Java object (POJO). `EndpointClient` serializes any object with Jackson, so
+a POJO needs no extra code to be sent. Example:
+[`CustomerRequest`](../src/main/java/com/agenticqa/api/model/CustomerRequest.java).
+
+```java
+CustomerRequest body = new CustomerRequest()
+        .setName("Ada Lovelace " + TestData.token())
+        .setEmail("ada@example.test")
+        .setStatus("inactive");                          // fields left null are not sent
+APIResponse created = api.call("customers.create", body);
+Customer customer = ApiClient.read(created, Customer.class);   // the response, typed
+
+// a negative test from the same POJO: Payload takes over where the type cannot
+api.call("customers.create", Payload.of(body).set("status", 42));
+```
+
+Rules for a request POJO: a no-argument constructor, getters and setters (setters may return `this` for
+chaining), `@JsonInclude(NON_NULL)` so unset fields are not sent, and `@JsonIgnoreProperties(ignoreUnknown = true)`
+so it can also read a response. Put them in `src/main/java/com/agenticqa/api/model`.
+
+In feature files, [`CustomerPojoSteps`](../src/test/java/com/agenticqa/steps/CustomerPojoSteps.java) keeps the POJO
+in the session and sends it ([`customer_pojo_requests.feature`](../src/test/resources/features/api/customer_pojo_requests.feature)):
+
+```gherkin
+Given a customer request object:
+  | name  | Grace Hopper {unique}              |
+  | email | grace.hopper.{unique}@example.test |
+And the customer request object status is "inactive"
+When I call "customers.create" with the customer request object as "pojo"
+Then the "pojo" response status is 201
+And the "pojo" response matches the customer request object
+```
+
+POJO or `Payload`? Use a POJO when a body is stable, mostly built in Java, and its type helps (autocomplete,
+compile errors on renamed fields). Use a JSON template plus `Payload` or the generic field steps when a body is
+large, changes often, or tests vary it field by field (missing fields, wrong types), which a POJO cannot express.
+Both go through the same `EndpointClient.call`, so they can be mixed.
+
 **What to write per new endpoint:**
 
 | You need | Write |
 |---|---|
-| a new endpoint | one line in `endpoints/<service>.yaml` |
+| a new endpoint | one line under its group in `endpoints:` of `config/common.yaml` |
 | a typical body for it | a JSON file under `testdata/`, referenced as `body:` |
+| a typed body used from Java | a POJO in `api/model` (optional) |
 | variations (missing field, wrong type, nested change) | nothing: field steps in the feature file, or `Payload.set/remove` |
-| a new service | one entry under `services:` per environment file, and a new `endpoints/<service>.yaml` |
-| a readable business step used in many scenarios | a step method using `EndpointClient` + `Payload` (optional) |
+| a new service | one entry under `services:` per environment file (URL, auth), and a new group under `endpoints:` in `common.yaml` |
+| a readable business step used in many scenarios | a step method using `EndpointClient` + `Payload` or a POJO (optional) |
 
 ## Paths and values
 

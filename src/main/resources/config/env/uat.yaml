@@ -1,40 +1,38 @@
 # UAT (user acceptance) environment. Run: mvn test -Denv=uat
+# Shared settings (browser, waits, endpoints, healing, ...) are in config/common.yaml; this file holds only what
+# differs here and wins over common.yaml.
 #
 # The URLs below are placeholders: replace the fallbacks with the real uat hosts, or set the variables in CI.
 # ${NAME} is filled from the system property NAME (-DNAME=...) or else the environment variable NAME;
-# ${NAME:-fallback} uses the fallback when neither is set. Keep secrets (API keys, passwords) out of this file:
-# reference them as ${NAME} and set them as CI secrets.
+# ${NAME:-fallback} uses the fallback when neither is set. Secrets (client secrets, passwords, API keys) are
+# never written here: they are ${NAME} without fallback, set as CI secrets or local environment variables.
+# A missing one fails the run at startup and names the variable.
 ui:
   baseUrl: ${UAT_UI_URL:-https://uat.customers.example.com}
-  browser: chromium
-  headless: true
-  slowMoMs: 0
-  timeoutMs: 30000
+  waits:
+    actionMs: 30000
+    navigationMs: 60000
+    assertionMs: 30000
 api:
   baseUrl: ${UAT_API_URL:-https://uat-api.customers.example.com}
   timeoutMs: 30000
-# Every HTTP service the tests talk to, by name. Feature files and endpoint files (src/main/resources/endpoints)
-# address a service by this name. Override a URL per run with -Dservices.customers.baseUrl=http://...
 services:
   customers:
     baseUrl: ${UAT_CUSTOMERS_URL:-https://uat-api.customers.example.com}
     timeoutMs: 30000
-    headers:
-      Accept: application/json
-      # X-Api-Key: ${UAT_CUSTOMERS_API_KEY}
+    # OAuth2 client credentials: a token is fetched once per run from tokenUrl and sent as
+    # "Authorization: Bearer ..." with every request to this service (renewed shortly before it expires).
+    auth:
+      type: ${UAT_CUSTOMERS_AUTH:-oauth2}     # none, oauth2, basic or bearer
+      tokenUrl: ${UAT_AUTH_URL:-https://uat-auth.example.com/oauth2/token}
+      clientId: ${UAT_CUSTOMERS_CLIENT_ID}
+      clientSecret: ${UAT_CUSTOMERS_CLIENT_SECRET}
+      scope: customers.read customers.write
   # orders:
   #   baseUrl: ${UAT_ORDERS_URL:-https://uat-api.orders.example.com}
-  #   headers:
-  #     X-Api-Key: ${UAT_ORDERS_API_KEY}
-healing:
-  enabled: true
-  probeTimeoutMs: 2000
-  minScore: 0.6
-  fingerprintsFile: healing/fingerprints.json
-  reportFile: target/healing/heals.jsonl
-# Failed scenarios run again, right away; passed ones never do. count 0 switches retries off.
-# tags is a Cucumber tag expression choosing which scenarios may be retried ("" = all).
-# Override per run: -Dretry.count=2 -Dretry.tags="@api and not @noretry"
+  #   auth:
+  #     type: basic
+  #     username: ${UAT_ORDERS_USER}
+  #     password: ${UAT_ORDERS_PASSWORD}
 retry:
   count: 2
-  tags: "not @noretry"

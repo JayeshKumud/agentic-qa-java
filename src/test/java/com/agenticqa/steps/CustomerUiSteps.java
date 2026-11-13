@@ -179,7 +179,8 @@ public class CustomerUiSteps {
     }
 
     /**
-     * Checks that nothing was healed in this scenario.
+     * Checks that nothing was healed in this sce
+     * nario.
      */
     @Then("no locator was healed")
     public void nothingHealed() {

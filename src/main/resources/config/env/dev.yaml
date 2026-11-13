@@ -1,33 +1,19 @@
+# Local development. Run: mvn test (dev is the default). Shared settings are in config/common.yaml;
+# this file holds only what differs here and wins over common.yaml.
 ui:
   baseUrl: http://127.0.0.1:8000
-  browser: chromium
-  headless: false
-  slowMoMs: 0
-  timeoutMs: 15000
+  headless: false            # watch the browser locally
 api:
   baseUrl: http://127.0.0.1:8000
-  timeoutMs: 15000
-# Every HTTP service the tests talk to, by name. Feature files address a service by this name, for example
-# 'on the "customers" service'. Override a URL per run with -Dservices.customers.baseUrl=http://...
+# Every HTTP service the tests talk to, by name. The endpoint catalog (endpoints: in common.yaml) addresses a
+# service by this name. Override a URL per run with -Dservices.customers.baseUrl=http://...
 services:
   customers:
     baseUrl: http://127.0.0.1:8000
-    headers:
-      Accept: application/json
-  # orders:
-  #   baseUrl: http://127.0.0.1:8001
-  #   timeoutMs: 30000
-  #   headers:
-  #     X-Api-Key: change-me
-healing:
-  enabled: true
-  probeTimeoutMs: 2000
-  minScore: 0.6
-  fingerprintsFile: healing/fingerprints.json
-  reportFile: target/healing/heals.jsonl
-# Failed scenarios run again, right away; passed ones never do. count 0 switches retries off.
-# tags is a Cucumber tag expression choosing which scenarios may be retried ("" = all).
-# Override per run: -Dretry.count=2 -Dretry.tags="@api and not @noretry"
-retry:
-  count: 0
-  tags: "not @noretry"
+    # The local sample app needs no login. A service that does gets an auth section, for example:
+    # auth:
+    #   type: oauth2                       # none, oauth2 (client credentials), basic or bearer
+    #   tokenUrl: http://127.0.0.1:9000/oauth2/token
+    #   clientId: ${DEV_CUSTOMERS_CLIENT_ID:-local-client}
+    #   clientSecret: ${DEV_CUSTOMERS_CLIENT_SECRET:-local-secret}
+    #   scope: customers.read customers.write

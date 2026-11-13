@@ -214,14 +214,18 @@ Cleanup calls are added to the call log like any other call.
 
 **No Java needed, in most cases.** Two YAML entries cover a new service and its endpoints:
 
-1. The service under `services:` in each environment file (base URL, headers, timeout).
-2. Its endpoints in `src/main/resources/endpoints/<service>.yaml`, one line each:
+1. The service under `services:` in each environment file (base URL, auth such as client id and secret,
+   headers, timeout).
+2. Its endpoints under `endpoints:` in `src/main/resources/config/common.yaml`, one line each (paths are the
+   same in every environment):
 
    ```yaml
-   service: orders
    endpoints:
-     create: { method: POST, path: /orders, body: orders/new_order.json }
-     get:    { method: GET,  path: "/orders/{id}" }
+     orders:
+       service: orders
+       endpoints:
+         create: { method: POST, path: /orders, body: orders/new_order.json }
+         get:    { method: GET,  path: "/orders/{id}" }
    ```
 
 Feature files then use the generic steps: `Given a new "order" request for "orders.create"`,
