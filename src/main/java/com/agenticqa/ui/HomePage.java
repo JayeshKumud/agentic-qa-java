@@ -1,7 +1,9 @@
 package com.agenticqa.ui;
 
 import com.agenticqa.ui.healing.Healer;
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.WaitForSelectorState;
 
 /**
  * Page object of the home page. Steps talk to this class and never use selectors themselves.
@@ -31,12 +33,17 @@ public class HomePage {
     /**
      * Clicks the Select button of a role in the change-role dialog. Each button carries the class
      * {@code role_login_<ROLE>}, so the role picks its own button directly, without reading table rows.
+     * <p>
+     * After the click it waits until the dialog has closed and the page has finished loading, so the next step
+     * sees the page of the new role. Both waits use the context's default timeouts (waits in the env file).
      *
      * @param role the role as shown in the Role column, for example "COE", "NBE" or "OEM"
      * @return this page
      */
     public HomePage selectRole(String role) {
         el.get("roleLogin", "ROLE", role).click();
+        el.get("modalBox").waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.HIDDEN));
+        page.waitForLoadState();
         return this;
     }
 }
