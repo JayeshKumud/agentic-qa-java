@@ -7,6 +7,7 @@ import com.agenticqa.core.TestData;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.CustomersPage;
 import com.agenticqa.ui.CustomersPage.CustomerRow;
+import com.agenticqa.ui.PageComponentFactory;
 import com.agenticqa.ui.healing.HealEvent;
 import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.Route;
@@ -31,7 +32,6 @@ public class CustomerUiSteps {
     private final TestSession session;
     private final CustomerApi customers;
     private final CustomerCleanup cleanup;
-    private CustomersPage customersPage;
 
     /**
      * Receives this scenario's objects from PicoContainer.
@@ -188,12 +188,12 @@ public class CustomerUiSteps {
     }
 
     /**
-     * The page object, created on first use so API-only scenarios never start a browser.
+     * The page object of this scenario, from the factory: created on first use (so API-only scenarios never start
+     * a browser) and the same instance for every later step.
      *
      * @return the customers page
      */
     private CustomersPage page() {
-        if (customersPage == null) customersPage = new CustomersPage(session.page(), session.healer());
-        return customersPage;
+        return PageComponentFactory.get(CustomersPage.class);
     }
 }

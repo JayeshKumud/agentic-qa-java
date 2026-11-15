@@ -65,7 +65,9 @@ A plain string (`"addButton": "#add-customer-button"`) is short for `{ "selector
 
 1. Create `src/main/resources/locators/<page>.json` with the elements.
 2. Create the page object with a `PageElements` for that file, and actions that use `el.get("...")`.
-3. Use it from a step class, created lazily (see `CustomerUiSteps.page()`), so API-only scenarios never open a
-   browser.
+3. Let the page object implement `PageComponent` (a public `(Page, Healer)` constructor and `getTitle()`).
+4. Get it in a step class from the factory, `PageComponentFactory.get(XxxPage.class)` (see `HomeSteps.homePage()`).
+   It is created on first use, so API-only scenarios never open a browser, and every later call in the same
+   scenario returns the same instance.
 
 `LocatorRepositoryTest` shows how to unit-test a locator file without a browser.

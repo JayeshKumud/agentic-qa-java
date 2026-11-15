@@ -19,7 +19,7 @@ import java.util.List;
  * Every action that reloads the page (search, add, paging) waits for the new page to finish loading, so the
  * next read never sees the old document.
  */
-public class CustomersPage {
+public class CustomersPage implements PageComponent {
 
     /** Rows shown per page by the sample app. */
     public static final int PAGE_SIZE = 5;
@@ -39,6 +39,12 @@ public class CustomersPage {
     public CustomersPage(Page page, Healer healer) {
         this.page = page;
         this.el = new PageElements(page, healer, LOCATORS);
+    }
+
+    /** @return the title of the browser page */
+    @Override
+    public String getTitle() {
+        return page.title();
     }
 
     /**

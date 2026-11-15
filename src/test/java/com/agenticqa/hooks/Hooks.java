@@ -2,6 +2,7 @@ package com.agenticqa.hooks;
 
 import com.agenticqa.api.ApiCall;
 import com.agenticqa.core.TestSession;
+import com.agenticqa.ui.PageComponentFactory;
 import com.agenticqa.ui.healing.HealEvent;
 import com.microsoft.playwright.Page;
 import io.cucumber.java.After;
@@ -36,12 +37,14 @@ public class Hooks {
     @Before
     public void before(Scenario scenario) {
         session.scenarioName(scenario.getName());
+        PageComponentFactory.start(session); // steps get pages with PageComponentFactory.get(XxxPage.class)
     }
 
     /**
      * Runs after each scenario. Healed locators are attached to the report. If it failed, the log of its HTTP
      * calls is attached, and if a page was used, a full-page screenshot too.
-     * Then it always closes everything; for failed scenarios the trace zip is kept and its path attached.
+     * Then it always closes everything; for failed scenarios the trace zip is kept and its path attached. The page
+     * objects of the scenario are forgotten, so the next scenario on this thread creates new ones.
      *
      * @param scenario the finished Cucumber scenario
      */
@@ -70,6 +73,7 @@ public class Hooks {
                 // a missing screenshot must not hide the real failure
             }
         }
+        PageComponentFactory.reset();
         Path trace = session.close(failed);
         if (trace != null) {
             scenario.attach(trace.toAbsolutePath().toString(), "text/plain", "trace");
