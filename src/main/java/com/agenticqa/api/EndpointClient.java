@@ -14,7 +14,7 @@ import java.util.function.UnaryOperator;
  * Calls any endpoint of the catalog ({@link Endpoints}) by name. This one class replaces a client class with
  * one method per endpoint:
  * <pre>
- * EndpointClient api = ApiFactory.getApi(EndpointClient.class);
+ * EndpointClient api = new EndpointClient(session);
  * APIResponse created = api.call("customers.create", Payload.file("customers/new_customer.json").set("name", n));
  * APIResponse read    = api.call("customers.get", Map.of("id", id));
  * APIResponse updated = api.call("customers.update", Map.of("id", id), Payload.of(read).set("status", "inactive"));
@@ -23,7 +23,7 @@ import java.util.function.UnaryOperator;
  * every call goes through {@link ApiClient#send}, so it is logged, recorded for the report and shares cookies
  * with the browser.
  */
-public class EndpointClient implements Api {
+public class EndpointClient {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 

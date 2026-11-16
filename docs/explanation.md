@@ -467,15 +467,7 @@ hook, `order = 0`) binds that same object to the scenario's thread, so code that
 TestSession session = TestSession.current();   // the running scenario's session
 Page page = TestSession.currentPage();          // its browser page, opened on first use
 HomePage home = PageComponentFactory.get(HomePage.class);
-CustomerApi customers = ApiFactory.getApi(CustomerApi.class);
 ```
-
-`PageComponentFactory` and `ApiFactory` work the same way: the first call in a scenario creates the object (a page
-through its `(Page, Healer)` constructor, an API client through its `(TestSession)` constructor), keeps it in the
-session, and every later call in that scenario returns the same instance. The objects are **scenario-scoped**,
-not shared by the whole run, because each one holds its scenario's browser context, cookies and call log. An API
-client implements `Api`; `ServiceClient` is not one, because it also needs a service name
-(`new ServiceClient(session, "orders")`).
 
 There is exactly **one** ThreadLocal, the pointer to the session. Per-scenario data is not kept in separate
 static ThreadLocals; it lives in the session, so it is dropped with the session and nothing has to be cleared.
@@ -496,3 +488,42 @@ List<Unit.UnitKL> units = TestSession.current().list(UNIT_KL);           // empt
 
 `current()` fails with a clear message outside a scenario, before `Hooks.before`, and on another thread
 (`CompletableFuture`, parallel streams): a session belongs to the thread that runs its scenario.
+
+## API classes in the existing framework's style (`Api`, `ApiFactory`)
+
+API classes ported from the existing framework keep their shape. Only the GUI part uses the new setup above.
+
+```java
+public class CustomerValidationApi implements Api {          // src/test/java/com/agenticqa/apis
+    private final String baseUrl;
+    private final String customersPath;
+
+    public CustomerValidationApi() {                          // no-argument constructor
+        this.baseUrl = Config.getApiUrl("customers");         // services.customers.baseUrl of the active env
+        this.customersPath = "/customers";
+    }
+
+    public Response postCustomer(Object customerToPost) {     // REST Assured
+        Response response = RestAssured.given().contentType(ContentType.JSON).body(customerToPost)
+                .post(baseUrl + customersPath);
+        if (response.getStatusCode() != 201) Assert.fail("Error posting Customer ...");
+        return response;
+    }
+}
+
+Response response = ApiFactory.getApi(CustomerValidationApi.class).postCustomer(body);
+```
+
+- `ApiFactory.getApi` creates each API class once, through its no-argument constructor, and returns the same
+  instance for the **whole run**, to every scenario and thread. An API class must therefore keep no
+  per-scenario state, only final settings such as its base URL and paths.
+- `Config.getApiUrl(name)` reads `services.<name>.baseUrl` from the merged config (common.yaml, the environment
+  file, `-D` overrides), so `-Denv=uat` switches these classes too.
+- REST Assured is a test dependency, like TestNG, so these classes live under `src/test/java`
+  (`com.agenticqa.apis`) and can use `Assert.fail`.
+- They call the service directly, not through the browser context: their calls do not share the browser's
+  cookies and are not in the HTTP call log attached to failed scenarios.
+- The framework's own API layer (`CustomerApi`, `EndpointClient`, `ServiceClient`, the generic HTTP steps) is
+  unchanged and keeps `new CustomerApi(session)`. Both kinds can be mixed in one scenario: see
+  `features/api/customer_validation_api.feature`, which posts with `CustomerValidationApi` and checks with the
+  framework's customer steps.

@@ -229,7 +229,7 @@ endpoints:
 ```
 
 Feature files call them by name (`When I call "orders.get" as "read" with:` plus a table of path parameters),
-and Java code uses `ApiFactory.getApi(EndpointClient.class).call("orders.create", Payload.file("orders/new_order.json").set(...))`
+and Java code uses `new EndpointClient(session).call("orders.create", Payload.file("orders/new_order.json").set(...))`
 or passes a request POJO (`call("orders.create", new OrderRequest(...))`). No client class or method is needed
 per endpoint. See
 [docs/api-requests.md](docs/api-requests.md#endpoint-catalog-call-endpoints-by-name).

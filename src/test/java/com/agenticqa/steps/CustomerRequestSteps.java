@@ -1,6 +1,5 @@
 package com.agenticqa.steps;
 
-import com.agenticqa.api.ApiFactory;
 import com.agenticqa.api.ApiClient;
 import com.agenticqa.api.ApiState;
 import com.agenticqa.api.ApiState.Reply;
@@ -39,6 +38,7 @@ public class CustomerRequestSteps {
     private final TestSession session;
     private final ApiState api;
     private final Variables vars;
+    private final CustomerApi customers;
     private final ServiceCleanup cleanup;
 
     /**
@@ -53,6 +53,7 @@ public class CustomerRequestSteps {
         this.session = session;
         this.api = api;
         this.vars = vars;
+        this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
     }
 
@@ -130,7 +131,7 @@ public class CustomerRequestSteps {
     /** POST /customers with the request; on success the created customer becomes "the customer". */
     @When("I send the create customer request")
     public void sendCreate() {
-        APIResponse response = customers().create(api.request(REQUEST).body());
+        APIResponse response = customers.create(api.request(REQUEST).body());
         remember(response);
         if (response.status() == 201) {
             Customer created = CustomerApi.asCustomer(response);
@@ -146,7 +147,7 @@ public class CustomerRequestSteps {
     /** PUT /customers/{id} of "the customer" with the request; on success the answer becomes "the customer". */
     @When("I send the update request for the customer")
     public void sendUpdate() {
-        APIResponse response = customers().update(session.get(CUSTOMER).id(), api.request(REQUEST).body());
+        APIResponse response = customers.update(session.get(CUSTOMER).id(), api.request(REQUEST).body());
         remember(response);
         if (response.status() == 200) {
             session.put(CUSTOMER, CustomerApi.asCustomer(response));
@@ -191,14 +192,5 @@ public class CustomerRequestSteps {
     private void remember(APIResponse response) {
         session.put(RESPONSE, response);
         api.store(REQUEST, Reply.of(response));
-    }
-
-    /**
-     * The customers API of this scenario, from the factory (created on first use, then reused).
-     *
-     * @return the customers API
-     */
-    private CustomerApi customers() {
-        return ApiFactory.getApi(CustomerApi.class);
     }
 }

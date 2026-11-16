@@ -3,6 +3,7 @@ package com.agenticqa.core;
 import com.agenticqa.api.ApiCall;
 import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
+import com.agenticqa.ui.PageComponent;
 import com.agenticqa.ui.healing.HealEvent;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.APIRequestContext;
@@ -61,7 +62,7 @@ public class TestSession {
     private final Settings settings = EnvConfig.get();
     private final Map<DataKey<?>, Object> store = new HashMap<>();
     private final List<ApiCall> apiCalls = new ArrayList<>();
-    private final Map<Class<?>, Object> scenarioObjects = new HashMap<>(); // page objects and API clients
+    private final Map<Class<? extends PageComponent>, PageComponent> pageComponents = new HashMap<>();
 
     private BrowserContext context;
     private Page page;
@@ -276,20 +277,19 @@ public class TestSession {
     }
 
     /**
-     * The scenario's object of a type, created with {@code create} on first use and reused after that. Used by
-     * {@code PageComponentFactory} (page objects) and {@code ApiFactory} (API clients); the objects are dropped
-     * with the session, so the next scenario never gets one that holds a closed browser context.
+     * The scenario's page object of a type, created with {@code create} on first use and reused after that.
+     * Used by {@code PageComponentFactory}; the pages are dropped with the session.
      *
-     * @param type   the class, for example HomePage.class or CustomerApi.class
-     * @param create creates the object when this scenario has none of that type yet
-     * @param <T>    the type
-     * @return the scenario's instance of that type
+     * @param type   the page class, for example HomePage.class
+     * @param create creates the page when this scenario has none of that type yet
+     * @param <T>    the page type
+     * @return the scenario's instance of that page
      */
-    public synchronized <T> T scenarioObject(Class<T> type, Supplier<T> create) {
-        Object existing = scenarioObjects.get(type);
+    public synchronized <T extends PageComponent> T pageComponent(Class<T> type, Supplier<T> create) {
+        PageComponent existing = pageComponents.get(type);
         if (existing == null) {
             existing = create.get();
-            scenarioObjects.put(type, existing);
+            pageComponents.put(type, existing);
         }
         return type.cast(existing);
     }
@@ -371,7 +371,7 @@ public class TestSession {
         Path keptVideo = video == null ? null : keepOrDelete(video, failed);
         context = null;
         page = null;
-        scenarioObjects.clear();
+        pageComponents.clear();
         if (CURRENT.get() == this) CURRENT.remove(); // the next scenario on this thread cannot see this one
         return new SavedFiles(trace, keptVideo);
     }

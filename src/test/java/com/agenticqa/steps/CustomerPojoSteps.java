@@ -1,6 +1,5 @@
 package com.agenticqa.steps;
 
-import com.agenticqa.api.ApiFactory;
 import com.agenticqa.api.ApiClient;
 import com.agenticqa.api.ApiState;
 import com.agenticqa.api.ApiState.Reply;
@@ -85,7 +84,7 @@ public class CustomerPojoSteps {
     @When("I call {string} with the customer request object as {string}")
     public void send(String endpoint, String name) {
         CustomerRequest body = session.get(CUSTOMER_REQUEST);
-        APIResponse response = ApiFactory.getApi(EndpointClient.class).call(endpoint, Map.of(), body, Map.of(), vars::find);
+        APIResponse response = new EndpointClient(session).call(endpoint, Map.of(), body, Map.of(), vars::find);
         session.put(RESPONSE, response);
         api.store(name, Reply.of(response));
     }

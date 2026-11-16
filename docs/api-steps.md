@@ -239,21 +239,19 @@ They still need no client class, request record or `withX` method: use `Endpoint
 ```java
 public class OrderSteps {
     private final TestSession session;
+    private final EndpointClient api;
     private final ServiceCleanup cleanup;
 
     public OrderSteps(TestSession session, ServiceCleanup cleanup) {   // PicoContainer injects these
         this.session = session;
+        this.api = new EndpointClient(session);
         this.cleanup = cleanup;
-    }
-
-    private EndpointClient api() {
-        return ApiFactory.getApi(EndpointClient.class);              // the scenario's client, reused
     }
 
     @When("I place an order for {int} items")
     public void placeOrder(int items) {
         Payload order = Payload.file("orders/new_order.json").set("items[0].quantity", items);
-        APIResponse response = api().call("orders.create", order);
+        APIResponse response = api.call("orders.create", order);
         session.put(Keys.RESPONSE, response);          // so "the API responds with status ..." works
         assertEquals(response.status(), 201, response.text());
         String id = Payload.of(response).get("id").asText();

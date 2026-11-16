@@ -1,47 +1,33 @@
 package com.agenticqa.api;
 
-import com.agenticqa.core.TestSession;
-import org.testng.annotations.AfterMethod;
+import com.agenticqa.apis.CustomerValidationApi;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertNotSame;
+import java.util.concurrent.CompletableFuture;
+
 import static org.testng.Assert.assertSame;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 
-/** ApiFactory without a browser: creating a client does not open a context, only calling it does. */
+/** ApiFactory as in the existing framework: one instance per API class for the whole run. No service is called. */
 public class ApiFactoryTest {
 
-    private TestSession session;
-
-    @AfterMethod(alwaysRun = true)
-    public void closeSession() {
-        if (session != null) session.close(false);
-    }
-
-    /** A client without the (TestSession) constructor. */
-    public static class NoSessionApi implements Api {
-        public NoSessionApi() {}
+    /** An API class without a no-argument constructor. */
+    public static class NeedsArgumentApi implements Api {
+        public NeedsArgumentApi(String name) {}
     }
 
     @Test
-    public void sameClientWithinAScenarioNewOneInTheNext() {
-        session = new TestSession();
-        session.bindToCurrentThread();
-        CustomerApi first = ApiFactory.getApi(CustomerApi.class);
-        assertSame(ApiFactory.getApi(CustomerApi.class), first, "reused within the scenario");
-        session.close(false);
-
-        session = new TestSession();
-        session.bindToCurrentThread();
-        assertNotSame(ApiFactory.getApi(CustomerApi.class), first, "the next scenario gets its own client");
+    public void sameInstanceForTheWholeRunAndEveryThread() throws Exception {
+        CustomerValidationApi first = ApiFactory.getApi(CustomerValidationApi.class);
+        assertSame(ApiFactory.getApi(CustomerValidationApi.class), first);
+        assertSame(CompletableFuture.supplyAsync(() -> ApiFactory.getApi(CustomerValidationApi.class)).get(), first,
+                "shared across threads");
     }
 
     @Test
-    public void failsClearlyOutsideAScenarioOrWithoutTheConstructor() {
-        expectThrows(IllegalStateException.class, () -> ApiFactory.getApi(CustomerApi.class));
-
-        session = new TestSession();
-        session.bindToCurrentThread();
-        expectThrows(IllegalStateException.class, () -> ApiFactory.getApi(NoSessionApi.class));
+    public void failsClearlyWithoutANoArgumentConstructor() {
+        RuntimeException e = expectThrows(RuntimeException.class, () -> ApiFactory.getApi(NeedsArgumentApi.class));
+        assertTrue(e.getMessage().startsWith("Unable to create api instance: "), e.getMessage());
     }
 }

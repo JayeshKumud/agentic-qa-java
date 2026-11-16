@@ -13,7 +13,7 @@ import java.util.Map;
  * Such a facade is optional. Code that calls an endpoint once can use {@link EndpointClient} directly, and
  * feature files use the generic steps ({@code When I call "customers.get" as ...}).
  */
-public class CustomerApi implements Api {
+public class CustomerApi {
 
     /** Name of the service under {@code services:} in the environment file. */
     public static final String SERVICE = "customers";

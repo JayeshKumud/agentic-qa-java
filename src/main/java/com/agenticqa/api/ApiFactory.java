@@ -1,63 +1,51 @@
 package com.agenticqa.api;
 
-import com.agenticqa.core.TestSession;
-
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Creates API clients for the running scenario and hands out the same instance on every call, from anywhere:
+ * Creates API classes and hands out the same instance on every call, in the style of the existing framework:
  * <pre>
- * CustomerApi customers = ApiFactory.getApi(CustomerApi.class);
- * APIResponse created = ApiFactory.getApi(EndpointClient.class).call("customers.create", payload);
+ * Response response = ApiFactory.getApi(CustomerValidationApi.class).postCustomer(body);
  * </pre>
- * A client is created on first use, through its {@code (TestSession)} constructor, with the scenario's session,
- * so it shares the browser's cookies, records its calls in the scenario's call log and uses the scenario's
- * environment settings.
- * <p>
- * The factory keeps no state: it finds the scenario with {@link TestSession#current()}, and the created clients
- * live in that session. They are scenario-scoped, not shared by the whole run, because each client holds its
- * scenario's session: a client kept for the whole run would send the next scenario's calls through a closed
- * browser context and into the wrong call log. Parallel scenarios therefore never share a client.
- * <p>
- * {@link ServiceClient} is not created here: it needs a service name as well, so code keeps creating it with
- * {@code new ServiceClient(session, "orders")}.
+ * An API class is created on first use through its no-argument constructor and kept for the whole run, shared
+ * by every scenario and thread. That is safe because an {@link Api} holds only final settings (base URL, paths)
+ * and no per-scenario state.
  */
-public final class ApiFactory {
+public class ApiFactory {
 
     private ApiFactory() {}
 
-    /**
-     * The API client of a type, created on first use in this scenario.
-     *
-     * @param apiToCreate the client class, for example CustomerApi.class
-     * @param <T>         the client type
-     * @return the scenario's instance of that client
-     * @throws IllegalStateException if no scenario is running on this thread, or the client cannot be created
-     */
-    public static <T extends Api> T getApi(Class<T> apiToCreate) {
-        TestSession session = TestSession.current();
-        return session.scenarioObject(apiToCreate, () -> create(apiToCreate, session));
-    }
+    static private final List<Api> createdApis = new CopyOnWriteArrayList<>();
 
     /**
-     * Calls the client's {@code (TestSession)} constructor.
+     * The instance of an API class, created on first use.
      *
-     * @param apiToCreate the client class
-     * @param session     the scenario's session
-     * @param <T>         the client type
-     * @return the new client
+     * @param apiToCreate the API class, for example CustomerValidationApi.class
+     * @param <T>         the API type
+     * @return the shared instance of that API class
+     * @throws RuntimeException if the class cannot be created (no public no-argument constructor, or it failed)
      */
-    private static <T extends Api> T create(Class<T> apiToCreate, TestSession session) {
-        try {
-            return apiToCreate.getConstructor(TestSession.class).newInstance(session);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException(apiToCreate.getSimpleName()
-                    + " needs a public constructor (TestSession session)", e);
-        } catch (InvocationTargetException e) {
-            throw new IllegalStateException("The constructor of " + apiToCreate.getSimpleName() + " failed: "
-                    + e.getCause(), e.getCause());
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("Unable to create api instance: " + apiToCreate.getName(), e);
+    public static <T extends Api> T getApi(Class<T> apiToCreate) {
+        for (Api api : createdApis) {
+            if (api.getClass().equals(apiToCreate)) {
+                return apiToCreate.cast(api);
+            }
         }
+
+        T apiInstance;
+
+        try {
+
+            apiInstance = apiToCreate.getDeclaredConstructor().newInstance();
+            createdApis.add(apiInstance);
+
+        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+                 | NoSuchMethodException | SecurityException e) {
+            throw new RuntimeException("Unable to create api instance: " + apiToCreate.getName(), e);
+        }
+
+        return apiInstance;
     }
 }
