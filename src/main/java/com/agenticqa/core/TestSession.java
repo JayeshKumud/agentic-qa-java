@@ -1,12 +1,10 @@
 package com.agenticqa.core;
 
-import com.agenticqa.api.ApiCall;
 import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
 import com.agenticqa.ui.PageComponent;
 import com.agenticqa.ui.healing.HealEvent;
 import com.agenticqa.ui.healing.Healer;
-import com.microsoft.playwright.APIRequestContext;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
@@ -25,13 +23,15 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Everything one scenario needs while it runs: the browser page, the API access and a typed store for sharing data
- * between steps. Cucumber's PicoContainer creates one instance per scenario and injects it into every step class,
- * so parallel scenarios never share a browser or data.
+ * Everything one scenario needs while it runs: the browser page and a typed store for sharing data between steps,
+ * GUI and API steps alike (an API step stores the customer it created, a GUI step reads it). Cucumber's
+ * PicoContainer creates one instance per scenario and injects it into every step class, so parallel scenarios
+ * never share a browser or data.
  * <p>
- * The page and the API calls come from the same browser context, so they share cookies and login state.
- * The context is created lazily, the first time a step asks for the page or the API, in the browser of the
- * current worker thread ({@link BrowserPool}); closing the session closes the context, not the browser.
+ * The browser context is created lazily, the first time a step asks for the page, in the browser of the current
+ * worker thread ({@link BrowserPool}), so API-only scenarios never start a browser. Closing the session closes the
+ * context, not the browser. API calls do not go through the session: API classes ({@code ApiFactory}) call their
+ * services directly with REST Assured.
  * <p>
  * Thread safety: a scenario runs on one thread from its first hook to its last, and nothing in a session is
  * shared with other scenarios, so parallel scenarios are isolated by construction.
@@ -61,7 +61,6 @@ public class TestSession {
 
     private final Settings settings = EnvConfig.get();
     private final Map<DataKey<?>, Object> store = new HashMap<>();
-    private final List<ApiCall> apiCalls = new ArrayList<>();
     private final Map<Class<? extends PageComponent>, PageComponent> pageComponents = new HashMap<>();
 
     private BrowserContext context;
@@ -123,34 +122,6 @@ public class TestSession {
      */
     public synchronized List<HealEvent> healEvents() {
         return healer == null ? List.of() : healer.events();
-    }
-
-    /**
-     * API access that shares cookies with the browser. Requests need the full URL (api.baseUrl plus the path),
-     * because the underlying context is configured with the UI base URL.
-     *
-     * @return the API request context of this scenario
-     */
-    public synchronized APIRequestContext api() {
-        return context().request();
-    }
-
-    /**
-     * Adds an HTTP call to this scenario's call log. Called by every API client.
-     *
-     * @param call the finished call
-     */
-    public synchronized void recordApiCall(ApiCall call) {
-        apiCalls.add(call);
-    }
-
-    /**
-     * HTTP calls of this scenario so far, oldest first.
-     *
-     * @return a copy of the call log
-     */
-    public synchronized List<ApiCall> apiCalls() {
-        return List.copyOf(apiCalls);
     }
 
     /**

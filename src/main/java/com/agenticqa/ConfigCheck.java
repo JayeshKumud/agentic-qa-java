@@ -4,7 +4,7 @@ import com.agenticqa.config.EnvConfig;
 
 /**
  * Prints the active environment and its effective settings (common.yaml and the environment file merged,
- * placeholders and -D overrides applied; secrets masked):
+ * placeholders and -D overrides applied):
  * {@code mvn -q exec:java -Dexec.mainClass=com.agenticqa.ConfigCheck -Denv=uat}
  */
 public class ConfigCheck {
@@ -20,7 +20,6 @@ public class ConfigCheck {
         System.out.println("ui        : " + settings.ui());
         System.out.println("services  : " + settings.services().keySet().stream()
                 .map(name -> name + "=" + settings.service(name)).toList());
-        System.out.println("endpoints : " + settings.endpoints().keySet());
         System.out.println("execution : " + settings.execution());
         System.out.println("cleanup   : " + settings.cleanup());
         System.out.println("retry     : " + settings.retry());

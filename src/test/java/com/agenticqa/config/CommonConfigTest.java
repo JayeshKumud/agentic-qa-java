@@ -78,19 +78,11 @@ public class CommonConfigTest {
     }
 
     @Test
-    public void serviceGetsDefaultHeadersTimeoutAndAuth() {
-        Settings.Service defaults = new Settings.Service(null, null,
-                Map.of("Accept", "application/json", "X-Team", "qa"), null);
-        Settings.Auth auth = new Settings.Auth("oauth2", "http://token", "id", "s3cret", null, null, null, null);
-        Settings settings = new Settings(null, new Settings.Api(null, 12000), defaults,
-                Map.of("customers", new Settings.Service("http://c", null, Map.of("X-Team", "customers"), auth)),
-                null, null, null, null, null);
-        Settings.Service service = settings.service("customers");
-        assertEquals(service.timeoutMs(), Integer.valueOf(12000));
-        assertEquals(service.headers(), Map.of("Accept", "application/json", "X-Team", "customers"));
-        assertEquals(service.auth().kind(), "oauth2");
-        assertFalse(service.auth().toString().contains("s3cret"), "secrets are masked");
+    public void serviceIsLookedUpByNameAndGetApiUrlReturnsItsBaseUrl() {
+        Settings settings = new Settings(null, Map.of("customers", new Settings.Service("http://c")), null, null, null, null);
+        assertEquals(settings.service("customers").baseUrl(), "http://c");
         expectThrows(IllegalArgumentException.class, () -> settings.service("orders"));
+        assertEquals(Config.getApiUrl("customers"), "http://127.0.0.1:8000", "dev: services.customers.baseUrl");
     }
 
     @Test
@@ -99,9 +91,7 @@ public class CommonConfigTest {
         assertEquals(settings.ui().baseUrl(), "http://127.0.0.1:8000", "from the environment file");
         assertEquals(settings.ui().browser(), "chromium", "from common.yaml");
         assertTrue(settings.ui().waits().navigationMs() > 0);
-        assertTrue(settings.endpoints().containsKey("customers"), "endpoint catalog from common.yaml");
-        assertEquals(settings.service("customers").headers().get("Accept"), "application/json");
-        assertEquals(settings.service("customers").auth().kind(), "none");
+        assertEquals(settings.service("customers").baseUrl(), "http://127.0.0.1:8000", "from the environment file");
         assertTrue(settings.cleanup().folders().contains("target/reports"));
         assertEquals(settings.ui().video(), "failed", "videos of failed scenarios by default");
         assertFalse(settings.ui().ignoreHttpsErrors());
@@ -110,7 +100,7 @@ public class CommonConfigTest {
 
     @Test
     public void videoModeIsNormalizedCheckedAndDefaultsToFailed() {
-        assertEquals(new Settings(null, null, null, null, null, null, null, null, null).ui().video(), "failed");
+        assertEquals(new Settings(null, null, null, null, null, null).ui().video(), "failed");
         Settings.Ui always = new Settings.Ui(null, null, true, 0, null, false, false, " Always ", null);
         assertEquals(always.video(), "always");
         assertTrue(always.recordsVideo());

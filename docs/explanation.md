@@ -4,7 +4,7 @@ Questions asked while working on this framework, with the answers.
 
 ---
 
-## Q1. When the debugger reaches `private final List<ApiCall> apiCalls = new ArrayList<>();`, why does it then jump to `public Hooks(TestSession session)`?
+## Q1. When the debugger reaches `private final Map<DataKey<?>, Object> store = new HashMap<>();`, why does it then jump to `public Hooks(TestSession session)`?
 
 This is normal Java behaviour combined with Cucumber's dependency injection (PicoContainer).
 
@@ -19,7 +19,7 @@ public TestSession() {
     super();
     this.settings = EnvConfig.get();          // line 40
     this.store    = new HashMap<>();          // line 41
-    this.apiCalls = new ArrayList<>();        // line 42
+    this.pageComponents = new HashMap<>();    // line 42
     // context, page, healer have no initializer, so they stay null
     this.scenarioName = "scenario";           // line 47
 }
@@ -72,13 +72,13 @@ Cucumber scans those packages for classes that have step or hook annotations (`@
 |------------------------|--------------------------|
 | `Hooks`                | `@Before`, `@After`      |
 | `CustomerApiSteps`     | `@Given/@When/@Then`     |
-| `CustomerRequestSteps` | `@Given/@When/@Then`     |
 | `CustomerUiSteps`      | `@Given/@When/@Then`     |
-| `HttpSteps`            | `@Given/@When/@Then`     |
+| `HomeSteps`            | `@When`                  |
+| `ZoneSteps`            | `@Given/@When/@Then`     |
 | `ServiceCleanup`       | `@After(order = 20000)`  |
 
 When a class is registered, Cucumber also looks at its constructor parameters and registers those types as well,
-and then their parameter types, and so on. That is how `TestSession`, `ApiState` and `Variables` become known to
+and then their parameter types, and so on. That is how `TestSession` and `Variables` become known to
 PicoContainer even though they are not glue classes. `Keys` has no annotations and is not needed by any
 constructor, so it is not involved.
 
@@ -102,11 +102,11 @@ Objects are created lazily, the first time the scenario needs them. PicoContaine
    creates it first, applying the same rule to that class's constructor parameters.
 3. Calls the constructor with those objects.
 
-### Worked example: `HttpSteps`
+### Worked example: `CustomerApiSteps`
 
 ```java
-public HttpSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup)
-public ServiceCleanup(TestSession session)
+public CustomerApiSteps(TestSession session, ServiceCleanup cleanup)
+public ServiceCleanup()
 public Hooks(TestSession session)
 ```
 
@@ -120,33 +120,33 @@ Scenario starts → new empty container
 │         └─ new TestSession()                  ← created (field initializers run)
 │    └─ new Hooks(session)                       ← created
 │
-├─ step "a new {string} request from {string}" needs an HttpSteps
-│    ├─ TestSession  → already in container      ← reused, not created again
-│    ├─ ApiState     → new ApiState()            ← created
-│    ├─ Variables    → new Variables()           ← created
-│    ├─ ServiceCleanup(TestSession)
-│    │    └─ TestSession → already in container  ← reused
-│    │    new ServiceCleanup(session)            ← created
-│    └─ new HttpSteps(session, api, vars, cleanup)
+├─ step "I create a customer named {string}" needs a CustomerApiSteps
+│    ├─ TestSession    → already in container    ← reused, not created again
+│    ├─ ServiceCleanup → new ServiceCleanup()    ← created
+│    └─ new CustomerApiSteps(session, cleanup)
 │
-├─ later steps in HttpSteps → same HttpSteps instance reused
+├─ later steps in CustomerApiSteps → same CustomerApiSteps instance reused
+├─ a GUI step needs a CustomerUiSteps → new CustomerUiSteps(session, cleanup), same session and cleanup
 │
 ├─ @After hooks run (ServiceCleanup order 20000 runs before Hooks.after)
 │
 Scenario ends → container and all its objects are discarded
 ```
 
+The API classes themselves are not created by PicoContainer: steps get them with `ApiFactory.getApi(...)`,
+which keeps one instance of each for the whole run (see [api.md](api.md)).
+
 ### Why this matters: sharing state between step classes
 
-`Hooks`, `HttpSteps`, `CustomerApiSteps`, `ServiceCleanup` and the others all receive **the same `TestSession`
-object** during a scenario. That is how they share things without static fields:
+`Hooks`, `CustomerApiSteps`, `CustomerUiSteps` and the others all receive **the same `TestSession` object**
+during a scenario. That is how they share things without static fields:
 
 - the browser `page` opened by a UI step is the one `Hooks.after()` screenshots on failure;
-- the `apiCalls` list filled by API steps is the one `Hooks.after()` attaches to the report;
-- data one step stores is the data the next step reads.
+- data one step stores is the data the next step reads, API or GUI: the customer an API step created is the one
+  the GUI step searches for.
 
-In the same way, `CustomerApiSteps`, `CustomerRequestSteps` and `CustomerUiSteps` share one `ServiceCleanup` with
-`HttpSteps`, so every customer created in the scenario is deleted at the end, whichever step class created it.
+In the same way, `CustomerApiSteps` and `CustomerUiSteps` share one `ServiceCleanup`, so every customer created
+in the scenario is deleted at the end, whichever step class created it.
 
 ### Parallel runs
 
@@ -178,24 +178,20 @@ class and hook that asks for it in its constructor. When the scenario ends, it i
 |----------------|---------------------------------------------------------------|--------------------------------------|
 | `settings`     | Settings of the active environment (`-Denv=dev/test/uat/ci`)  | when the session is created          |
 | `store`        | A map of data shared between steps (see Q4)                   | when the session is created          |
-| `apiCalls`     | A log of every HTTP call made in the scenario                 | when the session is created          |
-| `context`      | The Playwright browser context, with tracing switched on      | lazily, on first `page()` or `api()` |
+| `context`      | The Playwright browser context, with tracing switched on      | lazily, on first `page()`            |
 | `page`         | The browser page                                              | lazily, on first `page()`            |
 | `healer`       | The self-healing locator engine                               | lazily, on first `healer()`          |
 | `scenarioName` | The scenario name, used to name the trace file                | set by `Hooks.before()`              |
 
 ### What it does
 
-- **Browser and API access.** `page()` returns the scenario's browser page and `api()` returns Playwright's API
-  request context. Both come from the same browser context, so API calls and the browser share cookies and login
-  state.
-- **Lazy start.** The browser context is only opened the first time a step calls `page()` or `api()`. A scenario
-  that never needs one never opens one. `hasPage()` lets `Hooks.after()` check whether there is a page to
+- **Browser access.** `page()` returns the scenario's browser page. API calls do not go through the session:
+  the API classes call their services directly with REST Assured (see [api.md](api.md)).
+- **Lazy start.** The browser context is only opened the first time a step calls `page()`. An API-only scenario
+  never opens one. `hasPage()` lets `Hooks.after()` check whether there is a page to
   screenshot without opening a new one.
 - **One browser per thread.** The context is opened in the current thread's browser (`BrowserPool`). Closing the
   session closes only the context. The browser stays open for the next scenario on that thread, which is faster.
-- **API call log.** Every API client calls `recordApiCall(...)`. If the scenario fails, `Hooks.after()` attaches
-  `apiCalls()` to the report.
 - **Self-healing.** `healer()` returns the scenario's healer, and `healEvents()` lists the locators it healed, so
   `Hooks.after()` can report them.
 - **Data store.** `put`, `get` and `has` share typed values between steps (see Q4).
@@ -206,12 +202,11 @@ class and hook that asks for it in its constructor. When the scenario ends, it i
 ### Its life in one scenario
 
 ```
-PicoContainer:  new TestSession()        settings, store, apiCalls created
-Hooks.before(): scenarioName(...)        name remembered for the trace file
-steps:          page() / api()           browser context opened on first use
-                put(...) / get(...)      data shared between steps
-                recordApiCall(...)       each HTTP call logged
-Hooks.after():  apiCalls(), healEvents(), screenshot if failed
+PicoContainer:  new TestSession()        settings and store created
+Hooks.before(): scenarioName(...)        name remembered for the trace file; bound to the thread
+steps:          page()                   browser context opened on first use
+                put(...) / get(...)      data shared between steps, API and GUI
+Hooks.after():  healEvents(), screenshot if failed
                 close(failed)            tracing stopped, context closed
 PicoContainer:  container discarded      TestSession thrown away
 ```
@@ -219,7 +214,7 @@ PicoContainer:  container discarded      TestSession thrown away
 ### Why parallel scenarios don't interfere
 
 Every scenario gets its own `TestSession`, and nothing in it is static or shared. Parallel scenarios therefore
-have separate pages, call logs and data. They share only the browser of their worker thread, and each has its own
+have separate pages and data. They share only the browser of their worker thread, and each has its own
 context inside that browser.
 
 ---
@@ -236,16 +231,16 @@ Then the results show only that customer with status "active"      # CustomerUiS
 
 The first step creates the customer through the API. The next steps, in another class, need to know which customer
 was created. PicoContainer gives both classes **the same objects** for the scenario, so whatever one class stores,
-the other can read. The framework has four ways to share data.
+the other can read. The framework has three ways to share data.
 
 ### 1. The `TestSession` store with typed keys (between step classes)
 
 Keys are declared once as constants in `src/test/java/com/agenticqa/steps/Keys.java`:
 
 ```java
-public static final DataKey<Customer>    CUSTOMER = DataKey.of("customer", Customer.class);
-public static final DataKey<APIResponse> RESPONSE = DataKey.of("lastResponse", APIResponse.class);
-public static final DataKey<String>      NAME_TAG = DataKey.of("nameTag", String.class);
+public static final DataKey<Customer> CUSTOMER = DataKey.of("customer", Customer.class);   // apis.model.Customer
+public static final DataKey<Response> RESPONSE = DataKey.of("lastResponse", Response.class);  // REST Assured
+public static final DataKey<String>   NAME_TAG = DataKey.of("nameTag", String.class);
 ```
 
 One step stores a value (`CustomerApiSteps`):
@@ -264,7 +259,7 @@ A later step in another class reads it (`CustomerUiSteps`):
 ```java
 @When("I search the customers page for that customer")
 public void searchForCustomer() {
-    page().open().search(session.get(CUSTOMER).name());
+    page().open().search(session.get(CUSTOMER).getName());
 }
 ```
 
@@ -281,33 +276,27 @@ Why typed keys (`DataKey<T>`) and not plain strings:
 ### 2. `Variables`: named values used in feature files
 
 `Variables` (`src/main/java/com/agenticqa/core/Variables.java`) holds string values that the **feature file**
-refers to as `${name}`. It is used to chain requests. For example, `endpoint_catalog.feature`:
+refers to as `${name}`. For example, `zone_id.feature`:
 
 ```gherkin
-And I save the "ada" response field "id" as "adaId"
-And the "adaUpdate" request path parameter "id" is "${adaId}"
+And I save the zone id as "firstZone"
+...
+And the zone id is not "${firstZone}"
 ```
 
-The first step saves the new id under `adaId`. Later steps write `${adaId}` and it is replaced with the value. The
-same object also replaces `{unique}` with one random token per scenario, so test data never collides between
+The first step saves a value under `firstZone`. Later steps write `${firstZone}` and it is replaced with the value.
+The same object also replaces `{unique}` with one random token per scenario, so test data never collides between
 parallel scenarios.
 
 Use `Variables` when the **feature file author** decides what is saved and where it is used. Use the
 `TestSession` store when **Java code** passes an object to other steps.
 
-### 3. `ApiState`: named requests and responses
+### 3. Shared helper objects
 
-`ApiState` (`src/main/java/com/agenticqa/api/ApiState.java`) keeps the requests a scenario is building and the
-responses it got, each under a name (for example `"customer"` or `"order"`). One step creates a request, other
-steps change its fields, a later step sends it, and any step can read an earlier response by name. `HttpSteps` and
-`CustomerRequestSteps` both receive the same `ApiState`, so they work on the same requests.
-
-### 4. Shared helper objects
-
-Any class that a step constructor asks for is shared in the same way. For example, `CustomerApiSteps`,
-`CustomerRequestSteps` and `CustomerUiSteps` all receive the same `ServiceCleanup`. Each one calls
-`cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(id))` when it creates a customer, and the single `@After`
-hook in `ServiceCleanup` deletes all of them at the end of the scenario.
+Any class that a step constructor asks for is shared in the same way. For example, `CustomerApiSteps` and
+`CustomerUiSteps` both receive the same `ServiceCleanup`. Each one registers a delete when it creates a
+customer, `cleanup.add("customer " + id, () -> ApiFactory.getApi(CustomerApi.class).deleteCustomer(id))`, and the
+single `@After` hook in `ServiceCleanup` runs all of them at the end of the scenario.
 
 ### Fields inside one step class
 
@@ -354,12 +343,11 @@ can call.
 
 ### What a rename involves
 
-The name appears in about 21 files:
+The name appears in a dozen files:
 
 - **Java (must change or it won't compile):** `TestSession.java` itself (the file name has to match the class),
-  `Hooks`, the step and cleanup classes (`CustomerApiSteps`, `CustomerRequestSteps`, `CustomerUiSteps`,
-  `HttpSteps`, `ServiceCleanup`), and the API clients (`ApiClient`, `CustomerApi`,
-  `EndpointClient`, `ServiceClient`).
+  `Hooks`, the step classes (`CustomerApiSteps`, `CustomerUiSteps`, `ZoneSteps`), `PageComponentFactory` and the
+  unit tests that use it.
 - **Docs and comments (won't break anything if missed, but would be out of date):** `README.md`, the files in
   `docs/` (including this one), and comments in two feature files.
 
@@ -376,87 +364,32 @@ compiles fine with `ScenarioContext session`.
 
 ## Q6. If I have a new API endpoint, do I need to create another class like `CustomerApi`?
 
-Usually not. In this framework a new endpoint is **one line of YAML**, not a new Java class. `CustomerApi` is an
-optional convenience wrapper. It isn't something every endpoint needs.
-
-### What `CustomerApi` actually is
-
-Here's a simplified version of `src/main/java/com/agenticqa/api/CustomerApi.java`:
+**An endpoint of a service that already has an API class:** no, add a method to that class, in the same style
+as the others (REST Assured call, `Assert.fail` on an unexpected status, return the `Response`):
 
 ```java
-public APIResponse create(Object body)          { return api.call("customers.create", body); }
-public APIResponse getById(long id)             { return api.call("customers.get", Map.of("id", id)); }
-public APIResponse update(long id, Object body) { return api.call("customers.update", Map.of("id", id), body); }
+public Response searchCustomers(String name) {
+    Response response = RestAssured.given()
+            .header("Accept", "*/*")
+            .queryParam("name", name)
+            .get(baseUrl + customersPath + "/search");
+    if (response.getStatusCode() != 200) {
+        Assert.fail("Error searching Customers. Status code: " + response.getStatusCode()
+                + " : " + response.getBody().asString());
+    }
+    return response;
+}
 ```
 
-Each method is just a named shortcut to `EndpointClient.call(...)`. The method, path and service are not in Java at
-all. They come from the endpoint catalog, under `endpoints:` in `src/main/resources/config/common.yaml` (paths are
-the same in every environment, so they are written once):
+**A new service:** yes, one API class per service, plus model classes for its bodies:
 
-```yaml
-endpoints:
-  customers:
-    service: customers
-    endpoints:
-      create: { method: POST, path: /customers, body: customers/new_customer.json }
-      get:    { method: GET,  path: "/customers/{id}" }
-```
+1. Add its `baseUrl` under `services:` in each environment file.
+2. Add `XxxApi implements Api` in `src/test/java/com/agenticqa/apis/` with a no-argument constructor that reads
+   `Config.getApiUrl("<service>")`.
+3. Add its request and response models in `apis/model/`.
+4. Call it from steps with `ApiFactory.getApi(XxxApi.class)`.
 
-### What to do for a new endpoint
-
-**An endpoint on an existing service (e.g. customers):** add one line under `endpoints.customers.endpoints` in
-`common.yaml`:
-
-```yaml
-      search: { method: GET, path: /customers/search }
-```
-
-**A new service (e.g. orders):**
-
-1. Add it under `services:` in each environment file (`config/env/dev.yaml`, `test.yaml`, ...) with its `baseUrl`
-   and, if it needs a login, its `auth` (client id and secret as `${NAME}` placeholders).
-2. Add an `orders` group with its endpoints under `endpoints:` in `config/common.yaml`.
-3. Optionally, add a typical request body as a JSON file under `src/test/resources/testdata/orders/`.
-
-Feature files can then use it straight away with the generic steps, with no Java at all:
-
-```gherkin
-Given a new "order" request for "orders.create"
-And the "order" request field "items[0].quantity" is set to "3"
-When I call "orders.create" with the "order" request
-Then the "order" response status is 201
-And I save the "order" response field "id" as "orderId"
-When I call "orders.get" as "read" with:
-  | id | ${orderId} |
-```
-
-### When Java *is* worth writing
-
-Only when you want a **readable business step** used in many scenarios, like `When I place an order for 3 items`.
-Even then you don't need an `OrderApi` class. A step class can call `EndpointClient` directly:
-
-```java
-APIResponse response = api.call("orders.create",
-        Payload.file("orders/new_order.json").set("items[0].quantity", items));
-```
-
-An `OrderApi` class like `CustomerApi` makes sense only if many step classes call the same order endpoints and you'd
-like `orders.create(body)` rather than `api.call("orders.create", body)`. That's purely a readability choice, not a
-requirement.
-
-### Summary
-
-| You need                                       | Write                                                                 |
-|------------------------------------------------|-----------------------------------------------------------------------|
-| a new endpoint                                 | one line under `endpoints:` in `config/common.yaml`                   |
-| a new service                                  | an entry under `services:` per env file plus a group under `endpoints:` in `common.yaml` |
-| a default request body                         | a JSON file under `testdata/`                                         |
-| field variations (missing, wrong type, nested) | nothing: field steps in the feature file, or `Payload.set/remove`     |
-| a business-readable step                       | a step method using `EndpointClient` and `Payload`                    |
-| an `XxxApi` wrapper class                      | optional, only for convenience                                        |
-
-More detail: `docs/api-steps.md` (section "Adding API steps for a new service") and `docs/api-requests.md`
-(section "Endpoint catalog").
+The full description is in [api.md](api.md).
 
 ## TestSession.current(): the session from static code
 
@@ -491,39 +424,7 @@ List<Unit.UnitKL> units = TestSession.current().list(UNIT_KL);           // empt
 
 ## API classes in the existing framework's style (`Api`, `ApiFactory`)
 
-API classes ported from the existing framework keep their shape. Only the GUI part uses the new setup above.
-
-```java
-public class CustomerValidationApi implements Api {          // src/test/java/com/agenticqa/apis
-    private final String baseUrl;
-    private final String customersPath;
-
-    public CustomerValidationApi() {                          // no-argument constructor
-        this.baseUrl = Config.getApiUrl("customers");         // services.customers.baseUrl of the active env
-        this.customersPath = "/customers";
-    }
-
-    public Response postCustomer(Object customerToPost) {     // REST Assured
-        Response response = RestAssured.given().contentType(ContentType.JSON).body(customerToPost)
-                .post(baseUrl + customersPath);
-        if (response.getStatusCode() != 201) Assert.fail("Error posting Customer ...");
-        return response;
-    }
-}
-
-Response response = ApiFactory.getApi(CustomerValidationApi.class).postCustomer(body);
-```
-
-- `ApiFactory.getApi` creates each API class once, through its no-argument constructor, and returns the same
-  instance for the **whole run**, to every scenario and thread. An API class must therefore keep no
-  per-scenario state, only final settings such as its base URL and paths.
-- `Config.getApiUrl(name)` reads `services.<name>.baseUrl` from the merged config (common.yaml, the environment
-  file, `-D` overrides), so `-Denv=uat` switches these classes too.
-- REST Assured is a test dependency, like TestNG, so these classes live under `src/test/java`
-  (`com.agenticqa.apis`) and can use `Assert.fail`.
-- They call the service directly, not through the browser context: their calls do not share the browser's
-  cookies and are not in the HTTP call log attached to failed scenarios.
-- The framework's own API layer (`CustomerApi`, `EndpointClient`, `ServiceClient`, the generic HTTP steps) is
-  unchanged and keeps `new CustomerApi(session)`. Both kinds can be mixed in one scenario: see
-  `features/api/customer_validation_api.feature`, which posts with `CustomerValidationApi` and checks with the
-  framework's customer steps.
+The API part keeps the existing framework's shape: API classes with a no-argument constructor, base URL from
+`Config.getApiUrl(name)`, REST Assured calls, created once for the whole run by `ApiFactory.getApi(...)`. Only the
+GUI part uses the session setup above. API and GUI steps share data through the `TestSession` store. See
+[api.md](api.md).

@@ -1,6 +1,6 @@
 package com.agenticqa.api;
 
-import com.agenticqa.apis.CustomerValidationApi;
+import com.agenticqa.apis.CustomerApi;
 import org.testng.annotations.Test;
 
 import java.util.concurrent.CompletableFuture;
@@ -19,9 +19,9 @@ public class ApiFactoryTest {
 
     @Test
     public void sameInstanceForTheWholeRunAndEveryThread() throws Exception {
-        CustomerValidationApi first = ApiFactory.getApi(CustomerValidationApi.class);
-        assertSame(ApiFactory.getApi(CustomerValidationApi.class), first);
-        assertSame(CompletableFuture.supplyAsync(() -> ApiFactory.getApi(CustomerValidationApi.class)).get(), first,
+        CustomerApi first = ApiFactory.getApi(CustomerApi.class);
+        assertSame(ApiFactory.getApi(CustomerApi.class), first);
+        assertSame(CompletableFuture.supplyAsync(() -> ApiFactory.getApi(CustomerApi.class)).get(), first,
                 "shared across threads");
     }
 

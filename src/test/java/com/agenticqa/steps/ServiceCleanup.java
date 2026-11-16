@@ -1,64 +1,54 @@
 package com.agenticqa.steps;
 
-import com.agenticqa.api.ServiceClient;
-import com.agenticqa.core.TestSession;
 import io.cucumber.java.After;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Resources a scenario created on any service, deleted after the scenario, pass or fail. They are deleted in
- * reverse order, so a resource that depends on another (an order of a customer) goes first.
- * PicoContainer gives all step classes of one scenario the same instance.
+ * Data a scenario created, deleted after the scenario, pass or fail, newest first (so a resource that depends on
+ * another goes first). PicoContainer gives all step classes of one scenario the same instance:
+ * <pre>
+ * cleanup.add("customer " + id, () -> ApiFactory.getApi(CustomerApi.class).deleteCustomer(id));
+ * </pre>
  */
 public class ServiceCleanup {
 
-    private final TestSession session;
-    private final Deque<String[]> deletes = new ArrayDeque<>();
+    private final Map<String, Runnable> deletes = new LinkedHashMap<>();
 
     /**
-     * Receives this scenario's session from PicoContainer.
+     * Registers a delete to run after the scenario. Registering the same key again replaces the earlier delete,
+     * so a resource is deleted once.
      *
-     * @param session the per-scenario session
+     * @param key    names the resource, for example "customer 42"
+     * @param delete deletes it, for example through an API class
      */
-    public ServiceCleanup(TestSession session) {
-        this.session = session;
+    public synchronized void add(String key, Runnable delete) {
+        deletes.remove(key);
+        deletes.put(key, delete);
     }
 
     /**
-     * Registers a DELETE to run after the scenario.
+     * Unregisters a delete, for a resource the scenario already deleted itself. Does nothing if it was not
+     * registered.
      *
-     * @param service the service name
-     * @param path    the resource path
+     * @param key the key it was registered with
      */
-    public synchronized void delete(String service, String path) {
-        cancel(service, path); // registering the same resource twice deletes it once, at its newest position
-        deletes.push(new String[]{service, path});
+    public synchronized void cancel(String key) {
+        deletes.remove(key);
     }
 
-    /**
-     * Unregisters a DELETE, for a resource the scenario already deleted itself, so cleanup does not send a
-     * DELETE that can only fail. Does nothing if it was not registered.
-     *
-     * @param service the service name
-     * @param path    the resource path, exactly as registered
-     */
-    public synchronized void cancel(String service, String path) {
-        deletes.removeIf(d -> d[0].equals(service) && d[1].equals(path));
-    }
-
-    /** Runs the registered deletes before Hooks.after closes the session (higher order runs first). */
+    /** Runs the registered deletes, newest first, before Hooks.after closes the session (higher order runs first). */
     @After(order = 20000)
     public synchronized void cleanUp() {
-        while (!deletes.isEmpty()) {
-            String[] delete = deletes.pop();
+        String[] keys = deletes.keySet().toArray(new String[0]);
+        for (int i = keys.length - 1; i >= 0; i--) {
             try {
-                new ServiceClient(session, delete[0]).request("DELETE", delete[1], null, Map.of());
-            } catch (RuntimeException ignored) {
-                // best effort: cleanup must not hide the real result
+                deletes.get(keys[i]).run();
+            } catch (RuntimeException | AssertionError ignored) {
+                // best effort: cleanup must not hide the real result (API classes fail with Assert.fail)
             }
         }
+        deletes.clear();
     }
 }

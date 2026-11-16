@@ -2,10 +2,10 @@
 # Shared settings are in config/common.yaml; this file holds only what differs here and wins over common.yaml.
 ui:
   baseUrl: http://127.0.0.1:8000
-api:
-  baseUrl: http://127.0.0.1:8000
 services:
   customers:
     baseUrl: http://127.0.0.1:8000
+  appWebserviceAdapter:
+    baseUrl: ${CI_WEBSERVICE_ADAPTER_URL:-https://127.0.0.1:8443}
 retry:
   count: 1

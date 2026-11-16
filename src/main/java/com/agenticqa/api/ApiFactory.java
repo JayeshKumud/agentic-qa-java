@@ -7,7 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Creates API classes and hands out the same instance on every call, in the style of the existing framework:
  * <pre>
- * Response response = ApiFactory.getApi(CustomerValidationApi.class).postCustomer(body);
+ * Response response = ApiFactory.getApi(CustomerApi.class).postCustomer(body);
  * </pre>
  * An API class is created on first use through its no-argument constructor and kept for the whole run, shared
  * by every scenario and thread. That is safe because an {@link Api} holds only final settings (base URL, paths)
@@ -22,7 +22,7 @@ public class ApiFactory {
     /**
      * The instance of an API class, created on first use.
      *
-     * @param apiToCreate the API class, for example CustomerValidationApi.class
+     * @param apiToCreate the API class, for example CustomerApi.class
      * @param <T>         the API type
      * @return the shared instance of that API class
      * @throws RuntimeException if the class cannot be created (no public no-argument constructor, or it failed)

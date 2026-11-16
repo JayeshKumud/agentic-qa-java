@@ -1,38 +1,20 @@
 # UAT (user acceptance) environment. Run: mvn test -Denv=uat
-# Shared settings (browser, waits, endpoints, healing, ...) are in config/common.yaml; this file holds only what
+# Shared settings (browser, waits, healing, ...) are in config/common.yaml; this file holds only what
 # differs here and wins over common.yaml.
 #
 # The URLs below are placeholders: replace the fallbacks with the real uat hosts, or set the variables in CI.
 # ${NAME} is filled from the system property NAME (-DNAME=...) or else the environment variable NAME;
-# ${NAME:-fallback} uses the fallback when neither is set. Secrets (client secrets, passwords, API keys) are
-# never written here: they are ${NAME} without fallback, set as CI secrets or local environment variables.
-# A missing one fails the run at startup and names the variable.
+# ${NAME:-fallback} uses the fallback when neither is set.
 ui:
   baseUrl: ${UAT_UI_URL:-https://uat.customers.example.com}
   waits:
     actionMs: 30000
     navigationMs: 60000
     assertionMs: 30000
-api:
-  baseUrl: ${UAT_API_URL:-https://uat-api.customers.example.com}
-  timeoutMs: 30000
 services:
   customers:
     baseUrl: ${UAT_CUSTOMERS_URL:-https://uat-api.customers.example.com}
-    timeoutMs: 30000
-    # OAuth2 client credentials: a token is fetched once per run from tokenUrl and sent as
-    # "Authorization: Bearer ..." with every request to this service (renewed shortly before it expires).
-    auth:
-      type: ${UAT_CUSTOMERS_AUTH:-oauth2}     # none, oauth2, basic or bearer
-      tokenUrl: ${UAT_AUTH_URL:-https://uat-auth.example.com/oauth2/token}
-      clientId: ${UAT_CUSTOMERS_CLIENT_ID}
-      clientSecret: ${UAT_CUSTOMERS_CLIENT_SECRET}
-      scope: customers.read customers.write
-  # orders:
-  #   baseUrl: ${UAT_ORDERS_URL:-https://uat-api.orders.example.com}
-  #   auth:
-  #     type: basic
-  #     username: ${UAT_ORDERS_USER}
-  #     password: ${UAT_ORDERS_PASSWORD}
+  appWebserviceAdapter:
+    baseUrl: ${UAT_WEBSERVICE_ADAPTER_URL:-https://uat-webservice-adapter.example.com}
 retry:
   count: 2

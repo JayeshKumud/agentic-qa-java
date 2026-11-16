@@ -20,9 +20,9 @@ import java.util.regex.Pattern;
 
 /**
  * Loads the settings of the active environment. Two files on the classpath (src/main/resources) are read and
- * merged: {@value #COMMON} holds what every environment shares (browser, waits, endpoint catalog, execution
- * mode, cleanup, healing, retry), and config/env/NAME.yaml holds what differs per environment (URLs, client
- * ids and secrets, overrides). A key set in the environment file wins; nested sections are merged key by key,
+ * merged: {@value #COMMON} holds what every environment shares (browser, waits, execution mode, cleanup,
+ * healing, retry), and config/env/NAME.yaml holds what differs per environment (the UI URL, service base URLs,
+ * overrides). A key set in the environment file wins; nested sections are merged key by key,
  * lists are replaced. Choose the environment with -Denv=test or the ENV variable; the default is dev.
  * <p>
  * Any value can be overridden for one run with a system property named by its path, for example

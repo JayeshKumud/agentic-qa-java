@@ -1,5 +1,0 @@
-{
-  "name": 42,
-  "email": ["not", "a", "string"],
-  "status": true
-}

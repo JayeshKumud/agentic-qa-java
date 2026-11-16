@@ -1,38 +1,20 @@
 # Test environment. Run: mvn test -Denv=test
-# Shared settings (browser, waits, endpoints, healing, ...) are in config/common.yaml; this file holds only what
+# Shared settings (browser, waits, healing, ...) are in config/common.yaml; this file holds only what
 # differs here and wins over common.yaml.
 #
 # The URLs below are placeholders: replace the fallbacks with the real test hosts, or set the variables in CI.
 # ${NAME} is filled from the system property NAME (-DNAME=...) or else the environment variable NAME;
-# ${NAME:-fallback} uses the fallback when neither is set. Secrets (client secrets, passwords, API keys) are
-# never written here: they are ${NAME} without fallback, set as CI secrets or local environment variables.
-# A missing one fails the run at startup and names the variable.
+# ${NAME:-fallback} uses the fallback when neither is set.
 ui:
   baseUrl: ${TEST_UI_URL:-https://test.customers.example.com}
   waits:
     actionMs: 20000
     navigationMs: 40000
     assertionMs: 20000
-api:
-  baseUrl: ${TEST_API_URL:-https://test-api.customers.example.com}
-  timeoutMs: 20000
 services:
   customers:
     baseUrl: ${TEST_CUSTOMERS_URL:-https://test-api.customers.example.com}
-    timeoutMs: 20000
-    # OAuth2 client credentials: a token is fetched once per run from tokenUrl and sent as
-    # "Authorization: Bearer ..." with every request to this service (renewed shortly before it expires).
-    auth:
-      type: ${TEST_CUSTOMERS_AUTH:-oauth2}     # none, oauth2, basic or bearer
-      tokenUrl: ${TEST_AUTH_URL:-https://test-auth.example.com/oauth2/token}
-      clientId: ${TEST_CUSTOMERS_CLIENT_ID}
-      clientSecret: ${TEST_CUSTOMERS_CLIENT_SECRET}
-      scope: customers.read customers.write
-  # orders:
-  #   baseUrl: ${TEST_ORDERS_URL:-https://test-api.orders.example.com}
-  #   auth:
-  #     type: basic
-  #     username: ${TEST_ORDERS_USER}
-  #     password: ${TEST_ORDERS_PASSWORD}
+  appWebserviceAdapter:
+    baseUrl: ${TEST_WEBSERVICE_ADAPTER_URL:-https://test-webservice-adapter.example.com}
 retry:
   count: 1

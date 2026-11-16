@@ -1,16 +1,16 @@
 package com.agenticqa.steps;
 
-import com.agenticqa.api.ApiClient;
-import com.agenticqa.api.Customer;
-import com.agenticqa.api.CustomerApi;
-import com.agenticqa.api.Payload;
+import com.agenticqa.api.ApiFactory;
+import com.agenticqa.apis.CustomerApi;
+import com.agenticqa.apis.model.Customer;
 import com.agenticqa.core.TestData;
 import com.agenticqa.core.TestSession;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.microsoft.playwright.APIResponse;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import io.restassured.response.Response;
+
+import java.util.List;
 
 import static com.agenticqa.steps.Keys.CUSTOMER;
 import static com.agenticqa.steps.Keys.RESPONSE;
@@ -19,13 +19,14 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
- * Steps for the customers REST API. Names in feature files are made unique per scenario (a random token is
- * appended), so scenarios can run in parallel against the same app; every customer created is deleted afterwards.
+ * Steps for the customers REST API, through {@link CustomerApi} from {@link ApiFactory}. Each step stores what it
+ * created or changed as "the customer" in the scenario's {@link TestSession}, so GUI steps of the same scenario
+ * work on it too. Names are made unique per scenario (a random token is appended), so scenarios can run in
+ * parallel against the same app; every customer created is deleted afterwards.
  */
 public class CustomerApiSteps {
 
     private final TestSession session;
-    private final CustomerApi customers;
     private final ServiceCleanup cleanup;
 
     /**
@@ -36,7 +37,6 @@ public class CustomerApiSteps {
      */
     public CustomerApiSteps(TestSession session, ServiceCleanup cleanup) {
         this.session = session;
-        this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
     }
 
@@ -49,11 +49,10 @@ public class CustomerApiSteps {
     @When("I create a customer named {string}")
     public void createCustomer(String name) {
         String unique = TestData.uniqueName(name);
-        APIResponse response = customers.create(Payload.empty().set("name", unique).set("email", TestData.emailFor(unique)));
+        Response response = customerApi().postCustomer(new Customer(unique, TestData.emailFor(unique)));
         session.put(RESPONSE, response);
-        assertEquals(response.status(), 201, "Create failed: " + response.text());
-        Customer customer = CustomerApi.asCustomer(response);
-        cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(customer.id()));
+        Customer customer = response.as(Customer.class);
+        deleteAfterScenario(cleanup, customer.getId());
         session.put(CUSTOMER, customer);
     }
 
@@ -65,20 +64,18 @@ public class CustomerApiSteps {
     @When("I change the customer status to {string}")
     public void changeStatus(String status) {
         Customer current = session.get(CUSTOMER);
-        APIResponse response = customers.update(current.id(), Payload.of(current).remove("id").set("status", status));
+        Customer changed = new Customer(null, current.getName(), current.getEmail(), status);
+        Response response = customerApi().putCustomer(current.getId(), changed);
         session.put(RESPONSE, response);
-        assertEquals(response.status(), 200, "Update failed: " + response.text());
-        session.put(CUSTOMER, CustomerApi.asCustomer(response));
+        session.put(CUSTOMER, response.as(Customer.class));
     }
 
     /** Deletes the customer. */
     @When("I delete the customer")
     public void deleteCustomer() {
         Customer current = session.get(CUSTOMER);
-        APIResponse response = customers.deleteById(current.id());
-        session.put(RESPONSE, response);
-        assertEquals(response.status(), 204, "Delete failed: " + response.text());
-        cleanup.cancel(CustomerApi.SERVICE, CustomerApi.pathOf(current.id()));
+        session.put(RESPONSE, customerApi().deleteCustomer(current.getId()));
+        cleanup.cancel(cleanupKey(current.getId()));
     }
 
     /**
@@ -89,25 +86,23 @@ public class CustomerApiSteps {
     @Then("the customer can be found by id with status {string}")
     public void findById(String status) {
         Customer expected = session.get(CUSTOMER);
-        APIResponse response = customers.getById(expected.id());
-        assertEquals(response.status(), 200, "Get failed: " + response.text());
-        Customer actual = CustomerApi.asCustomer(response);
-        assertEquals(actual.id(), expected.id());
-        assertEquals(actual.name(), expected.name());
-        assertEquals(actual.email(), expected.email());
-        assertEquals(actual.status(), status);
+        Customer actual = customerApi().getCustomer(expected.getId()).as(Customer.class);
+        assertEquals(actual.getId(), expected.getId());
+        assertEquals(actual.getName(), expected.getName());
+        assertEquals(actual.getEmail(), expected.getEmail());
+        assertEquals(actual.getStatus(), status);
     }
 
     /** Checks that the customer appears in GET /customers. */
     @Then("the customer appears in the customer list")
     public void appearsInList() {
-        assertTrue(listContains(session.get(CUSTOMER).id()), "Customer missing from list");
+        assertTrue(listedIds().contains(session.get(CUSTOMER).getId()), "Customer missing from list");
     }
 
     /** Checks that the customer no longer appears in GET /customers. */
     @Then("the customer no longer appears in the customer list")
     public void absentFromList() {
-        assertFalse(listContains(session.get(CUSTOMER).id()), "Deleted customer still listed");
+        assertFalse(listedIds().contains(session.get(CUSTOMER).getId()), "Deleted customer still listed");
     }
 
     /**
@@ -117,22 +112,31 @@ public class CustomerApiSteps {
      */
     @Then("the API responds with status {int}")
     public void responseStatus(int status) {
-        APIResponse response = session.get(RESPONSE);
-        assertEquals(response.status(), status, response.text());
+        Response response = session.get(RESPONSE);
+        assertEquals(response.getStatusCode(), status, response.getBody().asString());
     }
 
     /**
-     * Tells whether GET /customers contains a customer id.
+     * Registers a customer for deletion after the scenario. Used by the GUI steps too, for customers added
+     * through the page.
      *
-     * @param id the id to look for
-     * @return true if listed
+     * @param cleanup the scenario's cleanup
+     * @param id      the customer id
      */
-    private boolean listContains(long id) {
-        APIResponse response = customers.list();
-        assertEquals(response.status(), 200, "List failed: " + response.text());
-        for (JsonNode node : ApiClient.json(response)) {
-            if (node.path("id").asLong() == id) return true;
-        }
-        return false;
+    static void deleteAfterScenario(ServiceCleanup cleanup, long id) {
+        cleanup.add(cleanupKey(id), () -> ApiFactory.getApi(CustomerApi.class).deleteCustomer(id));
+    }
+
+    private static String cleanupKey(long id) {
+        return "customer " + id;
+    }
+
+    /** @return the ids in GET /customers */
+    private List<Long> listedIds() {
+        return customerApi().getCustomers().jsonPath().getList("id", Long.class);
+    }
+
+    private CustomerApi customerApi() {
+        return ApiFactory.getApi(CustomerApi.class);
     }
 }

@@ -9,18 +9,6 @@ Feature: A zone id set in one step and read in the next steps
     When I read the zone id
     Then the zone id read is the one that was set
 
-  Scenario: Use the zone id in a request body
-    Given a unique zone id is set
-    And a new "zone" request with body:
-      """
-      { "name": "Zone ${zoneId}" }
-      """
-    And the "zone" request field "zoneId" is set to "json:${zoneId}"
-    Then the "zone" request field "zoneId" is "${zoneId}"
-    And the "zone" request field "name" is "Zone ${zoneId}"
-    When I read the zone id
-    Then the zone id should be "${zoneId}"
-
   # @Sequential wins over the feature's @Parallel: this scenario runs alone, after the parallel ones.
   @Sequential
   Scenario: A second zone id in the same scenario replaces the first

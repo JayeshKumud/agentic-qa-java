@@ -4,7 +4,6 @@ import io.cucumber.tagexpressions.Expression;
 import io.cucumber.tagexpressions.TagExpressionParser;
 
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -16,17 +15,13 @@ import java.util.TreeMap;
  * example {@code -Dui.headless=false} or {@code -Dservices.customers.baseUrl=http://...}.
  *
  * @param ui              browser settings and waits
- * @param api             REST API settings
- * @param serviceDefaults headers (and timeout) every service gets unless it sets its own; may be null
- * @param services        the HTTP services (microservices) tests talk to, by name, for example "customers"
- * @param endpoints       the endpoint catalog, by group name (the part before the dot in "customers.get")
+ * @param services        the HTTP services tests talk to, by name, for example "customers" ({@link Config#getApiUrl})
  * @param execution       how scenarios without @Parallel or @Sequential run
  * @param cleanup         folders emptied before a run, and the run's log file
  * @param healing         self-healing locator settings; defaults apply when the section is missing
  * @param retry           which failed scenarios are run again, and how often; no retries when the section is missing
  */
-public record Settings(Ui ui, Api api, Service serviceDefaults, Map<String, Service> services,
-                       Map<String, EndpointGroup> endpoints, Execution execution, Cleanup cleanup,
+public record Settings(Ui ui, Map<String, Service> services, Execution execution, Cleanup cleanup,
                        Healing healing, Retry retry) {
 
     /**
@@ -77,18 +72,7 @@ public record Settings(Ui ui, Api api, Service serviceDefaults, Map<String, Serv
     }
 
     /**
-     * The endpoint catalog, never null.
-     *
-     * @return group name to group
-     */
-    @Override
-    public Map<String, EndpointGroup> endpoints() {
-        return endpoints == null ? Map.of() : endpoints;
-    }
-
-    /**
-     * Settings of one named service: its own values, else {@code serviceDefaults}, else {@code api}.
-     * Headers are merged: the service's headers win over the default headers.
+     * Settings of one named service.
      *
      * @param name the service name
      * @return the service settings
@@ -101,15 +85,7 @@ public record Settings(Ui ui, Api api, Service serviceDefaults, Map<String, Serv
                     + (services == null ? "none" : new TreeMap<>(services).keySet())
                     + ". Add it under 'services:' in config/env/" + EnvConfig.envName() + ".yaml");
         }
-        Service defaults = serviceDefaults != null ? serviceDefaults : new Service(null, null, null, null);
-        Integer timeout = service.timeoutMs() != null ? service.timeoutMs()
-                : defaults.timeoutMs() != null ? defaults.timeoutMs()
-                : api != null && api.timeoutMs() > 0 ? api.timeoutMs() : 15000;
-        Map<String, String> headers = new LinkedHashMap<>();
-        if (defaults.headers() != null) headers.putAll(defaults.headers());
-        if (service.headers() != null) headers.putAll(service.headers());
-        Auth auth = service.auth() != null ? service.auth() : defaults.auth() != null ? defaults.auth() : Auth.none();
-        return new Service(service.baseUrl(), timeout, Map.copyOf(headers), auth);
+        return service;
     }
 
     /**
@@ -189,86 +165,11 @@ public record Settings(Ui ui, Api api, Service serviceDefaults, Map<String, Serv
     }
 
     /**
-     * REST API settings.
-     *
-     * @param baseUrl   API URL
-     * @param timeoutMs default timeout of one request in milliseconds, for services without their own
-     */
-    public record Api(String baseUrl, int timeoutMs) {}
-
-    /**
      * One HTTP service (microservice).
      *
-     * @param baseUrl   service URL; request paths such as "/orders" resolve against it
-     * @param timeoutMs timeout of one request in milliseconds; null uses serviceDefaults, then api.timeoutMs
-     * @param headers   headers sent with every request to this service; may be null
-     * @param auth      how requests to this service log in; null means none
+     * @param baseUrl service URL, read by API classes with {@code Config.getApiUrl(name)}
      */
-    public record Service(String baseUrl, Integer timeoutMs, Map<String, String> headers, Auth auth) {}
-
-    /**
-     * How requests to a service authenticate. Secrets come from placeholders ({@code ${UAT_CLIENT_SECRET}}),
-     * never from committed files, and {@link #toString()} masks them, so they never reach a log or report.
-     *
-     * @param type         none, oauth2 (client credentials grant), basic or bearer
-     * @param tokenUrl     oauth2: the token endpoint
-     * @param clientId     oauth2: the client id
-     * @param clientSecret oauth2: the client secret
-     * @param scope        oauth2: optional, space separated scopes
-     * @param username     basic: the user
-     * @param password     basic: the password
-     * @param token        bearer: a fixed token
-     */
-    public record Auth(String type, String tokenUrl, String clientId, String clientSecret, String scope,
-                       String username, String password, String token) {
-
-        /**
-         * No authentication.
-         *
-         * @return type none
-         */
-        public static Auth none() {
-            return new Auth("none", null, null, null, null, null, null, null);
-        }
-
-        /**
-         * The type, normalized.
-         *
-         * @return none, oauth2, basic or bearer, lower case
-         */
-        public String kind() {
-            return type == null || type.isBlank() ? "none" : type.trim().toLowerCase(Locale.ROOT);
-        }
-
-        /** @return the settings with secrets masked */
-        @Override
-        public String toString() {
-            return "Auth[type=" + kind() + ", tokenUrl=" + tokenUrl + ", clientId=" + clientId
-                    + ", clientSecret=" + mask(clientSecret) + ", scope=" + scope + ", username=" + username
-                    + ", password=" + mask(password) + ", token=" + mask(token) + "]";
-        }
-
-        private static String mask(String secret) {
-            return secret == null || secret.isEmpty() ? String.valueOf(secret) : "****";
-        }
-    }
-
-    /**
-     * One group of the endpoint catalog.
-     *
-     * @param service   the service name under 'services:'
-     * @param endpoints endpoint key to endpoint, for example "get"
-     */
-    public record EndpointGroup(String service, Map<String, EndpointSpec> endpoints) {}
-
-    /**
-     * One endpoint as written in the catalog.
-     *
-     * @param method HTTP verb
-     * @param path   path template, for example /customers/{id}
-     * @param body   default body file under src/test/resources/testdata, or null
-     */
-    public record EndpointSpec(String method, String path, String body) {}
+    public record Service(String baseUrl) {}
 
     /**
      * How scenarios run.

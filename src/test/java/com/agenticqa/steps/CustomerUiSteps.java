@@ -1,8 +1,8 @@
 package com.agenticqa.steps;
 
-import com.agenticqa.api.Customer;
-import com.agenticqa.api.CustomerApi;
-import com.agenticqa.api.Payload;
+import com.agenticqa.api.ApiFactory;
+import com.agenticqa.apis.CustomerApi;
+import com.agenticqa.apis.model.Customer;
 import com.agenticqa.core.TestData;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.CustomersPage;
@@ -24,13 +24,13 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 /**
- * Steps for the customers page. Data is usually prepared through the API (fast and reliable) and then checked
- * in the browser; only the behaviour under test goes through the UI.
+ * Steps for the customers page. Data is usually prepared through the API ({@link CustomerApi}, fast and reliable)
+ * and then checked in the browser; only the behaviour under test goes through the UI. GUI and API steps share
+ * "the customer" through the scenario's {@link TestSession} (key {@code Keys.CUSTOMER}).
  */
 public class CustomerUiSteps {
 
     private final TestSession session;
-    private final CustomerApi customers;
     private final ServiceCleanup cleanup;
 
     /**
@@ -41,7 +41,6 @@ public class CustomerUiSteps {
      */
     public CustomerUiSteps(TestSession session, ServiceCleanup cleanup) {
         this.session = session;
-        this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
     }
 
@@ -55,9 +54,9 @@ public class CustomerUiSteps {
         String tag = "Batch " + TestData.token();
         for (int i = 1; i <= count; i++) {
             String name = tag + " #" + i;
-            APIResponse response = customers.create(Payload.empty().set("name", name).set("email", TestData.emailFor(name)));
-            assertEquals(response.status(), 201, "Create failed: " + response.text());
-            cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(CustomerApi.asCustomer(response).id()));
+            Customer created = ApiFactory.getApi(CustomerApi.class)
+                    .postCustomer(new Customer(name, TestData.emailFor(name))).as(Customer.class);
+            CustomerApiSteps.deleteAfterScenario(cleanup, created.getId());
         }
         session.put(NAME_TAG, tag);
     }
@@ -76,14 +75,14 @@ public class CustomerUiSteps {
         List<CustomerRow> found = page().search(unique).visibleRows();
         assertEquals(found.size(), 1, "Expected exactly one row for " + unique);
         CustomerRow row = found.get(0);
-        cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(row.id()));
+        CustomerApiSteps.deleteAfterScenario(cleanup, row.id());
         session.put(CUSTOMER, new Customer(row.id(), row.name(), row.email(), row.status()));
     }
 
     /** Searches the page for the customer's name. */
     @When("I search the customers page for that customer")
     public void searchForCustomer() {
-        page().open().search(session.get(CUSTOMER).name());
+        page().open().search(session.get(CUSTOMER).getName());
     }
 
     /** Searches the page for the shared name tag. */
@@ -120,9 +119,9 @@ public class CustomerUiSteps {
         Customer expected = session.get(CUSTOMER);
         assertThat(page().rows()).hasCount(1);
         CustomerRow row = page().visibleRows().get(0);
-        assertEquals(row.id(), expected.id().longValue());
-        assertEquals(row.name(), expected.name());
-        assertEquals(row.email(), expected.email());
+        assertEquals(row.id(), expected.getId().longValue());
+        assertEquals(row.name(), expected.getName());
+        assertEquals(row.email(), expected.getEmail());
         assertEquals(row.status(), status);
     }
 
@@ -178,10 +177,7 @@ public class CustomerUiSteps {
                 "Expected " + description + " to be healed to " + selector + ", heals were: " + heals);
     }
 
-    /**
-     * Checks that nothing was healed in this sce
-     * nario.
-     */
+    /** Checks that nothing was healed in this scenario. */
     @Then("no locator was healed")
     public void nothingHealed() {
         assertTrue(session.healEvents().isEmpty(), "Unexpected heals: " + session.healEvents());

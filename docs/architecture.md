@@ -2,20 +2,20 @@
 
 This page explains how the framework is built, how its parts fit together, and what happens from
 `mvn test` to the final report. For details on specific features, see
-[api-requests.md](api-requests.md), [healing.md](healing.md) and [reporting.md](reporting.md).
+[api.md](api.md), [healing.md](healing.md) and [reporting.md](reporting.md).
 
 ## Design principles
 
-1. **One scenario, one session.** Everything a scenario uses (browser, page, API context, stored data,
-   requests, responses, healer, call log) belongs to that scenario only. That is what makes parallel runs safe.
-2. **Feature files describe behaviour, Java describes how.** Steps read like requirements. Selectors, URLs
-   and JSON handling live in page objects, API clients and helpers, each in one place.
-3. **API and UI share one browser context.** HTTP calls and the page share cookies, so a login done through one is
-   valid for the other.
-4. **Config, not code, for environments and services.** URLs, timeouts, headers and healing settings come
-   from `config/env/<env>.yaml` and can be overridden per run.
-5. **Failures carry their evidence.** Screenshot, trace, HTTP call log and heal events are attached
-   automatically. No step has to remember to collect them.
+1. **One scenario, one session.** Everything a scenario uses (browser, page, stored data, healer) belongs to
+   that scenario only. That is what makes parallel runs safe.
+2. **Feature files describe behaviour, Java describes how.** Steps read like requirements. Selectors live in
+   locator files and page objects, HTTP calls in API classes, each in one place.
+3. **API and UI share data through the session.** An API step stores what it created in the `TestSession`, and
+   a GUI step of the same scenario reads it, and the other way round.
+4. **Config, not code, for environments and services.** The UI URL, the base URL of every service, waits and
+   healing settings come from `config/env/<env>.yaml` and can be overridden per run.
+5. **Failures carry their evidence.** Screenshot, trace, video and heal events are attached automatically. No
+   step has to remember to collect them.
 6. **Tests clean up after themselves**, whether they pass or fail.
 
 ## Layers
@@ -24,52 +24,50 @@ This page explains how the framework is built, how its parts fit together, and w
 flowchart TB
     subgraph Spec["Specification (src/test/resources)"]
         F["Feature files<br/>features/api · ui · e2e"]
-        TD["Test data<br/>testdata/**/*.json"]
     end
 
     subgraph Glue["Glue (src/test/java)"]
         R["TestRunner<br/>Cucumber + TestNG, parallel<br/>ScenarioRetry"]
         H["Hooks<br/>@Before / @After"]
-        ST["Step definitions<br/>CustomerApiSteps · CustomerUiSteps<br/>CustomerRequestSteps · HttpSteps"]
+        ST["Step definitions<br/>CustomerApiSteps · CustomerUiSteps<br/>HomeSteps · ZoneSteps"]
         CL["Cleanup<br/>ServiceCleanup"]
+        subgraph APIS["apis (REST Assured)"]
+            CA["CustomerApi · WebserviceAdapterValidationApi"]
+            MD["model: Customer"]
+        end
         RP["RunSummaryPlugin · ReportSetupPlugin<br/>+ Allure · Extent"]
     end
 
     subgraph Core["Framework (src/main/java)"]
         S["TestSession<br/>per-scenario state"]
         BP["BrowserPool<br/>one browser per thread"]
-        AS["ApiState<br/>named requests / responses"]
-        V["Variables · JsonPaths · TestData"]
-        subgraph API["api"]
-            EP["Endpoints (catalog)<br/>EndpointClient · Payload"]
-            AC["ApiClient (base)"]
-            CA["CustomerApi"]
-            SC["ServiceClient"]
-        end
+        V["Variables · TestData"]
+        AF["ApiFactory · Api"]
         subgraph UI["ui"]
             PO["CustomersPage"]
             LR["PageElements<br/>LocatorRepository"]
             SL["SmartLocator"]
             HE["Healer · HealingScorer<br/>FingerprintStore"]
         end
-        CFG["EnvConfig → Settings"]
+        CFG["EnvConfig → Settings<br/>Config.getApiUrl"]
     end
 
     subgraph Ext["Outside the JVM"]
-        PW["Playwright<br/>browser + APIRequestContext"]
+        PW["Playwright<br/>browser"]
         APP["Application under test<br/>(sample-target-app :8000)"]
-        YAML["config/common.yaml + config/env/*.yaml<br/>(endpoint catalog in common.yaml) · locators/*.json"]
+        YAML["config/common.yaml + config/env/*.yaml<br/>· locators/*.json"]
         FP["healing/fingerprints.json"]
         OUT["target/reports · traces · healing"]
     end
 
     R --> F
     F --> ST
-    ST --> S & AS & V & CA & SC & PO
+    ST --> S & V & AF & PO
     ST --> CL
-    TD --> V
+    AF --> CA
+    CA --> CFG
+    CA --> APP
     H --> S
-    CA & SC --> AC --> S
     PO --> SL --> HE
     S --> PW --> APP
     S --> CFG --> YAML
@@ -81,17 +79,17 @@ flowchart TB
 
 | Layer | Package / folder | Responsibility |
 |---|---|---|
-| Specification | `features/`, `testdata/` | What is tested, in Gherkin, plus the JSON payloads it uses |
+| Specification | `features/` | What is tested, in Gherkin |
 | Runner | `runner.TestRunner` | Finds the features, wires glue and plugins, runs scenarios in parallel through a TestNG `DataProvider` |
-| Hooks | `hooks.Hooks` | Names the session before each scenario. After it, attaches heals, the HTTP log and a screenshot, then closes the session |
-| Steps | `steps.*` | Turn Gherkin into calls on page objects, clients and `ApiState`. No selectors and no raw URLs |
+| Hooks | `hooks.Hooks` | Names the session and binds it to the thread before each scenario. After it, attaches heals and a screenshot, then closes the session |
+| Steps | `steps.*` | Turn Gherkin into calls on page objects and API classes. No selectors and no raw URLs |
 | Cleanup | `ServiceCleanup` | Delete what the scenario created, newest first, in `@After` |
-| Session | `core.TestSession` | Lazily starts Playwright, holds the page, API context, healer, typed data store and call log |
-| Data helpers | `core.Variables`, `JsonPaths`, `TestData`, `DataKey` | `${var}` and `{unique}` substitution, JSON path read and write and merge, loading test data, typed keys |
-| API | `api.*` | `ApiClient` handles URLs, timeouts, default headers, JSON and logging. Subclasses describe business operations |
+| Session | `core.TestSession` | Lazily starts Playwright, holds the page, healer and the typed data store shared by API and GUI steps |
+| Data helpers | `core.Variables`, `TestData`, `DataKey` | `${var}` and `{unique}` substitution, unique test data, typed keys |
+| API | `api.ApiFactory`, `apis.*` | `ApiFactory` creates each API class once; API classes call their service with REST Assured |
 | UI | `ui.*` | Page objects built from `SmartLocator`s |
 | Healing | `ui.healing.*` | Fingerprint capture, similarity scoring and replacement of broken selectors |
-| Config | `config.*` | Loads `config/env/<env>.yaml` once per JVM into a typed `Settings` record |
+| Config | `config.*` | Loads `config/env/<env>.yaml` once per JVM into a typed `Settings` record; `Config.getApiUrl` for API classes |
 | Reporting | `reporting.RunSummaryPlugin` | Cucumber event listener that writes `run-summary.html` and `.json` |
 
 ## Key components
@@ -106,26 +104,23 @@ classDiagram
     class TestSession {
         +settings() Settings
         +page() Page
-        +api() APIRequestContext
         +healer() Healer
         +put(DataKey, value)
         +get(DataKey) T
-        +recordApiCall(ApiCall)
-        +close(failed) Path
+        +current()$ TestSession
+        +close(failed) SavedFiles
     }
-    class ApiState {
-        named requests
-        named responses
+    class ApiFactory {
+        +getApi(Class)$ T
     }
-    class ApiClient {
-        <<abstract>>
-        base URL, timeout, headers
-        JSON + call log
+    class CustomerApi {
+        +postCustomer(body) Response
+        +getCustomer(id) Response
+        +putCustomer(id, body) Response
+        +deleteCustomer(id) Response
     }
-    class CustomerApi
-    class ServiceClient
-    class EndpointClient {
-        +call(name, pathParams, body) APIResponse
+    class Config {
+        +getApiUrl(name)$ String
     }
     class CustomersPage
     class PageElements {
@@ -136,46 +131,35 @@ classDiagram
         +locator() Locator
     }
     class Healer
-    ApiClient <|-- ServiceClient
-    EndpointClient --> ServiceClient : per call
-    CustomerApi --> EndpointClient
-    ApiClient --> TestSession : api(), recordApiCall()
+    ApiFactory --> CustomerApi : creates once
+    CustomerApi --> Config : base URL
     CustomersPage --> PageElements
     PageElements --> SmartLocator : heal true
     SmartLocator --> Healer : resolve()
     TestSession --> Healer : creates lazily
 ```
 
-- **The context starts lazily.** `page()` or `api()` opens a new browser context the first time it is called,
-  in the browser of the current worker thread (`BrowserPool`). Each worker thread launches its browser once and
-  reuses it for all its scenarios, while every scenario still gets its own context (cookies, storage, trace).
-  A pure API scenario also creates a context, because the API context comes from it, but it never opens a page.
+- **The context starts lazily.** `page()` opens a new browser context the first time it is called, in the
+  browser of the current worker thread (`BrowserPool`). Each worker thread launches its browser once and reuses
+  it for all its scenarios, while every scenario still gets its own context (cookies, storage, trace). An
+  API-only scenario never starts a browser.
 - **Tracing** starts with the context and is saved to `target/artifacts/traces/` only when the scenario fails.
 - **Video** is recorded with the context (`ui.video`, default `failed`) and kept in `target/artifacts/videos/` only
   when the scenario fails; passed scenarios' videos are deleted. `ui.ignoreHttpsErrors` and `ui.maximize` are
   context options too, so every page of the scenario gets them.
 - **The typed store** (`put`/`get` with a `DataKey<T>`) lets step classes share values such as "the current
-  customer" without static fields.
+  customer" without static fields, between API and GUI steps alike.
 
 ### API access
 
-`ApiClient` is the single place where HTTP happens:
+API classes are written as in the existing framework (see [api.md](api.md)):
 
-1. It resolves the service from `Settings.service(name)`: base URL (which `-Dservices.NAME.baseUrl` can
-   override), timeout and default headers.
-2. It sends the request through `session.api()`, so cookies are shared with the page.
-3. It records an `ApiCall` (method, URL, status, time, request and response bodies) in the session's call log.
-   If the scenario fails, the log is attached to the report.
-
-Clients on top of it:
-
-- **`EndpointClient`** calls any endpoint of the catalog (`endpoints:` in `src/main/resources/config/common.yaml`) by
-  name, for example `call("customers.get", Map.of("id", 42))`. Bodies are `Payload`s (any JSON, edited by
-  path), so no request class or method is needed per endpoint.
-- **`CustomerApi`** is an optional facade of one-line methods over `EndpointClient`, for the operations the
-  readable customer steps use many times.
-- **`ServiceClient`** sends any method to any path of a configured service. It is used by the generic
-  `HttpSteps` together with `ApiState` (named requests and responses), `JsonPaths` and `Variables`.
+1. An API class (`apis/CustomerApi`) implements `Api` and has a no-argument constructor that reads its base URL
+   with `Config.getApiUrl("customers")`, which `-Dservices.customers.baseUrl` can override.
+2. Each method calls the service with REST Assured, fails with `Assert.fail` on an unexpected status and returns
+   the `Response`. Bodies are model classes (`apis/model/Customer`), serialized by Jackson.
+3. Steps get the class with `ApiFactory.getApi(CustomerApi.class)`, which creates it once and returns the same
+   instance for the whole run, so API classes hold no per-scenario state.
 
 ### UI access and self-healing
 
@@ -199,7 +183,7 @@ The full algorithm is in [healing.md](healing.md).
 flowchart LR
     P["-Denv=ci<br/>or ENV=ci<br/>(default dev)"] --> E["EnvConfig.get()<br/>read once per JVM"]
     Y["classpath:<br/>config/env/ci.yaml"] --> E
-    E --> S["Settings<br/>ui · api · services · healing"]
+    E --> S["Settings<br/>ui · services · healing"]
     O["-Dservices.NAME.baseUrl"] --> S
 ```
 
@@ -222,19 +206,19 @@ sequenceDiagram
     R->>C: scenarios() (parallel DataProvider)
     C->>Rep: TestRunStarted
     loop each scenario, on its own thread
-        C->>S: new TestSession, ApiState, cleanup (per scenario)
-        C->>H: @Before → session.scenarioName()
+        C->>S: new TestSession, cleanup (per scenario)
+        C->>H: @Before → session.scenarioName(), bindToCurrentThread()
         loop each step
             C->>St: step method
-            St->>S: page() / api() (starts context lazily)
+            St->>S: page() (starts context lazily), put/get shared data
             S->>P: thread's browser (launched once per thread), new context, start tracing
-            St->>A: HTTP calls (ApiClient) / page actions (page objects)
+            St->>A: HTTP calls (API classes, REST Assured) / page actions (page objects)
             A-->>St: responses / DOM
             St->>St: assertions
         end
-        C->>St: cleanup @After(order = 20000): DELETE created resources
+        C->>St: cleanup @After(order = 20000): delete created resources
         C->>H: @After (default order, runs after cleanup)
-        H->>H: attach heals, api-calls (failed), screenshot (failed)
+        H->>H: attach heals, screenshot (failed)
         H->>S: close(failed) → save trace if failed, close context
         C->>Rep: TestCaseFinished (status, attachments)
         opt failed and retry.count / retry.tags allow it
@@ -251,15 +235,16 @@ sequenceDiagram
    `com.agenticqa.steps` and `com.agenticqa.hooks`. Tags (`-Dcucumber.filter.tags`) select scenarios.
 2. **Scheduling.** The overridden `scenarios()` `DataProvider` is `parallel = true`, and Surefire passes
    `dataproviderthreadcount = ${threads}`, so up to N scenarios run at once.
-3. **Wiring.** For each scenario, PicoContainer builds a fresh object graph: `TestSession`, `ApiState`, the step
-   classes and the cleanup classes. Classes that ask for the same type get the same instance.
-4. **Before.** `Hooks.before` stores the scenario name, which is used for trace file names.
-5. **Steps.** Steps call page objects and API clients. The first call to the browser or the API starts Playwright
-   with the configured browser, headless mode, base URL, timeout and tracing.
+3. **Wiring.** For each scenario, PicoContainer builds a fresh object graph: `TestSession`, the step classes and
+   the cleanup class. Classes that ask for the same type get the same instance.
+4. **Before.** `Hooks.before` stores the scenario name, which is used for trace file names, and binds the session
+   to the thread for `TestSession.current()`.
+5. **Steps.** Steps call page objects and API classes. The first call to the browser starts Playwright with the
+   configured browser, headless mode, base URL, timeout and tracing.
 6. **After.** First, the cleanup classes (`@After(order = 20000)`; for `@After` hooks a higher order runs first)
    delete the resources the scenario registered, newest first, while the session is still open. Then
-   `Hooks.after` attaches heal events (always), the HTTP call log and a full-page screenshot (on failure only),
-   and closes the session. The trace is saved only on failure.
+   `Hooks.after` attaches heal events (always) and a full-page screenshot (on failure only), and closes the
+   session. The trace and video are kept only on failure.
 7. **Reporting.** Cucumber's `pretty`, `html` and `json` plugins and `RunSummaryPlugin` collect events
    throughout the run. At the end, `RunSummaryPlugin` writes the summary.
 
@@ -267,15 +252,13 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    F1["Given a new 'hedy' request<br/>from customers/customer_profile.json"] --> AS1["ApiState: request 'hedy'"]
-    F2["…field … is set / removed / merged"] --> AS1
-    AS1 --> F3["When I send the 'hedy' request<br/>as POST … on the 'customers' service"]
-    F3 --> SC["ServiceClient → App"] --> AS2["ApiState: response 'hedy'"]
-    AS2 --> F4["I save … field 'id' as 'hedyId'"] --> VAR["Variables: ${hedyId}"]
-    VAR --> F5["GET /customers/${hedyId} …"]
-    AS2 --> F6["the 'hedy' response is the customer"] --> KEY["TestSession: Keys.CUSTOMER"]
-    KEY --> F7["I search the customers page<br/>for that customer"] --> PO["CustomersPage → browser"]
-    F3 -.-> CLN["ServiceCleanup<br/>DELETE after scenario"]
+    F1["When I add a customer named …<br/>through the form"] --> PO1["CustomersPage → browser"]
+    PO1 --> KEY["TestSession: Keys.CUSTOMER"]
+    KEY --> F2["Then the customer can be found<br/>by id with status …"] --> CA1["CustomerApi.getCustomer → App"]
+    KEY --> F3["When I change the customer<br/>status to …"] --> CA2["CustomerApi.putCustomer → App"]
+    CA2 --> KEY
+    KEY --> F4["I search the customers page<br/>for that customer"] --> PO2["CustomersPage → browser"]
+    F1 -.-> CLN["ServiceCleanup<br/>delete after scenario"]
 ```
 
 ## CI workflow
@@ -305,9 +288,9 @@ doesn't cancel the other. A newer push to the same branch cancels the run that i
 
 | You want to… | Change |
 |---|---|
-| Test a new endpoint | One line under `endpoints:` in `config/common.yaml`, then the generic steps (`When I call "..."`) |
-| Talk to a new microservice | Add an entry under `services:` (URL, auth) in each `config/env/*.yaml` and a group under `endpoints:` in `config/common.yaml` |
-| Add business-level API steps | A step class using `EndpointClient` and `Payload`, taking `TestSession` in its constructor |
+| Test a new endpoint | A method on the service's API class in `apis/`, then a step that calls it |
+| Talk to a new microservice | Its `baseUrl` under `services:` in each `config/env/*.yaml`, an API class in `apis/` and its models in `apis/model/` |
+| Add API steps | A step class using `ApiFactory.getApi(XxxApi.class)`, storing results in the `TestSession` |
 | Test a new page | Add `locators/<page>.json`, a page object using `PageElements`, plus a step class |
 | Share data between step classes | Add a `DataKey` in `steps/Keys.java` and use `session.put` / `get` |
 | Add an environment | Add `config/env/<name>.yaml` (copy `test.yaml`) and run with `-Denv=<name>` |
@@ -317,10 +300,10 @@ doesn't cancel the other. A newer push to the same branch cancels the run that i
 
 ## Known limits
 
-- Bodies are JSON only. Form-encoded, multipart and XML bodies would need their own steps.
-- JSON paths use a small, strict syntax, not full JSONPath (no filters or wildcards).
+- API calls do not go through the browser context, so they do not share the browser's cookies or login.
 - One browser runs per worker thread. Scenarios are isolated by browser contexts, not by processes, so a
   browser crash affects the scenario running in it (the next scenario gets a new browser). Use `-Dthreads` to
   match the machine.
 - Extent and `cucumber.html` show each retry attempt as its own entry. The run summary and Allure group them.
-- The sample app is a single service, so the multi-service features are shown with only the `customers` service.
+- The sample app is a single service. `WebserviceAdapterValidationApi` shows a second service's API class, but
+  no scenario calls it, because the sample app has no such endpoint.
