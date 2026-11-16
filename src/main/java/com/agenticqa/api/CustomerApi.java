@@ -80,6 +80,16 @@ public class CustomerApi {
     }
 
     /**
+     * Path of one customer on the {@link #SERVICE} service, for example for {@code ServiceCleanup}.
+     *
+     * @param id the customer id
+     * @return the path, for example /customers/42
+     */
+    public static String pathOf(long id) {
+        return "/customers/" + id;
+    }
+
+    /**
      * Reads a response body as a customer.
      *
      * @param response a response whose body is one customer

@@ -26,15 +26,15 @@ public class CustomerApiSteps {
 
     private final TestSession session;
     private final CustomerApi customers;
-    private final CustomerCleanup cleanup;
+    private final ServiceCleanup cleanup;
 
     /**
      * Receives this scenario's objects from PicoContainer.
      *
      * @param session the per-scenario session
-     * @param cleanup the per-scenario cleanup tracker
+     * @param cleanup deletes what the scenario created, after it
      */
-    public CustomerApiSteps(TestSession session, CustomerCleanup cleanup) {
+    public CustomerApiSteps(TestSession session, ServiceCleanup cleanup) {
         this.session = session;
         this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
@@ -53,7 +53,7 @@ public class CustomerApiSteps {
         session.put(RESPONSE, response);
         assertEquals(response.status(), 201, "Create failed: " + response.text());
         Customer customer = CustomerApi.asCustomer(response);
-        cleanup.track(customer.id());
+        cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(customer.id()));
         session.put(CUSTOMER, customer);
     }
 
@@ -78,7 +78,7 @@ public class CustomerApiSteps {
         APIResponse response = customers.deleteById(current.id());
         session.put(RESPONSE, response);
         assertEquals(response.status(), 204, "Delete failed: " + response.text());
-        cleanup.untrack(current.id());
+        cleanup.cancel(CustomerApi.SERVICE, CustomerApi.pathOf(current.id()));
     }
 
     /**

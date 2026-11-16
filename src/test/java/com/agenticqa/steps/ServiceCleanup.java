@@ -34,7 +34,19 @@ public class ServiceCleanup {
      * @param path    the resource path
      */
     public synchronized void delete(String service, String path) {
+        cancel(service, path); // registering the same resource twice deletes it once, at its newest position
         deletes.push(new String[]{service, path});
+    }
+
+    /**
+     * Unregisters a DELETE, for a resource the scenario already deleted itself, so cleanup does not send a
+     * DELETE that can only fail. Does nothing if it was not registered.
+     *
+     * @param service the service name
+     * @param path    the resource path, exactly as registered
+     */
+    public synchronized void cancel(String service, String path) {
+        deletes.removeIf(d -> d[0].equals(service) && d[1].equals(path));
     }
 
     /** Runs the registered deletes before Hooks.after closes the session (higher order runs first). */

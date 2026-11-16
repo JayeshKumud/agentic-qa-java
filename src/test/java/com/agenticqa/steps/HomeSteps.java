@@ -7,6 +7,17 @@ import io.cucumber.java.en.When;
 /** Steps for the home page. */
 public class HomeSteps {
 
+    private final PageComponentFactory pages;
+
+    /**
+     * Receives this scenario's page factory from PicoContainer.
+     *
+     * @param pages the per-scenario page factory
+     */
+    public HomeSteps(PageComponentFactory pages) {
+        this.pages = pages;
+    }
+
     /**
      * Selects a role in the change-role dialog: {@code When I select the "COE" role}.
      *
@@ -23,6 +34,6 @@ public class HomeSteps {
      * @return the home page
      */
     private HomePage homePage() {
-        return PageComponentFactory.get(HomePage.class);
+        return pages.get(HomePage.class);
     }
 }

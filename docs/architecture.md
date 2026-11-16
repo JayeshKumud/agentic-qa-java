@@ -31,7 +31,7 @@ flowchart TB
         R["TestRunner<br/>Cucumber + TestNG, parallel<br/>ScenarioRetry"]
         H["Hooks<br/>@Before / @After"]
         ST["Step definitions<br/>CustomerApiSteps · CustomerUiSteps<br/>CustomerRequestSteps · HttpSteps"]
-        CL["Cleanup<br/>CustomerCleanup · ServiceCleanup"]
+        CL["Cleanup<br/>ServiceCleanup"]
         RP["RunSummaryPlugin · ReportSetupPlugin<br/>+ Allure · Extent"]
     end
 
@@ -85,7 +85,7 @@ flowchart TB
 | Runner | `runner.TestRunner` | Finds the features, wires glue and plugins, runs scenarios in parallel through a TestNG `DataProvider` |
 | Hooks | `hooks.Hooks` | Names the session before each scenario. After it, attaches heals, the HTTP log and a screenshot, then closes the session |
 | Steps | `steps.*` | Turn Gherkin into calls on page objects, clients and `ApiState`. No selectors and no raw URLs |
-| Cleanup | `CustomerCleanup`, `ServiceCleanup` | Delete what the scenario created, newest first, in `@After` |
+| Cleanup | `ServiceCleanup` | Delete what the scenario created, newest first, in `@After` |
 | Session | `core.TestSession` | Lazily starts Playwright, holds the page, API context, healer, typed data store and call log |
 | Data helpers | `core.Variables`, `JsonPaths`, `TestData`, `DataKey` | `${var}` and `{unique}` substitution, JSON path read and write and merge, loading test data, typed keys |
 | API | `api.*` | `ApiClient` handles URLs, timeouts, default headers, JSON and logging. Subclasses describe business operations |
@@ -272,7 +272,7 @@ flowchart LR
     VAR --> F5["GET /customers/${hedyId} …"]
     AS2 --> F6["the 'hedy' response is the customer"] --> KEY["TestSession: Keys.CUSTOMER"]
     KEY --> F7["I search the customers page<br/>for that customer"] --> PO["CustomersPage → browser"]
-    F3 -.-> CLN["ServiceCleanup / CustomerCleanup<br/>DELETE after scenario"]
+    F3 -.-> CLN["ServiceCleanup<br/>DELETE after scenario"]
 ```
 
 ## CI workflow

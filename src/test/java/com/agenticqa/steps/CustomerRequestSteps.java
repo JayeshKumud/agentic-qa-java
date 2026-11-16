@@ -39,7 +39,7 @@ public class CustomerRequestSteps {
     private final ApiState api;
     private final Variables vars;
     private final CustomerApi customers;
-    private final CustomerCleanup cleanup;
+    private final ServiceCleanup cleanup;
 
     /**
      * Receives this scenario's objects from PicoContainer.
@@ -47,9 +47,9 @@ public class CustomerRequestSteps {
      * @param session the per-scenario session
      * @param api     the scenario's named requests and responses
      * @param vars    the scenario's variables
-     * @param cleanup the per-scenario cleanup tracker
+     * @param cleanup deletes what the scenario created, after it
      */
-    public CustomerRequestSteps(TestSession session, ApiState api, Variables vars, CustomerCleanup cleanup) {
+    public CustomerRequestSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup) {
         this.session = session;
         this.api = api;
         this.vars = vars;
@@ -135,7 +135,7 @@ public class CustomerRequestSteps {
         remember(response);
         if (response.status() == 201) {
             Customer created = CustomerApi.asCustomer(response);
-            cleanup.track(created.id());
+            cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(created.id()));
             session.put(CUSTOMER, created);
             // later edits start from what the server stored, including defaults such as status
             ObjectNode stored = (ObjectNode) JsonPaths.parse(response.text());
@@ -164,7 +164,7 @@ public class CustomerRequestSteps {
     @Given("the {string} response is the customer")
     public void responseIsTheCustomer(String response) {
         Customer customer = ApiClient.read(api.reply(response).body(), Customer.class);
-        cleanup.track(customer.id());
+        cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(customer.id()));
         session.put(CUSTOMER, customer);
     }
 

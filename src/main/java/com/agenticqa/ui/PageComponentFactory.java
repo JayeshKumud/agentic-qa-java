@@ -9,40 +9,36 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Creates page objects for the running scenario and hands out the same instance on every call:
+ * Creates the page objects of one scenario and hands out the same instance on every call. Step classes receive it
+ * from PicoContainer, like {@link TestSession}:
  * <pre>
+ * public HomeSteps(PageComponentFactory pages) {
+ *     this.pages = pages;
+ * }
+ *
  * private HomePage homePage() {
- *     return PageComponentFactory.get(HomePage.class);
+ *     return pages.get(HomePage.class);
  * }
  * </pre>
  * A page is created on first use, through its {@code (Page, Healer)} constructor, with the scenario's browser
  * page and healer. API-only scenarios that never ask for a page therefore never start a browser.
  * <p>
- * State is kept per thread: a scenario runs on one thread from its first hook to its last, so parallel
- * scenarios never share pages. {@code Hooks} calls {@link #start} before and {@link #reset} after every
- * scenario, so the next scenario on the same thread never gets a page of a closed browser.
+ * PicoContainer creates one factory per scenario and gives every step class of that scenario the same one, then
+ * discards it. Parallel scenarios therefore never share pages, and the next scenario never gets a page of a
+ * closed browser, without any ThreadLocal or cleanup in the hooks.
  */
-public final class PageComponentFactory {
+public class PageComponentFactory {
 
-    private static final ThreadLocal<TestSession> SESSION = new ThreadLocal<>();
-    private static final ThreadLocal<Map<Class<?>, PageComponent>> CREATED_PAGES = ThreadLocal.withInitial(HashMap::new);
-
-    private PageComponentFactory() {}
+    private final TestSession session;
+    private final Map<Class<? extends PageComponent>, PageComponent> createdPages = new HashMap<>();
 
     /**
-     * Binds the factory to the scenario that starts on this thread.
+     * Receives this scenario's session from PicoContainer.
      *
-     * @param session the scenario's session
+     * @param session the per-scenario session
      */
-    public static void start(TestSession session) {
-        SESSION.set(session);
-        CREATED_PAGES.get().clear();
-    }
-
-    /** Forgets the scenario and its pages on this thread. */
-    public static void reset() {
-        CREATED_PAGES.remove();
-        SESSION.remove();
+    public PageComponentFactory(TestSession session) {
+        this.session = session;
     }
 
     /**
@@ -51,20 +47,27 @@ public final class PageComponentFactory {
      * @param pageToCreate the page class, for example HomePage.class
      * @param <T>          the page type
      * @return the scenario's instance of that page
-     * @throws IllegalStateException if no scenario is running on this thread, or the page cannot be created
+     * @throws IllegalStateException if the page cannot be created
      */
-    public static <T extends PageComponent> T get(Class<T> pageToCreate) {
-        PageComponent existing = CREATED_PAGES.get().get(pageToCreate);
+    public synchronized <T extends PageComponent> T get(Class<T> pageToCreate) {
+        PageComponent existing = createdPages.get(pageToCreate);
         if (existing != null) return pageToCreate.cast(existing);
 
-        TestSession session = SESSION.get();
-        if (session == null) {
-            throw new IllegalStateException("No scenario is running on this thread, so " + pageToCreate.getSimpleName()
-                    + " cannot be created. Pages are only available inside steps (Hooks calls PageComponentFactory.start).");
-        }
-        T page;
+        T page = create(pageToCreate);
+        createdPages.put(pageToCreate, page);
+        return page;
+    }
+
+    /**
+     * Calls the page's {@code (Page, Healer)} constructor with the session's page and healer.
+     *
+     * @param pageToCreate the page class
+     * @param <T>          the page type
+     * @return the new page
+     */
+    private <T extends PageComponent> T create(Class<T> pageToCreate) {
         try {
-            page = pageToCreate.getConstructor(Page.class, Healer.class).newInstance(session.page(), session.healer());
+            return pageToCreate.getConstructor(Page.class, Healer.class).newInstance(session.page(), session.healer());
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(pageToCreate.getSimpleName()
                     + " needs a public constructor (Page page, Healer healer)", e);
@@ -74,7 +77,5 @@ public final class PageComponentFactory {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Cannot create " + pageToCreate.getSimpleName() + ": " + e, e);
         }
-        CREATED_PAGES.get().put(pageToCreate, page);
-        return page;
     }
 }

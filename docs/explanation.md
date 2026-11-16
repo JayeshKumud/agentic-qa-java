@@ -75,7 +75,6 @@ Cucumber scans those packages for classes that have step or hook annotations (`@
 | `CustomerRequestSteps` | `@Given/@When/@Then`     |
 | `CustomerUiSteps`      | `@Given/@When/@Then`     |
 | `HttpSteps`            | `@Given/@When/@Then`     |
-| `CustomerCleanup`      | `@After(order = 20000)`  |
 | `ServiceCleanup`       | `@After(order = 20000)`  |
 
 When a class is registered, Cucumber also looks at its constructor parameters and registers those types as well,
@@ -146,8 +145,8 @@ object** during a scenario. That is how they share things without static fields:
 - the `apiCalls` list filled by API steps is the one `Hooks.after()` attaches to the report;
 - data one step stores is the data the next step reads.
 
-In the same way, `CustomerApiSteps`, `CustomerRequestSteps` and `CustomerUiSteps` share one `CustomerCleanup`, so
-every customer created in the scenario is deleted at the end, whichever step class created it.
+In the same way, `CustomerApiSteps`, `CustomerRequestSteps` and `CustomerUiSteps` share one `ServiceCleanup` with
+`HttpSteps`, so every customer created in the scenario is deleted at the end, whichever step class created it.
 
 ### Parallel runs
 
@@ -306,9 +305,9 @@ steps change its fields, a later step sends it, and any step can read an earlier
 ### 4. Shared helper objects
 
 Any class that a step constructor asks for is shared in the same way. For example, `CustomerApiSteps`,
-`CustomerRequestSteps` and `CustomerUiSteps` all receive the same `CustomerCleanup`. Each one calls
-`cleanup.track(id)` when it creates a customer, and the single `@After` hook in `CustomerCleanup` deletes all of
-them at the end of the scenario.
+`CustomerRequestSteps` and `CustomerUiSteps` all receive the same `ServiceCleanup`. Each one calls
+`cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(id))` when it creates a customer, and the single `@After`
+hook in `ServiceCleanup` deletes all of them at the end of the scenario.
 
 ### Fields inside one step class
 
@@ -359,7 +358,7 @@ The name appears in about 21 files:
 
 - **Java (must change or it won't compile):** `TestSession.java` itself (the file name has to match the class),
   `Hooks`, the step and cleanup classes (`CustomerApiSteps`, `CustomerRequestSteps`, `CustomerUiSteps`,
-  `HttpSteps`, `CustomerCleanup`, `ServiceCleanup`), and the API clients (`ApiClient`, `CustomerApi`,
+  `HttpSteps`, `ServiceCleanup`), and the API clients (`ApiClient`, `CustomerApi`,
   `EndpointClient`, `ServiceClient`).
 - **Docs and comments (won't break anything if missed, but would be out of date):** `README.md`, the files in
   `docs/` (including this one), and comments in two feature files.

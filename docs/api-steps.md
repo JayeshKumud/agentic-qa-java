@@ -27,7 +27,7 @@ every step class and every class their constructors ask for. Within that scenari
 
 ```java
 public HttpSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup) { ... }
-public CustomerRequestSteps(TestSession session, ApiState api, Variables vars, CustomerCleanup cleanup) { ... }
+public CustomerRequestSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup) { ... }
 ```
 
 `HttpSteps` and `CustomerRequestSteps` get the **same** `ApiState` and `Variables`. That is the whole mechanism
@@ -40,7 +40,6 @@ parallel each get their own objects, so they cannot see each other's data.
 | [`ApiState`](../src/main/java/com/agenticqa/api/ApiState.java) | Named requests (body text and headers) and named responses | `api` |
 | [`Variables`](../src/main/java/com/agenticqa/core/Variables.java) | `${name}` values and the scenario's `{unique}` token | `core` |
 | [`ServiceCleanup`](../src/test/java/com/agenticqa/steps/ServiceCleanup.java) | DELETEs to run after the scenario, on any service | `steps` |
-| [`CustomerCleanup`](../src/test/java/com/agenticqa/steps/CustomerCleanup.java) | IDs of customers to delete after the scenario | `steps` |
 
 ## The life of one request
 
@@ -172,7 +171,7 @@ object or array as compact JSON) or `the variable "region" is "eu-{unique}"`.
 
 On a **201** the create step also does three more things:
 
-1. Tracks the new ID in `CustomerCleanup`.
+1. Registers `/customers/<id>` with `ServiceCleanup`, so the customer is deleted after the scenario.
 2. Stores the created `Customer` under `Keys.CUSTOMER`. This is "the customer" that the business steps and the
    UI steps use (`the customer can be found by id ...`, `I search the customers page for that customer`).
 3. **Restarts the `"customer"` request from the server's answer, without `id`.** Later edits and
@@ -184,22 +183,24 @@ On a **201** the create step also does three more things:
 The generic steps know nothing about customers. Two steps connect them:
 
 - `Given the "hedy" response is the customer` reads a stored response as a `Customer`, puts it under
-  `Keys.CUSTOMER` and tracks it for cleanup. Every "the customer" step, API or browser, now works on it.
+  `Keys.CUSTOMER` and registers it with `ServiceCleanup`. Every "the customer" step, API or browser, now works on it.
 - `I save the customer's id as "radiaId"` goes the other way. It takes the ID, name, email or status of "the
   customer" (for example one added through the GUI form) and saves it as a variable for the generic steps.
 
 ## Cleanup
 
-There are two cleanup classes, both run by PicoContainer for each scenario and both as `@After(order = 20000)`:
+There is one cleanup class, `ServiceCleanup`, created by PicoContainer for each scenario and run as `@After(order = 20000)`:
 
 - `ServiceCleanup`: `"/orders/${orderId}" on the "orders" service is deleted after the scenario` adds a DELETE
   to a stack. After the scenario the DELETEs run **newest first**, so a resource that depends on another is
   deleted first.
-- `CustomerCleanup`: deletes every customer ID tracked by the customer steps and the bridge.
+- The customer steps register what they create the same way (`cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(id))`).
+  A step that deletes the customer itself calls `cleanup.cancel(...)` with the same service and path, so no DELETE is
+  sent twice. Registering the same path twice deletes it once.
 
-Cucumber runs `@After` hooks with a **higher** order first, so both run before `Hooks.after` (default order
-10000) closes the browser context they send their requests through. Both run whether the scenario passed or
-failed. Both are best effort: a failing DELETE is ignored, so it cannot hide the real result of the scenario.
+Cucumber runs `@After` hooks with a **higher** order first, so it runs before `Hooks.after` (default order
+10000) closes the browser context it sends its requests through. It runs whether the scenario passed or
+failed, and it is best effort: a failing DELETE is ignored, so it cannot hide the real result of the scenario.
 Cleanup calls are added to the call log like any other call.
 
 ## When a step fails

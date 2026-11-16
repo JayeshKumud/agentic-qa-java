@@ -31,18 +31,21 @@ public class CustomerUiSteps {
 
     private final TestSession session;
     private final CustomerApi customers;
-    private final CustomerCleanup cleanup;
+    private final ServiceCleanup cleanup;
+    private final PageComponentFactory pages;
 
     /**
      * Receives this scenario's objects from PicoContainer.
      *
      * @param session the per-scenario session
-     * @param cleanup the per-scenario cleanup tracker
+     * @param cleanup deletes what the scenario created, after it
+     * @param pages   the per-scenario page factory
      */
-    public CustomerUiSteps(TestSession session, CustomerCleanup cleanup) {
+    public CustomerUiSteps(TestSession session, ServiceCleanup cleanup, PageComponentFactory pages) {
         this.session = session;
         this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
+        this.pages = pages;
     }
 
     /**
@@ -57,7 +60,7 @@ public class CustomerUiSteps {
             String name = tag + " #" + i;
             APIResponse response = customers.create(Payload.empty().set("name", name).set("email", TestData.emailFor(name)));
             assertEquals(response.status(), 201, "Create failed: " + response.text());
-            cleanup.track(CustomerApi.asCustomer(response).id());
+            cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(CustomerApi.asCustomer(response).id()));
         }
         session.put(NAME_TAG, tag);
     }
@@ -76,7 +79,7 @@ public class CustomerUiSteps {
         List<CustomerRow> found = page().search(unique).visibleRows();
         assertEquals(found.size(), 1, "Expected exactly one row for " + unique);
         CustomerRow row = found.get(0);
-        cleanup.track(row.id());
+        cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(row.id()));
         session.put(CUSTOMER, new Customer(row.id(), row.name(), row.email(), row.status()));
     }
 
@@ -194,6 +197,6 @@ public class CustomerUiSteps {
      * @return the customers page
      */
     private CustomersPage page() {
-        return PageComponentFactory.get(CustomersPage.class);
+        return pages.get(CustomersPage.class);
     }
 }
