@@ -298,6 +298,7 @@ To add a suite, add its tag to `matrix.suite`.
 | [docs/api.md](docs/api.md) | API classes, ApiFactory, Config.getApiUrl, models, sharing data with GUI steps, cleanup |
 | [docs/keys.md](docs/keys.md) | Sharing data with `Keys`: why, the keys there are, `of` / `listOf` / `mapOf`, use in steps and other classes |
 | [docs/base-unique.md](docs/base-unique.md) | Base uniques: `TestSession.put(Keys.BASE_UNIQUE, ...)` compared with the old static ThreadLocal `setBaseUniqueMap` |
+| [docs/page-components.md](docs/page-components.md) | Page objects per scenario: `TestSession.pageComponent` line by line, why a `Supplier`, `type.cast`, `synchronized`, and where the pages end |
 | [docs/locators.md](docs/locators.md) | Locators in JSON files and how page objects use them |
 | [docs/healing.md](docs/healing.md) | How self-healing locators and fingerprints work |
 | [docs/reporting.md](docs/reporting.md) | Every report (run summary, Allure, Extent, Cucumber), attachment and CI artifact |
