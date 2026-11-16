@@ -1,6 +1,7 @@
 package com.agenticqa.core;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A typed key for data shared between the steps of one scenario.
@@ -43,5 +44,26 @@ public record DataKey<T>(String name, Class<T> type) {
     @SuppressWarnings("unchecked")
     public static <E> DataKey<List<E>> listOf(String name, Class<E> elementType) {
         return new DataKey<>(name, (Class<List<E>>) (Class<?>) List.class);
+    }
+
+    /**
+     * Creates a key for a map, which {@link #of} cannot type because {@code Map.class} has no key or value type:
+     * <pre>
+     * public static final DataKey&lt;Map&lt;String, Unique&gt;&gt; BASE_UNIQUE =
+     *         DataKey.mapOf("baseUnique", String.class, Unique.class);
+     * </pre>
+     * Entries are added with {@code TestSession.put(mapKey, entryKey, value)}, which the compiler checks, so the
+     * cast is safe.
+     *
+     * @param name      a short readable name
+     * @param keyType   the type of the map keys
+     * @param valueType the type of the map values
+     * @param <K>       the type of the map keys
+     * @param <V>       the type of the map values
+     * @return the key
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> DataKey<Map<K, V>> mapOf(String name, Class<K> keyType, Class<V> valueType) {
+        return new DataKey<>(name, (Class<Map<K, V>>) (Class<?>) Map.class);
     }
 }

@@ -17,7 +17,9 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -210,6 +212,41 @@ public class TestSession {
                     + "' in this scenario. Did an earlier step run?");
         }
         return list;
+    }
+
+    /**
+     * Puts an entry in a map stored under a map key, creating the map on first use. An entry with the same key
+     * is replaced: {@code session.put(Keys.BASE_UNIQUE, "U1", unique)}.
+     *
+     * @param key      a map key, see {@link DataKey#mapOf}
+     * @param entryKey the entry's key
+     * @param value    the entry's value
+     * @param <K>      the type of the map keys
+     * @param <V>      the type of the map values
+     * @throws IllegalArgumentException if the entry key or the value is null
+     */
+    public synchronized <K, V> void put(DataKey<Map<K, V>> key, K entryKey, V value) {
+        if (entryKey == null || value == null) {
+            throw new IllegalArgumentException("Cannot put a null key or value in '" + key.name()
+                    + "' in this scenario (key " + entryKey + ", value " + value + ")");
+        }
+        @SuppressWarnings("unchecked")
+        Map<K, V> map = (Map<K, V>) store.computeIfAbsent(key, k -> new LinkedHashMap<K, V>());
+        map.put(entryKey, value);
+    }
+
+    /**
+     * The entries put under a map key, in the order they were first put, as a read-only copy.
+     *
+     * @param key a map key, see {@link DataKey#mapOf}
+     * @param <K> the type of the map keys
+     * @param <V> the type of the map values
+     * @return the entries, empty if none were put in this scenario
+     */
+    public synchronized <K, V> Map<K, V> map(DataKey<Map<K, V>> key) {
+        @SuppressWarnings("unchecked")
+        Map<K, V> map = (Map<K, V>) store.get(key);
+        return map == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(map));
     }
 
     /**

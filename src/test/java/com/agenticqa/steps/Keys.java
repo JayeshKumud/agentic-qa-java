@@ -1,10 +1,12 @@
 package com.agenticqa.steps;
 
 import com.agenticqa.apis.model.Customer;
+import com.agenticqa.apis.model.Unique;
 import com.agenticqa.core.DataKey;
 import io.restassured.response.Response;
 
 import java.util.List;
+import java.util.Map;
 
 /** Keys for data that several step classes share within one scenario. */
 public final class Keys {
@@ -26,6 +28,14 @@ public final class Keys {
      * cannot change it: {@code session.put(VIEWS, List.copyOf(views))}, read with {@code session.get(VIEWS)}.
      */
     public static final DataKey<List<String>> VIEWS = DataKey.listOf("views", String.class);
+
+    /**
+     * Uniques created in the scenario, by base name. Add with {@code TestSession.current().put(BASE_UNIQUE, name,
+     * unique)} and read with {@code TestSession.current().map(BASE_UNIQUE)}; see {@code BackUniqueTransit}.
+     * The constant is only the key: the map itself lives in each scenario's session and ends with it.
+     */
+    public static final DataKey<Map<String, Unique>> BASE_UNIQUE =
+            DataKey.mapOf("baseUnique", String.class, Unique.class);
 
     /** Constants only, not instantiable. */
     private Keys() {}

@@ -267,7 +267,7 @@ public class OrderSteps {
 ```
 
 To share data between step classes, use `session.put(key, value)` / `session.get(key)` with a typed `DataKey`
-(see `steps/Keys.java`). Register anything the scenario creates for cleanup.
+(see `steps/Keys.java` and [docs/keys.md](docs/keys.md)). Register anything the scenario creates for cleanup.
 
 ### 5. A new environment
 
@@ -296,6 +296,7 @@ To add a suite, add its tag to `matrix.suite`.
 | [docs/architecture.md](docs/architecture.md) | Layers, components, the scenario lifecycle and the workflow from start to finish |
 | [docs/running-tests.md](docs/running-tests.md) | common.yaml and environment files, wait times, @Parallel / @Sequential, cleanup before a run, retries, re-running failed scenarios |
 | [docs/api.md](docs/api.md) | API classes, ApiFactory, Config.getApiUrl, models, sharing data with GUI steps, cleanup |
+| [docs/keys.md](docs/keys.md) | Sharing data with `Keys`: why, the keys there are, `of` / `listOf` / `mapOf`, use in steps and other classes |
 | [docs/locators.md](docs/locators.md) | Locators in JSON files and how page objects use them |
 | [docs/healing.md](docs/healing.md) | How self-healing locators and fingerprints work |
 | [docs/reporting.md](docs/reporting.md) | Every report (run summary, Allure, Extent, Cucumber), attachment and CI artifact |
