@@ -25,19 +25,97 @@ A key is a `DataKey<T>`: a name plus the type of the value stored under it.
 | a missing value is `null`, and the `NullPointerException` shows up far away | `get` fails at once: `Nothing stored under key 'customer' in this scenario. Did an earlier step run?` |
 | data in `static` fields or `ThreadLocal`s needs a `clear()` after every scenario | data lives in the scenario's session and ends with it |
 
-### The key is static, the data is not
+## Why there is no `clear()` or `remove()`
+
+### The old way: data in a static ThreadLocal
+
+```java
+// TestSession, old style
+private static final ThreadLocal<HashMap<String, Unique>> baseUnique = ThreadLocal.withInitial(HashMap::new);
+
+public static void setBaseUniqueMap(String name, Unique unique) { baseUnique.get().put(name, unique); }
+public static HashMap<String, Unique> getBaseUniqueMap()        { return baseUnique.get(); }
+
+public static void clear() {                 // must be called after EVERY scenario
+    baseUnique.remove();
+}
+```
+
+Here the **data itself** sits in a `static` field. A `ThreadLocal` keeps one map per **thread**, not per
+scenario, and the test threads are pooled: one thread runs many scenarios, one after the other. So:
+
+- if `clear()` is not called after a scenario (a hook fails early, a new hook forgets it, a retry runs
+  differently), the **next scenario on that thread inherits the old uniques** and looks up wrong registration ids;
+- every new ThreadLocal variable needs its own line in `clear()`; one missed line is one leak;
+- anyone can call `getBaseUniqueMap().clear()` or `put(...)` on the live map, from anywhere.
+
+### The new way: data in the scenario's session
+
+```java
+// Keys.java: only the key
+public static final DataKey<Map<String, Unique>> BASE_UNIQUE =
+        DataKey.mapOf("baseUnique", String.class, Unique.class);
+
+// any step or helper: the data goes into the running scenario's session
+TestSession.current().put(Keys.BASE_UNIQUE, "U1", unique);
+Map<String, Unique> uniques = TestSession.current().map(Keys.BASE_UNIQUE);
+```
+
+The map is stored **inside the scenario's `TestSession`**, so it lives exactly as long as the scenario:
+
+| Moment | What happens to the data |
+|---|---|
+| scenario starts | PicoContainer creates a **new** `TestSession` with an **empty** store |
+| `Hooks.before` | binds that session to the thread, so `TestSession.current()` finds it |
+| steps run | `put` / `add` fill **this session's** store; parallel scenarios fill their own sessions |
+| `Hooks.after` | `session.close(failed)` runs, **pass or fail**, and removes the one ThreadLocal pointer |
+| scenario ends | PicoContainer discards the session, and the map goes with it |
+| next scenario, same thread | gets a new session with an empty store: nothing to clear |
+
+So the "clear" is not a method someone has to remember: it is the end of the session, which always happens.
+This also holds for every key you add later: a new key needs no clean-up line anywhere.
+
+`BackUniqueTransitTest` checks both cases: `parallelScenariosEachSeeOnlyTheirOwnUniques` (16 overlapping
+scenarios on 8 threads, each with its own `U1`) and `aReusedThreadDoesNotSeeThePreviousScenariosUniques` (a second
+scenario on the same thread starts empty).
+
+### The only ThreadLocal left
+
+`TestSession` keeps exactly one `ThreadLocal`: a pointer from the thread to its current session, for
+`TestSession.current()`. It holds no data of its own. `Hooks.before` sets it and `TestSession.close()` removes it,
+and both are framework code that runs for every scenario, so step and helper code never deals with it.
+
+### When you would still remove something
+
+Only to reset a value **in the middle of a scenario**, for example before a second round in the same scenario. That
+is a different job from the old `clear()`: store a new value under the key (`put` replaces it). A
+`session.remove(key)` does not exist yet; add it if a step really needs to forget a value mid-scenario.
+
+## Why the `Keys` variables can be `static`
 
 ```java
 public static final DataKey<Customer> CUSTOMER = DataKey.of("customer", Customer.class);
 ```
 
-The constant holds only a name and a type, the same for every scenario and thread, so it is safe as a
-`static final` field. The **value** is stored in the scenario's own `TestSession`: PicoContainer creates a new
-session for every scenario, and `Hooks.after` closes it. So:
+A `static` field is shared by the whole run: every scenario and every thread sees the same one. That is wrong for
+**data**, and right for a **key**:
 
-- parallel scenarios never see each other's values, even under the same key;
-- the next scenario on the same thread starts with an empty store;
-- nothing needs a `clear()`, `remove()` or reset after a scenario.
+| | Static ThreadLocal (old) | `Keys` constant (new) |
+|---|---|---|
+| What the static field holds | the data (one map per thread) | only a **name** (`"customer"`) and a **type** (`Customer`) |
+| Changes during the run | yes, every `put` changes it | never: `final`, and `DataKey` is an immutable record |
+| Different per scenario | must be, so it needs clean-up | no, every scenario uses the same name and type |
+| Clean-up | `clear()` after every scenario | none |
+
+Think of the key as a **label on a drawer**. Every scenario's `TestSession` has its own set of drawers; the
+label `CUSTOMER` is the same everywhere, but what is inside the drawer belongs to one scenario only. Two parallel
+scenarios that both write `session.put(Keys.CUSTOMER, ...)` write into two different sessions.
+
+Declaring every key once in `Keys.java` also means:
+
+- each name has exactly one type, so no class can store a `String` where another expects a `Customer`;
+- one file lists everything scenarios share, with a comment saying who writes and who reads each key;
+- renaming or retyping a key is a compile error everywhere it is used, not a silent mismatch at run time.
 
 ## The keys in `Keys.java`
 
