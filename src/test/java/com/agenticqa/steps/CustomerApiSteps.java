@@ -9,6 +9,8 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.restassured.response.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -25,6 +27,7 @@ import static org.testng.Assert.assertTrue;
  * parallel against the same app; every customer created is deleted afterwards.
  */
 public class CustomerApiSteps {
+    private static final Logger logger = LoggerFactory.getLogger(CustomerApiSteps.class);
 
     private final TestSession session;
     private final ServiceCleanup cleanup;
@@ -54,6 +57,7 @@ public class CustomerApiSteps {
         Customer customer = response.as(Customer.class);
         deleteAfterScenario(cleanup, customer.getId());
         session.put(CUSTOMER, customer);
+        logger.info("Created {}", customer);
     }
 
     /**
@@ -68,6 +72,7 @@ public class CustomerApiSteps {
         Response response = customerApi().putCustomer(current.getId(), changed);
         session.put(RESPONSE, response);
         session.put(CUSTOMER, response.as(Customer.class));
+        logger.info("Changed customer {} status to {}", current.getId(), status);
     }
 
     /** Deletes the customer. */

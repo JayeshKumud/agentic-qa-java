@@ -1,6 +1,8 @@
 package com.agenticqa.steps;
 
 import io.cucumber.java.After;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -13,6 +15,7 @@ import java.util.Map;
  * </pre>
  */
 public class ServiceCleanup {
+    private static final Logger logger = LoggerFactory.getLogger(ServiceCleanup.class);
 
     private final Map<String, Runnable> deletes = new LinkedHashMap<>();
 
@@ -45,8 +48,10 @@ public class ServiceCleanup {
         for (int i = keys.length - 1; i >= 0; i--) {
             try {
                 deletes.get(keys[i]).run();
-            } catch (RuntimeException | AssertionError ignored) {
+                logger.info("Cleanup: deleted {}", keys[i]);
+            } catch (RuntimeException | AssertionError e) {
                 // best effort: cleanup must not hide the real result (API classes fail with Assert.fail)
+                logger.warn("Cleanup: could not delete {}: {}", keys[i], e.getMessage());
             }
         }
         deletes.clear();

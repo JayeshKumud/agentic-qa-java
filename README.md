@@ -169,7 +169,7 @@ described in [docs/running-tests.md](docs/running-tests.md).
 | `target/artifacts/videos/*.webm` | Video of each failed scenario (`ui.video`: failed, always or off) |
 | `target/artifacts/traces/*.zip` | Playwright trace of each failed scenario. Open it with `npx playwright show-trace <zip>` or at <https://trace.playwright.dev> |
 | `target/healing/heals.jsonl` | One line per healed locator |
-| `target/logs/run.log` | Everything the run printed: browser launches, errors |
+| `target/logs/run.log` | Everything the run printed: SLF4J log lines (API calls with status, created customers, cleanup, uniques), browser launches, errors. Format and level: `src/test/resources/simplelogger.properties` |
 
 ## Writing tests
 

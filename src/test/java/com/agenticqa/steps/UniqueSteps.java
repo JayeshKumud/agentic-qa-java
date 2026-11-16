@@ -6,6 +6,8 @@ import com.agenticqa.helpers.BackUniqueTransit;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
@@ -17,6 +19,7 @@ import static org.testng.Assert.assertEquals;
  * builds a {@link BackUniqueTransit}, which swaps the base names for their registration ids.
  */
 public class UniqueSteps {
+    private static final Logger logger = LoggerFactory.getLogger(UniqueSteps.class);
 
     private final TestSession session;
     private BackUniqueTransit transit;
@@ -39,6 +42,7 @@ public class UniqueSteps {
     @Given("the unique {string} has registration id {string}")
     public void storeUnique(String baseUnique, String uniqRegId) {
         session.put(BASE_UNIQUE, baseUnique, new Unique(uniqRegId));
+        logger.info("Stored unique {} with registration id {}", baseUnique, uniqRegId);
     }
 
     /**

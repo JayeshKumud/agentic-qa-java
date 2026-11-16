@@ -1,5 +1,8 @@
 package com.agenticqa.api;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -14,6 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * and no per-scenario state.
  */
 public class ApiFactory {
+    private static final Logger logger = LoggerFactory.getLogger(ApiFactory.class);
 
     private ApiFactory() {}
 
@@ -40,6 +44,7 @@ public class ApiFactory {
 
             apiInstance = apiToCreate.getDeclaredConstructor().newInstance();
             createdApis.add(apiInstance);
+            logger.info("Created api instance: {}", apiToCreate.getSimpleName());
 
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
                  | NoSuchMethodException | SecurityException e) {

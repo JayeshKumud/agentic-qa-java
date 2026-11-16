@@ -3,6 +3,9 @@ package com.agenticqa.helpers;
 import com.agenticqa.apis.model.Unique;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.steps.Keys;
+import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +24,12 @@ import java.util.Map;
  */
 public class BackUniqueTransit {
 
+    private static final Logger logger = LoggerFactory.getLogger(BackUniqueTransit.class);
+
+    /**
+     * @return the transit time, as given
+     */
+    @Getter
     private final String time;
     private final List<String> uniqueRegIds;
 
@@ -36,7 +45,7 @@ public class BackUniqueTransit {
         if (uniqueIds != null && !uniqueIds.isBlank()) {
             Map<String, Unique> baseUniques = TestSession.current().map(Keys.BASE_UNIQUE);
             if (baseUniques.isEmpty()) {
-                System.out.println("[UNIQUE] No dynamic unique found");
+                logger.info("No dynamic unique found");
             }
             for (String unique : uniqueIds.split(",")) {
                 String name = unique.trim();                     // trimmed before the lookup, so "U1, U2" finds U2
@@ -44,14 +53,11 @@ public class BackUniqueTransit {
                 Unique stored = baseUniques.get(name);
                 uniqueRegIds.add(stored != null ? stored.getUniqRegId() : name);
             }
+            logger.info("Back unique transit at {}: {} -> {}", time, uniqueIds, uniqueRegIds);
         } else {
             // no uniques given: add the else branch of the original class here
+            logger.info("Back unique transit at {}: no uniques given", time);
         }
-    }
-
-    /** @return the transit time, as given */
-    public String getTime() {
-        return time;
     }
 
     /** @return the registration ids, in the order the uniques were given */

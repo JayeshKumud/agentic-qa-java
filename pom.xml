@@ -45,6 +45,13 @@
       <artifactId>tag-expressions</artifactId>
       <version>6.1.0</version>
     </dependency>
+    <!-- Logging: classes log with SLF4J (LoggerFactory.getLogger(X.class)); slf4j-simple prints the lines,
+         formatted by src/test/resources/simplelogger.properties, and RunLog copies them into target/logs/run.log -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.13</version>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
