@@ -299,4 +299,5 @@ class of its own there, for example `com.agenticqa.core.SharedKeys`.
 ## Related
 
 - [api.md](api.md): API classes and how API and GUI steps share "the customer"
+- [base-unique.md](base-unique.md): `BASE_UNIQUE` compared with the old static ThreadLocal `setBaseUniqueMap`, point by point
 - [explanation.md](explanation.md): how PicoContainer creates the session and the step classes, `TestSession.current()`
