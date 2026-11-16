@@ -1,5 +1,6 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.api.ApiFactory;
 import com.agenticqa.api.ApiState;
 import com.agenticqa.api.ApiState.Reply;
 import com.agenticqa.api.EndpointClient;
@@ -48,6 +49,7 @@ public class HttpSteps {
     private final ApiState api;
     private final Variables vars;
     private final ServiceCleanup cleanup;
+    private final EndpointClient endpoints;
 
     /**
      * Receives this scenario's objects from PicoContainer.
@@ -56,12 +58,14 @@ public class HttpSteps {
      * @param api     the scenario's named requests and responses
      * @param vars    the scenario's variables
      * @param cleanup the scenario's cleanup list
+     * @param apis    the per-scenario API client factory
      */
-    public HttpSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup) {
+    public HttpSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup, ApiFactory apis) {
         this.session = session;
         this.api = api;
         this.vars = vars;
         this.cleanup = cleanup;
+        this.endpoints = apis.getApi(EndpointClient.class);
     }
 
     // --------------------------------------------------------------------------------------- building requests
@@ -277,7 +281,7 @@ public class HttpSteps {
     @When("I call {string} with the {string} request")
     public void callWithRequest(String endpoint, String name) {
         ApiState.Request request = api.request(name);
-        APIResponse response = new EndpointClient(session)
+        APIResponse response = endpoints
                 .call(endpoint, request.pathParams(), request.body(), request.headers(), vars::find);
         remember(name, response);
     }
@@ -291,7 +295,7 @@ public class HttpSteps {
      */
     @When("I call {string} as {string}")
     public void call(String endpoint, String name) {
-        remember(name, new EndpointClient(session).call(endpoint, Map.of(), null, Map.of(), vars::find));
+        remember(name, endpoints.call(endpoint, Map.of(), null, Map.of(), vars::find));
     }
 
     /**
@@ -309,7 +313,7 @@ public class HttpSteps {
     public void callWithParams(String endpoint, String name, DataTable table) {
         Map<String, String> params = new java.util.LinkedHashMap<>();
         table.asMap(String.class, String.class).forEach((param, value) -> params.put(param.trim(), vars.resolve(value)));
-        remember(name, new EndpointClient(session).call(endpoint, params, null, Map.of(), vars::find));
+        remember(name, endpoints.call(endpoint, params, null, Map.of(), vars::find));
     }
 
     /**

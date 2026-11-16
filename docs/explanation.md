@@ -105,8 +105,9 @@ Objects are created lazily, the first time the scenario needs them. PicoContaine
 ### Worked example: `HttpSteps`
 
 ```java
-public HttpSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup)
+public HttpSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup, ApiFactory apis)
 public ServiceCleanup(TestSession session)
+public ApiFactory(TestSession session)
 public Hooks(TestSession session)
 ```
 
@@ -127,7 +128,10 @@ Scenario starts → new empty container
 │    ├─ ServiceCleanup(TestSession)
 │    │    └─ TestSession → already in container  ← reused
 │    │    new ServiceCleanup(session)            ← created
-│    └─ new HttpSteps(session, api, vars, cleanup)
+│    ├─ ApiFactory(TestSession)
+│    │    └─ TestSession → already in container  ← reused
+│    │    new ApiFactory(session)                ← created
+│    └─ new HttpSteps(session, api, vars, cleanup, apis)
 │
 ├─ later steps in HttpSteps → same HttpSteps instance reused
 │
@@ -147,6 +151,14 @@ object** during a scenario. That is how they share things without static fields:
 
 In the same way, `CustomerApiSteps`, `CustomerRequestSteps` and `CustomerUiSteps` share one `ServiceCleanup` with
 `HttpSteps`, so every customer created in the scenario is deleted at the end, whichever step class created it.
+
+The two factories work the same way. `PageComponentFactory` hands out page objects (`pages.get(HomePage.class)`)
+and `ApiFactory` hands out API clients (`apis.getApi(CustomerApi.class)`). Each creates an object on first use, a
+page through its `(Page, Healer)` constructor and a client (any class that implements `Api`) through its
+`(TestSession)` constructor, and returns the same instance for the rest of the scenario, to every step class.
+Pico discards both factories with the scenario, so the objects are scenario-scoped: each holds its scenario's
+browser context, cookies and call log, and must not outlive it. `ServiceClient` is not created by `ApiFactory`
+because it also needs a service name (`new ServiceClient(session, "orders")`).
 
 ### Parallel runs
 

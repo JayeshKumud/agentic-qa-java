@@ -26,8 +26,9 @@ feature file: any step can be used in any scenario.
 every step class and every class their constructors ask for. Within that scenario it shares one instance of each:
 
 ```java
-public HttpSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup) { ... }
-public CustomerRequestSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup) { ... }
+public HttpSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup, ApiFactory apis) { ... }
+public CustomerRequestSteps(TestSession session, ApiState api, Variables vars, ServiceCleanup cleanup,
+                            ApiFactory apis) { ... }
 ```
 
 `HttpSteps` and `CustomerRequestSteps` get the **same** `ApiState` and `Variables`. That is the whole mechanism
@@ -242,9 +243,9 @@ public class OrderSteps {
     private final EndpointClient api;
     private final ServiceCleanup cleanup;
 
-    public OrderSteps(TestSession session, ServiceCleanup cleanup) {   // PicoContainer injects these
+    public OrderSteps(TestSession session, ServiceCleanup cleanup, ApiFactory apis) {   // PicoContainer injects these
         this.session = session;
-        this.api = new EndpointClient(session);
+        this.api = apis.getApi(EndpointClient.class);   // the scenario's client, shared with the other step classes
         this.cleanup = cleanup;
     }
 

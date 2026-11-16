@@ -1,5 +1,6 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.api.ApiFactory;
 import com.agenticqa.api.ApiClient;
 import com.agenticqa.api.Customer;
 import com.agenticqa.api.CustomerApi;
@@ -33,10 +34,11 @@ public class CustomerApiSteps {
      *
      * @param session the per-scenario session
      * @param cleanup deletes what the scenario created, after it
+     * @param apis    the per-scenario API client factory
      */
-    public CustomerApiSteps(TestSession session, ServiceCleanup cleanup) {
+    public CustomerApiSteps(TestSession session, ServiceCleanup cleanup, ApiFactory apis) {
         this.session = session;
-        this.customers = new CustomerApi(session);
+        this.customers = apis.getApi(CustomerApi.class);
         this.cleanup = cleanup;
     }
 

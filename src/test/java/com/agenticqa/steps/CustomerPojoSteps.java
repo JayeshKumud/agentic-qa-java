@@ -1,5 +1,6 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.api.ApiFactory;
 import com.agenticqa.api.ApiClient;
 import com.agenticqa.api.ApiState;
 import com.agenticqa.api.ApiState.Reply;
@@ -31,6 +32,7 @@ public class CustomerPojoSteps {
     private final TestSession session;
     private final ApiState api;
     private final Variables vars;
+    private final EndpointClient endpoints;
 
     /**
      * Receives this scenario's objects from PicoContainer.
@@ -38,11 +40,13 @@ public class CustomerPojoSteps {
      * @param session the per-scenario session
      * @param api     the scenario's named requests and responses
      * @param vars    the scenario's variables
+     * @param apis    the per-scenario API client factory
      */
-    public CustomerPojoSteps(TestSession session, ApiState api, Variables vars) {
+    public CustomerPojoSteps(TestSession session, ApiState api, Variables vars, ApiFactory apis) {
         this.session = session;
         this.api = api;
         this.vars = vars;
+        this.endpoints = apis.getApi(EndpointClient.class);
     }
 
     /**
@@ -84,7 +88,7 @@ public class CustomerPojoSteps {
     @When("I call {string} with the customer request object as {string}")
     public void send(String endpoint, String name) {
         CustomerRequest body = session.get(CUSTOMER_REQUEST);
-        APIResponse response = new EndpointClient(session).call(endpoint, Map.of(), body, Map.of(), vars::find);
+        APIResponse response = endpoints.call(endpoint, Map.of(), body, Map.of(), vars::find);
         session.put(RESPONSE, response);
         api.store(name, Reply.of(response));
     }
