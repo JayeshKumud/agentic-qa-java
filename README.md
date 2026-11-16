@@ -164,6 +164,7 @@ described in [docs/running-tests.md](docs/running-tests.md).
 | `target/reports/allure/index.html` | Allure report, after `mvn allure:report` |
 | `target/reports/cucumber.html` | Every step of every scenario, with attachments |
 | `target/reports/failed-scenarios.txt` | Scenarios that still failed after retries, ready to re-run |
+| `target/artifacts/videos/*.webm` | Video of each failed scenario (`ui.video`: failed, always or off) |
 | `target/artifacts/traces/*.zip` | Playwright trace of each failed scenario. Open it with `npx playwright show-trace <zip>` or at <https://trace.playwright.dev> |
 | `target/healing/heals.jsonl` | One line per healed locator |
 | `target/logs/run.log` | Everything the run printed: API calls, browser launches, token requests, errors |

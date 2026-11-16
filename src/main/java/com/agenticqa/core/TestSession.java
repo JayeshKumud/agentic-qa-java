@@ -10,6 +10,7 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Tracing;
+import com.microsoft.playwright.Video;
 import com.microsoft.playwright.assertions.PlaywrightAssertions;
 
 import java.nio.file.Path;
@@ -36,6 +37,17 @@ import java.util.Map;
 public class TestSession {
 
     private static final DateTimeFormatter FILE_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+
+    /** Where Playwright writes videos while recording; kept videos are copied to target/artifacts/videos. */
+    private static final Path VIDEO_RECORDING_DIR = Paths.get("target", "artifacts", "videos", "recording");
+
+    /**
+     * Files the session kept when it closed.
+     *
+     * @param trace the Playwright trace, or null if none was kept
+     * @param video the video of the page, or null if none was kept
+     */
+    public record SavedFiles(Path trace, Path video) {}
 
     private final Settings settings = EnvConfig.get();
     private final Map<DataKey<?>, Object> store = new HashMap<>();
@@ -180,13 +192,30 @@ public class TestSession {
         return context;
     }
 
-    /** Opens a new context in this thread's browser, with tracing switched on. */
+    /**
+     * Opens a new context in this thread's browser, with tracing switched on, and video recording unless
+     * {@code ui.video} is off. All browser and page settings are applied here, once per scenario; every page and
+     * page object created later inherits them.
+     */
     private void startBrowser() {
         Settings.Ui ui = settings.ui();
         Browser browser = BrowserPool.browser(ui);
-        context = browser.newContext(new Browser.NewContextOptions()
+        boolean maximized = BrowserPool.maximized(ui);
+        Browser.NewContextOptions options = new Browser.NewContextOptions()
                 .setBaseURL(ui.baseUrl())
-                .setViewportSize(ui.viewport().width(), ui.viewport().height()));
+                .setIgnoreHTTPSErrors(ui.ignoreHttpsErrors());
+        if (maximized) {
+            options.setViewportSize(null); // the page uses the real, maximized window size
+        } else {
+            options.setViewportSize(ui.viewport().width(), ui.viewport().height());
+        }
+        if (ui.recordsVideo()) {
+            options.setRecordVideoDir(VIDEO_RECORDING_DIR);
+            if (!maximized) {
+                options.setRecordVideoSize(ui.viewport().width(), ui.viewport().height()); // full size, not scaled down
+            }
+        }
+        context = browser.newContext(options);
         Settings.Waits waits = ui.waits();
         context.setDefaultTimeout(waits.actionMs());
         context.setDefaultNavigationTimeout(waits.navigationMs());
@@ -196,22 +225,23 @@ public class TestSession {
     }
 
     /**
-     * Stops tracing (the zip is kept only when the scenario failed) and closes the context. The browser stays
-     * open for the next scenario on this thread.
+     * Stops tracing (the zip is kept only when the scenario failed) and closes the context. The page's video is
+     * kept when {@code ui.video} is always, or failed and the scenario failed; otherwise it is deleted. The
+     * browser stays open for the next scenario on this thread.
      * Each close is attempted separately so cleanup never hides the real test result.
      *
      * @param failed true if the scenario failed
-     * @return the saved trace file, or null if none was saved (passed, or no browser was started)
+     * @return the kept trace and video; both null if nothing was kept (passed, or no browser was started)
      */
-    public synchronized Path close(boolean failed) {
-        Path saved = null;
+    public synchronized SavedFiles close(boolean failed) {
+        Path trace = null;
         if (context != null) {
             try {
                 if (failed) {
-                    Path trace = traceFile();
-                    context.tracing().stop(new Tracing.StopOptions().setPath(trace));
-                    System.out.println("Trace saved: " + trace);
-                    saved = trace;
+                    Path file = artifactFile("traces", ".zip");
+                    context.tracing().stop(new Tracing.StopOptions().setPath(file));
+                    System.out.println("Trace saved: " + file);
+                    trace = file;
                 } else {
                     context.tracing().stop();
                 }
@@ -219,24 +249,56 @@ public class TestSession {
                 // best effort
             }
         }
-        quietly(() -> { if (context != null) context.close(); });
+        Video video = null;
+        try {
+            if (page != null) video = page.video(); // null when video is off
+        } catch (RuntimeException ignored) {
+            // best effort
+        }
+        quietly(() -> { if (context != null) context.close(); }); // closing finishes writing the video
+        Path keptVideo = video == null ? null : keepOrDelete(video, failed);
         context = null;
         page = null;
-        return saved;
+        return new SavedFiles(trace, keptVideo);
     }
 
     /**
-     * Path of the trace file of this scenario, for example
-     * target/artifacts/traces/2026-11-09_14-05-09_create-and-find-a-customer.zip
+     * Copies a finished video to target/artifacts/videos when it is to be kept, then deletes the recording.
      *
-     * @return the trace path
+     * @param video  the page's video
+     * @param failed true if the scenario failed
+     * @return the kept video file, or null if none was kept
      */
-    private Path traceFile() {
+    private Path keepOrDelete(Video video, boolean failed) {
+        Path kept = null;
+        if (failed || settings.ui().video().equals("always")) {
+            try {
+                Path file = artifactFile("videos", ".webm");
+                video.saveAs(file);
+                System.out.println("Video saved: " + file);
+                kept = file;
+            } catch (RuntimeException ignored) {
+                // best effort
+            }
+        }
+        quietly(video::delete); // the recording under videos/recording
+        return kept;
+    }
+
+    /**
+     * Path of a file of this scenario, for example
+     * target/artifacts/traces/2026-11-09_14-05-09_create-and-find-a-customer_TestNG-1.zip
+     *
+     * @param folder    the folder under target/artifacts, for example traces or videos
+     * @param extension the file extension with its dot, for example .zip
+     * @return the file path
+     */
+    private Path artifactFile(String folder, String extension) {
         String slug = scenarioName.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
         // thread name keeps the files of parallel (or retried) scenarios with the same name apart
         String thread = Thread.currentThread().getName().replaceAll("[^A-Za-z0-9]+", "-");
-        return Paths.get("target", "artifacts", "traces",
-                LocalDateTime.now().format(FILE_STAMP) + "_" + slug + "_" + thread + ".zip");
+        return Paths.get("target", "artifacts", folder,
+                LocalDateTime.now().format(FILE_STAMP) + "_" + slug + "_" + thread + extension);
     }
 
     /**

@@ -36,9 +36,10 @@ public record Settings(Ui ui, Api api, Service serviceDefaults, Map<String, Serv
      */
     @Override
     public Ui ui() {
-        Ui base = ui != null ? ui : new Ui(null, null, true, 0, null, null);
+        Ui base = ui != null ? ui : new Ui(null, null, true, 0, null, false, false, null, null);
         return new Ui(base.baseUrl(), base.browser() == null ? "chromium" : base.browser(), base.headless(),
                 base.slowMoMs(), base.viewport() != null ? base.viewport() : new Viewport(1366, 768),
+                base.maximize(), base.ignoreHttpsErrors(), base.video() == null ? "failed" : base.video(),
                 base.waits() != null ? base.waits() : Waits.defaults());
     }
 
@@ -128,10 +129,30 @@ public record Settings(Ui ui, Api api, Service serviceDefaults, Map<String, Serv
      * @param browser  chromium, firefox or webkit
      * @param headless run without a visible browser window
      * @param slowMoMs artificial delay per action in milliseconds, useful when debugging
-     * @param viewport browser window size
-     * @param waits    how long Playwright waits before it gives up
+     * @param viewport          browser window size, used unless {@code maximize} is on
+     * @param maximize          use the real window size instead of the viewport (maximized window); headed runs only
+     * @param ignoreHttpsErrors accept invalid HTTPS certificates, for environments with self-signed certificates
+     * @param video             off, failed (keep videos of failed scenarios only) or always
+     * @param waits             how long Playwright waits before it gives up
      */
-    public record Ui(String baseUrl, String browser, boolean headless, int slowMoMs, Viewport viewport, Waits waits) {}
+    public record Ui(String baseUrl, String browser, boolean headless, int slowMoMs, Viewport viewport,
+                     boolean maximize, boolean ignoreHttpsErrors, String video, Waits waits) {
+
+        /** Normalizes and checks the video mode. */
+        public Ui {
+            if (video != null) {
+                video = video.trim().toLowerCase(Locale.ROOT);
+                if (!List.of("off", "failed", "always").contains(video)) {
+                    throw new IllegalArgumentException("ui.video must be off, failed or always, not '" + video + "'");
+                }
+            }
+        }
+
+        /** @return true if the scenario's browser session is recorded */
+        public boolean recordsVideo() {
+            return video != null && !video.equals("off");
+        }
+    }
 
     /**
      * Browser window size.

@@ -103,5 +103,27 @@ public class CommonConfigTest {
         assertEquals(settings.service("customers").headers().get("Accept"), "application/json");
         assertEquals(settings.service("customers").auth().kind(), "none");
         assertTrue(settings.cleanup().folders().contains("target/reports"));
+        assertEquals(settings.ui().video(), "failed", "videos of failed scenarios by default");
+        assertFalse(settings.ui().ignoreHttpsErrors());
+        assertFalse(settings.ui().maximize());
+    }
+
+    @Test
+    public void videoModeIsNormalizedCheckedAndDefaultsToFailed() {
+        assertEquals(new Settings(null, null, null, null, null, null, null, null, null).ui().video(), "failed");
+        Settings.Ui always = new Settings.Ui(null, null, true, 0, null, false, false, " Always ", null);
+        assertEquals(always.video(), "always");
+        assertTrue(always.recordsVideo());
+        assertFalse(new Settings.Ui(null, null, true, 0, null, false, false, "off", null).recordsVideo());
+        expectThrows(IllegalArgumentException.class,
+                () -> new Settings.Ui(null, null, true, 0, null, false, false, "sometimes", null));
+    }
+
+    @Test
+    public void maximizeOnlyAppliesToHeadedRuns() {
+        assertTrue(com.agenticqa.core.BrowserPool.maximized(
+                new Settings.Ui(null, null, false, 0, null, true, false, null, null)));
+        assertFalse(com.agenticqa.core.BrowserPool.maximized(
+                new Settings.Ui(null, null, true, 0, null, true, false, null, null)), "headless keeps the viewport");
     }
 }

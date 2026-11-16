@@ -11,6 +11,9 @@ ui:
   headless: true             # per run: -Dui.headless=false
   slowMoMs: 0                # delay per browser action, for watching a run
   viewport: { width: 1366, height: 768 }
+  maximize: false            # true: real window size, maximized (headed runs only; headless keeps the viewport)
+  ignoreHttpsErrors: false   # true only for environments with self-signed certificates; per run: -Dui.ignoreHttpsErrors=true
+  video: failed              # off | failed (keep videos of failed scenarios) | always; per run: -Dui.video=always
   # How long Playwright waits before it gives up (milliseconds). Per run: -Dui.waits.actionMs=30000 and so on.
   waits:
     actionMs: 15000          # click, fill, locator waits

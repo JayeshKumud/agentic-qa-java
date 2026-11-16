@@ -106,6 +106,9 @@ Any setting can be overridden for one run with a system property named by its pa
 | `ui.baseUrl` | `-Dui.baseUrl=https://feature-123.test.example.com` |
 | `ui.browser` | `-Dui.browser=firefox` |
 | `ui.headless` | `-Dui.headless=false` (watch a UAT run locally) |
+| `ui.video` | `-Dui.video=always` (keep videos of passed scenarios too; `off` records none, default `failed`) |
+| `ui.ignoreHttpsErrors` | `-Dui.ignoreHttpsErrors=true` (an environment with a self-signed certificate) |
+| `ui.maximize` | `-Dui.headless=false -Dui.maximize=true` (real, maximized window instead of the viewport; headed only) |
 | `ui.waits.actionMs` | `-Dui.waits.actionMs=30000` |
 | `services.<name>.baseUrl` | `-Dservices.customers.baseUrl=http://localhost:9000` |
 | `execution.defaultMode` | `-Dexecution.defaultMode=sequential` |

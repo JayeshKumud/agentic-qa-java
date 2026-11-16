@@ -22,6 +22,7 @@ Everything is local files under `target/`. No reporting server is involved.
 | `target/allure-results/` | Allure Cucumber plugin | Raw **Allure** results, plus `environment.properties`. Turn them into HTML with `mvn allure:report`. |
 | `target/reports/allure/index.html` | `mvn allure:report` | **Allure** report: overview, suites, timeline, retries, categories, environment. |
 | `target/artifacts/traces/<time>_<scenario>_<thread>.zip` | `TestSession.close` | Playwright trace, **failed scenarios only**. |
+| `target/artifacts/videos/<time>_<scenario>_<thread>.webm` | `TestSession.close` | Video of the page, by `ui.video`: **failed scenarios only** (default), `always` or `off`. Its path is attached to the report as `video`. |
 | `target/healing/heals.jsonl` | `Healer` | One JSON line per healed locator (see [healing.md](healing.md)). |
 | `target/surefire-reports/` | Maven Surefire | Plain TestNG results, including unit tests such as `HealingScorerTest`. |
 | console | `pretty` plugin, `Healer`, `RunSummaryPlugin` | Steps as they run, `[HEAL]` lines, `Trace saved: …`, and the final `[REPORT]` line. |
@@ -232,6 +233,7 @@ The script **never fails the job**. If the JSON is missing, for example because 
 |---|---|---|
 | `reports-<suite>` | always | `target/reports/` (run summary, Cucumber, Extent and Allure HTML, JSON files, failed-scenario list), `target/allure-results/`, `target/healing/heals.jsonl` and `healing/fingerprints.json` (the baseline as it was after the run) |
 | `traces-<suite>` | job failed | `target/artifacts/traces/*.zip` |
+| `videos-<suite>` | job failed | `target/artifacts/videos/*.webm` |
 | `app-log-<suite>` | job failed | the sample app's server log |
 
 Usual triage when a CI run fails:

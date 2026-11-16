@@ -8,7 +8,6 @@ import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.Scenario;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,7 +40,8 @@ public class Hooks {
     /**
      * Runs after each scenario. Healed locators are attached to the report. If it failed, the log of its HTTP
      * calls is attached, and if a page was used, a full-page screenshot too.
-     * Then it always closes everything; for failed scenarios the trace zip is kept and its path attached.
+     * Then it always closes everything; for failed scenarios the trace zip and the video (ui.video) are kept and
+     * their paths attached.
      *
      * @param scenario the finished Cucumber scenario
      */
@@ -70,9 +70,12 @@ public class Hooks {
                 // a missing screenshot must not hide the real failure
             }
         }
-        Path trace = session.close(failed);
-        if (trace != null) {
-            scenario.attach(trace.toAbsolutePath().toString(), "text/plain", "trace");
+        TestSession.SavedFiles saved = session.close(failed);
+        if (saved.trace() != null) {
+            scenario.attach(saved.trace().toAbsolutePath().toString(), "text/plain", "trace");
+        }
+        if (saved.video() != null) {
+            scenario.attach(saved.video().toAbsolutePath().toString(), "text/plain", "video");
         }
     }
 }

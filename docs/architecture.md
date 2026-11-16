@@ -151,6 +151,9 @@ classDiagram
   reuses it for all its scenarios, while every scenario still gets its own context (cookies, storage, trace).
   A pure API scenario also creates a context, because the API context comes from it, but it never opens a page.
 - **Tracing** starts with the context and is saved to `target/artifacts/traces/` only when the scenario fails.
+- **Video** is recorded with the context (`ui.video`, default `failed`) and kept in `target/artifacts/videos/` only
+  when the scenario fails; passed scenarios' videos are deleted. `ui.ignoreHttpsErrors` and `ui.maximize` are
+  context options too, so every page of the scenario gets them.
 - **The typed store** (`put`/`get` with a `DataKey<T>`) lets step classes share values such as "the current
   customer" without static fields.
 

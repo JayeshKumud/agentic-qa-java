@@ -117,6 +117,16 @@ jobs:
           path: target/artifacts/traces/
           if-no-files-found: ignore
 
+      - name: Upload videos of failed scenarios
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: videos-${{ matrix.suite }}
+          path: |
+            target/artifacts/videos/
+            !target/artifacts/videos/recording/
+          if-no-files-found: ignore
+
       - name: Upload app log
         if: failure()
         uses: actions/upload-artifact@v4

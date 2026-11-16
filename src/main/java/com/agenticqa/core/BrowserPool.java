@@ -5,6 +5,7 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Playwright;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -49,6 +50,17 @@ public final class BrowserPool {
         return worker.browser();
     }
 
+    /**
+     * Tells whether pages use the real, maximized window instead of the configured viewport. Only headed runs
+     * can: a headless browser has no window, so it keeps the viewport and screenshots match on every machine.
+     *
+     * @param ui the browser settings
+     * @return true if {@code ui.maximize} is on and the run is headed
+     */
+    public static boolean maximized(Settings.Ui ui) {
+        return ui.maximize() && !ui.headless();
+    }
+
     private static Worker launch(Settings.Ui ui) {
         String name = ui.browser() == null ? "chromium" : ui.browser().toLowerCase();
         Playwright playwright = Playwright.create();
@@ -61,7 +73,9 @@ public final class BrowserPool {
                 .setHeadless(ui.headless())
                 .setSlowMo(ui.slowMoMs());
         if (name.equals("chromium")) {
-            launch.setArgs(List.of("--disable-dev-shm-usage")); // needed inside containers
+            List<String> args = new ArrayList<>(List.of("--disable-dev-shm-usage")); // needed inside containers
+            if (maximized(ui)) args.add("--start-maximized");
+            launch.setArgs(args);
         }
         System.out.printf("[BROWSER] %s launched for thread %s%n", name, Thread.currentThread().getName());
         return new Worker(playwright, type.launch(launch));
