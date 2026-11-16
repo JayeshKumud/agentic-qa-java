@@ -5,41 +5,24 @@ import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Page;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
- * Creates the page objects of one scenario and hands out the same instance on every call. Step classes receive it
- * from PicoContainer, like {@link TestSession}:
+ * Creates page objects for the running scenario and hands out the same instance on every call, from anywhere:
  * <pre>
- * public HomeSteps(PageComponentFactory pages) {
- *     this.pages = pages;
- * }
- *
  * private HomePage homePage() {
- *     return pages.get(HomePage.class);
+ *     return PageComponentFactory.get(HomePage.class);
  * }
  * </pre>
  * A page is created on first use, through its {@code (Page, Healer)} constructor, with the scenario's browser
  * page and healer. API-only scenarios that never ask for a page therefore never start a browser.
  * <p>
- * PicoContainer creates one factory per scenario and gives every step class of that scenario the same one, then
- * discards it. Parallel scenarios therefore never share pages, and the next scenario never gets a page of a
- * closed browser, without any ThreadLocal or cleanup in the hooks.
+ * The factory keeps no state: it finds the scenario with {@link TestSession#current()}, and the created pages live
+ * in that session, so they are dropped when the session closes. Parallel scenarios never share pages, and the
+ * next scenario on the same thread never gets a page of a closed browser.
  */
-public class PageComponentFactory {
+public final class PageComponentFactory {
 
-    private final TestSession session;
-    private final Map<Class<? extends PageComponent>, PageComponent> createdPages = new HashMap<>();
-
-    /**
-     * Receives this scenario's session from PicoContainer.
-     *
-     * @param session the per-scenario session
-     */
-    public PageComponentFactory(TestSession session) {
-        this.session = session;
-    }
+    private PageComponentFactory() {}
 
     /**
      * The page object of a type, created on first use in this scenario.
@@ -47,25 +30,22 @@ public class PageComponentFactory {
      * @param pageToCreate the page class, for example HomePage.class
      * @param <T>          the page type
      * @return the scenario's instance of that page
-     * @throws IllegalStateException if the page cannot be created
+     * @throws IllegalStateException if no scenario is running on this thread, or the page cannot be created
      */
-    public synchronized <T extends PageComponent> T get(Class<T> pageToCreate) {
-        PageComponent existing = createdPages.get(pageToCreate);
-        if (existing != null) return pageToCreate.cast(existing);
-
-        T page = create(pageToCreate);
-        createdPages.put(pageToCreate, page);
-        return page;
+    public static <T extends PageComponent> T get(Class<T> pageToCreate) {
+        TestSession session = TestSession.current();
+        return session.pageComponent(pageToCreate, () -> create(pageToCreate, session));
     }
 
     /**
      * Calls the page's {@code (Page, Healer)} constructor with the session's page and healer.
      *
      * @param pageToCreate the page class
+     * @param session      the scenario's session
      * @param <T>          the page type
      * @return the new page
      */
-    private <T extends PageComponent> T create(Class<T> pageToCreate) {
+    private static <T extends PageComponent> T create(Class<T> pageToCreate, TestSession session) {
         try {
             return pageToCreate.getConstructor(Page.class, Healer.class).newInstance(session.page(), session.healer());
         } catch (NoSuchMethodException e) {

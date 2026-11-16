@@ -32,20 +32,17 @@ public class CustomerUiSteps {
     private final TestSession session;
     private final CustomerApi customers;
     private final ServiceCleanup cleanup;
-    private final PageComponentFactory pages;
 
     /**
      * Receives this scenario's objects from PicoContainer.
      *
      * @param session the per-scenario session
      * @param cleanup deletes what the scenario created, after it
-     * @param pages   the per-scenario page factory
      */
-    public CustomerUiSteps(TestSession session, ServiceCleanup cleanup, PageComponentFactory pages) {
+    public CustomerUiSteps(TestSession session, ServiceCleanup cleanup) {
         this.session = session;
         this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
-        this.pages = pages;
     }
 
     /**
@@ -197,6 +194,6 @@ public class CustomerUiSteps {
      * @return the customers page
      */
     private CustomersPage page() {
-        return pages.get(CustomersPage.class);
+        return PageComponentFactory.get(CustomersPage.class);
     }
 }

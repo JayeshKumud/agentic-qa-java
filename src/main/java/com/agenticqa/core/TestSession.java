@@ -3,6 +3,7 @@ package com.agenticqa.core;
 import com.agenticqa.api.ApiCall;
 import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
+import com.agenticqa.ui.PageComponent;
 import com.agenticqa.ui.healing.HealEvent;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.APIRequestContext;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Everything one scenario needs while it runs: the browser page, the API access and a typed store for sharing data
@@ -38,6 +40,14 @@ public class TestSession {
 
     private static final DateTimeFormatter FILE_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
+    /**
+     * The session of the scenario running on each thread. It points to the session PicoContainer created (Hooks
+     * binds it before every scenario, {@link #close} removes it), so static code and injected code see the same
+     * session. It is the only ThreadLocal of the session: per-scenario data lives in the session's own fields and
+     * store, so nothing else has to be cleared.
+     */
+    private static final ThreadLocal<TestSession> CURRENT = new ThreadLocal<>();
+
     /** Where Playwright writes videos while recording; kept videos are copied to target/artifacts/videos. */
     private static final Path VIDEO_RECORDING_DIR = Paths.get("target", "artifacts", "videos", "recording");
 
@@ -52,6 +62,7 @@ public class TestSession {
     private final Settings settings = EnvConfig.get();
     private final Map<DataKey<?>, Object> store = new HashMap<>();
     private final List<ApiCall> apiCalls = new ArrayList<>();
+    private final Map<Class<? extends PageComponent>, PageComponent> pageComponents = new HashMap<>();
 
     private BrowserContext context;
     private Page page;
@@ -183,6 +194,107 @@ public class TestSession {
     }
 
     /**
+     * Adds an item to a list stored under a list key, creating the list on first use:
+     * {@code session.add(Keys.CREATED_INST_MAN, instMan)}.
+     *
+     * @param key  a list key, see {@link DataKey#listOf}
+     * @param item the item to add
+     * @param <E>  the type of the list elements
+     * @throws IllegalArgumentException if the item is null
+     */
+    public synchronized <E> void add(DataKey<List<E>> key, E item) {
+        if (item == null) {
+            throw new IllegalArgumentException("Cannot add null to '" + key.name() + "' in this scenario");
+        }
+        @SuppressWarnings("unchecked")
+        List<E> list = (List<E>) store.computeIfAbsent(key, k -> new ArrayList<E>());
+        list.add(item);
+    }
+
+    /**
+     * The items added under a list key, oldest first, as a copy.
+     *
+     * @param key a list key, see {@link DataKey#listOf}
+     * @param <E> the type of the list elements
+     * @return the items, empty if none were added
+     */
+    public synchronized <E> List<E> list(DataKey<List<E>> key) {
+        @SuppressWarnings("unchecked")
+        List<E> list = (List<E>) store.get(key);
+        return list == null ? List.of() : List.copyOf(list);
+    }
+
+    /**
+     * The items added under a list key, for steps that need at least one.
+     *
+     * @param key a list key, see {@link DataKey#listOf}
+     * @param <E> the type of the list elements
+     * @return the items, oldest first, as a copy
+     * @throws IllegalStateException if nothing was added under the key in this scenario
+     */
+    public <E> List<E> requireList(DataKey<List<E>> key) {
+        List<E> list = list(key);
+        if (list.isEmpty()) {
+            throw new IllegalStateException("Nothing was added to '" + key.name()
+                    + "' in this scenario. Did an earlier step run?");
+        }
+        return list;
+    }
+
+    /**
+     * Makes this the current session of this thread, so {@link #current()} finds it. Hooks calls it before every
+     * scenario; {@link #close} undoes it.
+     */
+    public void bindToCurrentThread() {
+        CURRENT.set(this);
+    }
+
+    /**
+     * The session of the scenario running on this thread, for code that PicoContainer does not create (static
+     * helpers, listeners, page factories). Injected classes can keep receiving the session in their constructor;
+     * both are the same object.
+     *
+     * @return the current session
+     * @throws IllegalStateException if no scenario is running on this thread
+     */
+    public static TestSession current() {
+        TestSession session = CURRENT.get();
+        if (session == null) {
+            throw new IllegalStateException("No scenario is running on this thread. TestSession.current() works"
+                    + " inside a scenario, after Hooks.before has bound the session, and only on the scenario's thread.");
+        }
+        return session;
+    }
+
+    /**
+     * The browser page of the scenario running on this thread, opened on first use.
+     *
+     * @return the current scenario's page
+     * @throws IllegalStateException if no scenario is running on this thread
+     */
+    public static Page currentPage() {
+        return current().page();
+    }
+
+    /**
+     * The scenario's page object of a type, created with {@code create} on first use and reused after that.
+     * Used by {@code PageComponentFactory}; the pages are dropped with the session.
+     *
+     * @param type   the page class, for example HomePage.class
+     * @param create creates the page when this scenario has none of that type yet
+     * @param <T>    the page type
+     * @return the scenario's instance of that page
+     */
+    public synchronized <T extends PageComponent> T pageComponent(Class<T> type, Supplier<T> create) {
+        PageComponent existing = pageComponents.get(type);
+        if (existing == null) {
+            existing = create.get();
+            pageComponents.put(type, existing);
+        }
+        return type.cast(existing);
+    }
+
+    /**
      * The browser context, started on first use.
      *
      * @return the scenario's browser context
@@ -259,6 +371,8 @@ public class TestSession {
         Path keptVideo = video == null ? null : keepOrDelete(video, failed);
         context = null;
         page = null;
+        pageComponents.clear();
+        if (CURRENT.get() == this) CURRENT.remove(); // the next scenario on this thread cannot see this one
         return new SavedFiles(trace, keptVideo);
     }
 

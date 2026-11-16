@@ -28,13 +28,15 @@ public class Hooks {
     }
 
     /**
-     * Runs before each scenario.
+     * Runs before each scenario, as the first {@code @Before} hook (lowest order runs first), so every later hook
+     * and step can use {@link TestSession#current()}.
      *
      * @param scenario the running Cucumber scenario
      */
-    @Before
+    @Before(order = 0)
     public void before(Scenario scenario) {
         session.scenarioName(scenario.getName());
+        session.bindToCurrentThread(); // TestSession.current() now returns this scenario's session
     }
 
     /**

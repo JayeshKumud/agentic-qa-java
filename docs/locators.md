@@ -66,9 +66,9 @@ A plain string (`"addButton": "#add-customer-button"`) is short for `{ "selector
 1. Create `src/main/resources/locators/<page>.json` with the elements.
 2. Create the page object with a `PageElements` for that file, and actions that use `el.get("...")`.
 3. Let the page object implement `PageComponent` (a public `(Page, Healer)` constructor and `getTitle()`).
-4. Let the step class take a `PageComponentFactory` in its constructor (PicoContainer injects one per scenario)
-   and get the page with `pages.get(XxxPage.class)` (see `HomeSteps.homePage()`). It is created on first use, so
-   API-only scenarios never open a browser, and every later call in the same scenario, from any step class,
-   returns the same instance.
+4. Get it from anywhere in the scenario with `PageComponentFactory.get(XxxPage.class)` (see
+   `HomeSteps.homePage()`). The factory finds the scenario with `TestSession.current()`. The page is created on
+   first use, so API-only scenarios never open a browser, and every later call in the same scenario returns the
+   same instance.
 
 `LocatorRepositoryTest` shows how to unit-test a locator file without a browser.

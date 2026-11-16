@@ -457,3 +457,34 @@ requirement.
 
 More detail: `docs/api-steps.md` (section "Adding API steps for a new service") and `docs/api-requests.md`
 (section "Endpoint catalog").
+
+## TestSession.current(): the session from static code
+
+PicoContainer still creates one `TestSession` per scenario and injects it. `Hooks.before` (the first `@Before`
+hook, `order = 0`) binds that same object to the scenario's thread, so code that Pico does not create can reach it:
+
+```java
+TestSession session = TestSession.current();   // the running scenario's session
+Page page = TestSession.currentPage();          // its browser page, opened on first use
+HomePage home = PageComponentFactory.get(HomePage.class);
+```
+
+There is exactly **one** ThreadLocal, the pointer to the session. Per-scenario data is not kept in separate
+static ThreadLocals; it lives in the session, so it is dropped with the session and nothing has to be cleared.
+`TestSession.close` (called by `Hooks.after`, pass or fail) removes the pointer.
+
+Lists that steps add to during a scenario use a list key and the list helpers:
+
+```java
+// Keys.java
+public static final DataKey<List<InstMan>> CREATED_INST_MAN = DataKey.listOf("createdInstMan", InstMan.class);
+public static final DataKey<List<Unit.UnitKL>> UNIT_KL = DataKey.listOf("unitKL", Unit.UnitKL.class);
+
+// any step or helper
+TestSession.current().add(CREATED_INST_MAN, instMan);                    // fails clearly on null
+List<InstMan> created = TestSession.current().requireList(CREATED_INST_MAN); // fails clearly if empty
+List<Unit.UnitKL> units = TestSession.current().list(UNIT_KL);           // empty list if none
+```
+
+`current()` fails with a clear message outside a scenario, before `Hooks.before`, and on another thread
+(`CompletableFuture`, parallel streams): a session belongs to the thread that runs its scenario.
