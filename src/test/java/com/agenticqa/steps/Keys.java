@@ -5,6 +5,8 @@ import com.agenticqa.api.model.CustomerRequest;
 import com.agenticqa.core.DataKey;
 import com.microsoft.playwright.APIResponse;
 
+import java.util.List;
+
 /** Keys for data that several step classes share within one scenario. */
 public final class Keys {
 
@@ -22,6 +24,12 @@ public final class Keys {
 
     /** A customer request built as a POJO ({@code CustomerPojoSteps}). */
     public static final DataKey<CustomerRequest> CUSTOMER_REQUEST = DataKey.of("customerRequest", CustomerRequest.class);
+
+    /**
+     * The views of the scenario, shared between steps. Store a copy so later changes to the caller's list
+     * cannot change it: {@code session.put(VIEWS, List.copyOf(views))}, read with {@code session.get(VIEWS)}.
+     */
+    public static final DataKey<List<String>> VIEWS = DataKey.listOf("views", String.class);
 
     /** Constants only, not instantiable. */
     private Keys() {}
