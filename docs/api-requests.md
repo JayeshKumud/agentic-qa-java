@@ -181,7 +181,7 @@ parameter fails and names it. An unknown endpoint lists the endpoints of that gr
 Step code needs no request class either:
 
 ```java
-EndpointClient api = new EndpointClient(session);
+EndpointClient api = ApiFactory.getApi(EndpointClient.class);   // the scenario's client, reused
 
 Payload body = Payload.file("customers/new_customer.json")     // or Payload.empty(), Payload.of(map or record)
         .set("name", "Ada " + TestData.token())

@@ -15,7 +15,7 @@ import java.util.Objects;
  *         .setName("Ada Lovelace " + token)
  *         .setEmail("ada." + token + "@example.test")
  *         .setStatus("inactive");
- * APIResponse created = new EndpointClient(session).call("customers.create", body);
+ * APIResponse created = ApiFactory.getApi(EndpointClient.class).call("customers.create", body);
  * </pre>
  * Fields left null are not sent ({@link JsonInclude.Include#NON_NULL}), so the server applies its defaults.
  * To send something a POJO cannot hold (a wrong type, an extra field), turn it into a

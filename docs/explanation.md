@@ -467,7 +467,15 @@ hook, `order = 0`) binds that same object to the scenario's thread, so code that
 TestSession session = TestSession.current();   // the running scenario's session
 Page page = TestSession.currentPage();          // its browser page, opened on first use
 HomePage home = PageComponentFactory.get(HomePage.class);
+CustomerApi customers = ApiFactory.getApi(CustomerApi.class);
 ```
+
+`PageComponentFactory` and `ApiFactory` work the same way: the first call in a scenario creates the object (a page
+through its `(Page, Healer)` constructor, an API client through its `(TestSession)` constructor), keeps it in the
+session, and every later call in that scenario returns the same instance. The objects are **scenario-scoped**,
+not shared by the whole run, because each one holds its scenario's browser context, cookies and call log. An API
+client implements `Api`; `ServiceClient` is not one, because it also needs a service name
+(`new ServiceClient(session, "orders")`).
 
 There is exactly **one** ThreadLocal, the pointer to the session. Per-scenario data is not kept in separate
 static ThreadLocals; it lives in the session, so it is dropped with the session and nothing has to be cleared.

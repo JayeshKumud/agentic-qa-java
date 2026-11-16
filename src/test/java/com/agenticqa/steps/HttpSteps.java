@@ -1,5 +1,6 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.api.ApiFactory;
 import com.agenticqa.api.ApiState;
 import com.agenticqa.api.ApiState.Reply;
 import com.agenticqa.api.EndpointClient;
@@ -277,7 +278,7 @@ public class HttpSteps {
     @When("I call {string} with the {string} request")
     public void callWithRequest(String endpoint, String name) {
         ApiState.Request request = api.request(name);
-        APIResponse response = new EndpointClient(session)
+        APIResponse response = ApiFactory.getApi(EndpointClient.class)
                 .call(endpoint, request.pathParams(), request.body(), request.headers(), vars::find);
         remember(name, response);
     }
@@ -291,7 +292,7 @@ public class HttpSteps {
      */
     @When("I call {string} as {string}")
     public void call(String endpoint, String name) {
-        remember(name, new EndpointClient(session).call(endpoint, Map.of(), null, Map.of(), vars::find));
+        remember(name, ApiFactory.getApi(EndpointClient.class).call(endpoint, Map.of(), null, Map.of(), vars::find));
     }
 
     /**
@@ -309,7 +310,7 @@ public class HttpSteps {
     public void callWithParams(String endpoint, String name, DataTable table) {
         Map<String, String> params = new java.util.LinkedHashMap<>();
         table.asMap(String.class, String.class).forEach((param, value) -> params.put(param.trim(), vars.resolve(value)));
-        remember(name, new EndpointClient(session).call(endpoint, params, null, Map.of(), vars::find));
+        remember(name, ApiFactory.getApi(EndpointClient.class).call(endpoint, params, null, Map.of(), vars::find));
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.api.ApiFactory;
 import com.agenticqa.api.Customer;
 import com.agenticqa.api.CustomerApi;
 import com.agenticqa.api.Payload;
@@ -30,7 +31,6 @@ import static org.testng.Assert.assertTrue;
 public class CustomerUiSteps {
 
     private final TestSession session;
-    private final CustomerApi customers;
     private final ServiceCleanup cleanup;
 
     /**
@@ -41,7 +41,6 @@ public class CustomerUiSteps {
      */
     public CustomerUiSteps(TestSession session, ServiceCleanup cleanup) {
         this.session = session;
-        this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
     }
 
@@ -55,7 +54,7 @@ public class CustomerUiSteps {
         String tag = "Batch " + TestData.token();
         for (int i = 1; i <= count; i++) {
             String name = tag + " #" + i;
-            APIResponse response = customers.create(Payload.empty().set("name", name).set("email", TestData.emailFor(name)));
+            APIResponse response = customers().create(Payload.empty().set("name", name).set("email", TestData.emailFor(name)));
             assertEquals(response.status(), 201, "Create failed: " + response.text());
             cleanup.delete(CustomerApi.SERVICE, CustomerApi.pathOf(CustomerApi.asCustomer(response).id()));
         }
@@ -195,5 +194,14 @@ public class CustomerUiSteps {
      */
     private CustomersPage page() {
         return PageComponentFactory.get(CustomersPage.class);
+    }
+
+    /**
+     * The customers API of this scenario, from the factory (created on first use, then reused).
+     *
+     * @return the customers API
+     */
+    private CustomerApi customers() {
+        return ApiFactory.getApi(CustomerApi.class);
     }
 }

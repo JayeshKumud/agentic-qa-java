@@ -34,7 +34,7 @@ public final class PageComponentFactory {
      */
     public static <T extends PageComponent> T get(Class<T> pageToCreate) {
         TestSession session = TestSession.current();
-        return session.pageComponent(pageToCreate, () -> create(pageToCreate, session));
+        return session.scenarioObject(pageToCreate, () -> create(pageToCreate, session));
     }
 
     /**

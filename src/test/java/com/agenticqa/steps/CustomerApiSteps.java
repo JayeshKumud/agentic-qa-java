@@ -1,5 +1,6 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.api.ApiFactory;
 import com.agenticqa.api.ApiClient;
 import com.agenticqa.api.Customer;
 import com.agenticqa.api.CustomerApi;
@@ -25,7 +26,6 @@ import static org.testng.Assert.assertTrue;
 public class CustomerApiSteps {
 
     private final TestSession session;
-    private final CustomerApi customers;
     private final ServiceCleanup cleanup;
 
     /**
@@ -36,7 +36,6 @@ public class CustomerApiSteps {
      */
     public CustomerApiSteps(TestSession session, ServiceCleanup cleanup) {
         this.session = session;
-        this.customers = new CustomerApi(session);
         this.cleanup = cleanup;
     }
 
@@ -49,7 +48,7 @@ public class CustomerApiSteps {
     @When("I create a customer named {string}")
     public void createCustomer(String name) {
         String unique = TestData.uniqueName(name);
-        APIResponse response = customers.create(Payload.empty().set("name", unique).set("email", TestData.emailFor(unique)));
+        APIResponse response = customers().create(Payload.empty().set("name", unique).set("email", TestData.emailFor(unique)));
         session.put(RESPONSE, response);
         assertEquals(response.status(), 201, "Create failed: " + response.text());
         Customer customer = CustomerApi.asCustomer(response);
@@ -65,7 +64,7 @@ public class CustomerApiSteps {
     @When("I change the customer status to {string}")
     public void changeStatus(String status) {
         Customer current = session.get(CUSTOMER);
-        APIResponse response = customers.update(current.id(), Payload.of(current).remove("id").set("status", status));
+        APIResponse response = customers().update(current.id(), Payload.of(current).remove("id").set("status", status));
         session.put(RESPONSE, response);
         assertEquals(response.status(), 200, "Update failed: " + response.text());
         session.put(CUSTOMER, CustomerApi.asCustomer(response));
@@ -75,7 +74,7 @@ public class CustomerApiSteps {
     @When("I delete the customer")
     public void deleteCustomer() {
         Customer current = session.get(CUSTOMER);
-        APIResponse response = customers.deleteById(current.id());
+        APIResponse response = customers().deleteById(current.id());
         session.put(RESPONSE, response);
         assertEquals(response.status(), 204, "Delete failed: " + response.text());
         cleanup.cancel(CustomerApi.SERVICE, CustomerApi.pathOf(current.id()));
@@ -89,7 +88,7 @@ public class CustomerApiSteps {
     @Then("the customer can be found by id with status {string}")
     public void findById(String status) {
         Customer expected = session.get(CUSTOMER);
-        APIResponse response = customers.getById(expected.id());
+        APIResponse response = customers().getById(expected.id());
         assertEquals(response.status(), 200, "Get failed: " + response.text());
         Customer actual = CustomerApi.asCustomer(response);
         assertEquals(actual.id(), expected.id());
@@ -128,11 +127,20 @@ public class CustomerApiSteps {
      * @return true if listed
      */
     private boolean listContains(long id) {
-        APIResponse response = customers.list();
+        APIResponse response = customers().list();
         assertEquals(response.status(), 200, "List failed: " + response.text());
         for (JsonNode node : ApiClient.json(response)) {
             if (node.path("id").asLong() == id) return true;
         }
         return false;
+    }
+
+    /**
+     * The customers API of this scenario, from the factory (created on first use, then reused).
+     *
+     * @return the customers API
+     */
+    private CustomerApi customers() {
+        return ApiFactory.getApi(CustomerApi.class);
     }
 }
