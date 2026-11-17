@@ -1,13 +1,23 @@
 # Page objects per scenario: `TestSession.pageComponent`
 
-Steps get their page objects from `PageComponentFactory`:
+Steps get their page objects from [`Pages`](../src/main/java/com/agenticqa/ui/Pages.java), which PicoContainer
+injects like the `TestSession`:
 
 ```java
 // HomeSteps, CustomerUiSteps
-private HomePage homePage() {
-    return PageComponentFactory.get(HomePage.class);
+public CustomerUiSteps(TestSession session, ServiceCleanup cleanup, Pages pages) {
+    this.pages = pages;
 }
+
+pages.customers().open().search(name);
+pages.home().selectRole(role);
+pages.get(OrdersPage.class);              // a page that has no named method yet
 ```
+
+`Pages` holds only the scenario's session and calls `PageComponentFactory.get(type, session)`, so it needs no
+`TestSession.current()` lookup. Code that is not injected (a helper, a listener) can still call
+`PageComponentFactory.get(HomePage.class)`, which finds the session through `TestSession.current()`. Both go
+through the same session cache, so they return the same object.
 
 Every call in one scenario returns the **same** `HomePage`. A new scenario gets a new one. The page objects are
 kept by this method in
@@ -142,9 +152,13 @@ public class OrdersPage implements PageComponent {
     }
 }
 
-// in a step
-OrdersPage orders = PageComponentFactory.get(OrdersPage.class);
+// in Pages, so steps can call pages.orders()
+public OrdersPage orders() {
+    return get(OrdersPage.class);
+}
 ```
+
+Until the named method is added, `pages.get(OrdersPage.class)` works too.
 
 If the constructor is missing, `PageComponentFactory` fails with
 `OrdersPage needs a public constructor (Page page, Healer healer)`.

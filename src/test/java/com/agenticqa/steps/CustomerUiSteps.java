@@ -5,9 +5,8 @@ import com.agenticqa.apis.CustomerApi;
 import com.agenticqa.apis.model.Customer;
 import com.agenticqa.core.TestData;
 import com.agenticqa.core.TestSession;
-import com.agenticqa.ui.CustomersPage;
 import com.agenticqa.ui.CustomersPage.CustomerRow;
-import com.agenticqa.ui.PageComponentFactory;
+import com.agenticqa.ui.Pages;
 import com.agenticqa.ui.healing.HealEvent;
 import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.Route;
@@ -32,16 +31,20 @@ public class CustomerUiSteps {
 
     private final TestSession session;
     private final ServiceCleanup cleanup;
+    private final Pages pages;
 
     /**
      * Receives this scenario's objects from PicoContainer.
      *
      * @param session the per-scenario session
      * @param cleanup deletes what the scenario created, after it
+     * @param pages   the scenario's page objects, each created on first use (API-only scenarios never start a
+     *                browser)
      */
-    public CustomerUiSteps(TestSession session, ServiceCleanup cleanup) {
+    public CustomerUiSteps(TestSession session, ServiceCleanup cleanup, Pages pages) {
         this.session = session;
         this.cleanup = cleanup;
+        this.pages = pages;
     }
 
     /**
@@ -70,9 +73,9 @@ public class CustomerUiSteps {
     public void addThroughForm(String name) {
         String unique = TestData.uniqueName(name);
         String email = TestData.emailFor(unique);
-        page().open().addCustomer(unique, email);
+        pages.customers().open().addCustomer(unique, email);
 
-        List<CustomerRow> found = page().search(unique).visibleRows();
+        List<CustomerRow> found = pages.customers().search(unique).visibleRows();
         assertEquals(found.size(), 1, "Expected exactly one row for " + unique);
         CustomerRow row = found.get(0);
         CustomerApiSteps.deleteAfterScenario(cleanup, row.id());
@@ -82,31 +85,31 @@ public class CustomerUiSteps {
     /** Searches the page for the customer's name. */
     @When("I search the customers page for that customer")
     public void searchForCustomer() {
-        page().open().search(session.get(CUSTOMER).getName());
+        pages.customers().open().search(session.get(CUSTOMER).getName());
     }
 
     /** Searches the page for the shared name tag. */
     @When("I search the customers page for that tag")
     public void searchForTag() {
-        page().open().search(session.get(NAME_TAG));
+        pages.customers().open().search(session.get(NAME_TAG));
     }
 
     /** Searches for a name no customer has. */
     @When("I search the customers page for a name that matches nobody")
     public void searchForNobody() {
-        page().open().search("nobody-" + TestData.token());
+        pages.customers().open().search("nobody-" + TestData.token());
     }
 
     /** Goes to the next page of results. */
     @When("I go to the next page")
     public void nextPage() {
-        page().nextPage();
+        pages.customers().nextPage();
     }
 
     /** Goes to the previous page of results. */
     @When("I go to the previous page")
     public void previousPage() {
-        page().previousPage();
+        pages.customers().previousPage();
     }
 
     /**
@@ -117,8 +120,8 @@ public class CustomerUiSteps {
     @Then("the results show only that customer with status {string}")
     public void onlyThatCustomer(String status) {
         Customer expected = session.get(CUSTOMER);
-        assertThat(page().rows()).hasCount(1);
-        CustomerRow row = page().visibleRows().get(0);
+        assertThat(pages.customers().rows()).hasCount(1);
+        CustomerRow row = pages.customers().visibleRows().get(0);
         assertEquals(row.id(), expected.getId().longValue());
         assertEquals(row.name(), expected.getName());
         assertEquals(row.email(), expected.getEmail());
@@ -128,8 +131,8 @@ public class CustomerUiSteps {
     /** Checks the empty-result message and that no rows are shown. */
     @Then("the page says no customers were found")
     public void noCustomersFound() {
-        assertThat(page().noResultsMessage()).hasText("No customers found.");
-        assertThat(page().rows()).hasCount(0);
+        assertThat(pages.customers().noResultsMessage()).hasText("No customers found.");
+        assertThat(pages.customers().rows()).hasCount(0);
     }
 
     /**
@@ -140,8 +143,8 @@ public class CustomerUiSteps {
      */
     @Then("the page shows {int} customer(s) and {string}")
     public void pageShows(int count, String indicator) {
-        assertThat(page().rows()).hasCount(count);
-        assertThat(page().pageIndicator()).hasText(indicator);
+        assertThat(pages.customers().rows()).hasCount(count);
+        assertThat(pages.customers().pageIndicator()).hasText(indicator);
     }
 
     /**
@@ -181,15 +184,5 @@ public class CustomerUiSteps {
     @Then("no locator was healed")
     public void nothingHealed() {
         assertTrue(session.healEvents().isEmpty(), "Unexpected heals: " + session.healEvents());
-    }
-
-    /**
-     * The page object of this scenario, from the factory: created on first use (so API-only scenarios never start
-     * a browser) and the same instance for every later step.
-     *
-     * @return the customers page
-     */
-    private CustomersPage page() {
-        return PageComponentFactory.get(CustomersPage.class);
     }
 }

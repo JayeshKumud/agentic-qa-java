@@ -33,7 +33,20 @@ public final class PageComponentFactory {
      * @throws IllegalStateException if no scenario is running on this thread, or the page cannot be created
      */
     public static <T extends PageComponent> T get(Class<T> pageToCreate) {
-        TestSession session = TestSession.current();
+        return get(pageToCreate, TestSession.current());
+    }
+
+    /**
+     * The page object of a type in the given scenario, created on first use. Used by {@link Pages}, which has the
+     * session injected and so needs no {@link TestSession#current()} lookup.
+     *
+     * @param pageToCreate the page class, for example HomePage.class
+     * @param session      the scenario's session
+     * @param <T>          the page type
+     * @return the scenario's instance of that page
+     * @throws IllegalStateException if the page cannot be created
+     */
+    public static <T extends PageComponent> T get(Class<T> pageToCreate, TestSession session) {
         return session.pageComponent(pageToCreate, () -> create(pageToCreate, session));
     }
 

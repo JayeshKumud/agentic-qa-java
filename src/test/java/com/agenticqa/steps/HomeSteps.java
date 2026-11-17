@@ -1,11 +1,21 @@
 package com.agenticqa.steps;
 
-import com.agenticqa.ui.HomePage;
-import com.agenticqa.ui.PageComponentFactory;
+import com.agenticqa.ui.Pages;
 import io.cucumber.java.en.When;
 
 /** Steps for the home page. */
 public class HomeSteps {
+
+    private final Pages pages;
+
+    /**
+     * Receives the scenario's page objects from PicoContainer.
+     *
+     * @param pages the scenario's page objects, each created on first use
+     */
+    public HomeSteps(Pages pages) {
+        this.pages = pages;
+    }
 
     /**
      * Selects a role in the change-role dialog: {@code When I select the "COE" role}.
@@ -14,15 +24,6 @@ public class HomeSteps {
      */
     @When("I select the {string} role")
     public void selectRole(String role) {
-        homePage().selectRole(role);
-    }
-
-    /**
-     * The home page of this scenario, from the factory (created on first use, then reused).
-     *
-     * @return the home page
-     */
-    private HomePage homePage() {
-        return PageComponentFactory.get(HomePage.class);
+        pages.home().selectRole(role);
     }
 }
