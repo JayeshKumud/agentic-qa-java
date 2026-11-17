@@ -7,6 +7,7 @@ Feature: Customer journey across the page and the API
     - the API steps use that id, and store the customer the API returns (with its new status),
     - the UI search steps read the stored name, and the checks compare the page with the stored customer.
 
+  @PRKLM-1014
   Scenario: A customer added on the page is updated and deleted through the API
     # UI -> stores the customer (id read from the page)
     When I add a customer named "Katherine Johnson" through the form

@@ -2,6 +2,7 @@ package com.agenticqa.runner;
 
 import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
+import com.agenticqa.hooks.TestCaseTag;
 import io.cucumber.testng.Pickle;
 import io.cucumber.testng.PickleWrapper;
 import org.testng.IRetryAnalyzer;
@@ -31,6 +32,7 @@ public class ScenarioRetry implements IRetryAnalyzer {
         if (parameters.length == 0 || !(parameters[0] instanceof PickleWrapper wrapper)) return false;
         Pickle pickle = wrapper.getPickle();
         if (!settings.appliesTo(pickle.getTags())) return false;
+        if (result.getThrowable() instanceof TestCaseTag.TagError) return false; // wrong tags fail every attempt
 
         String key = pickle.getUri() + ":" + pickle.getScenarioLine();
         int retry = RETRIES.merge(key, 1, Integer::sum);

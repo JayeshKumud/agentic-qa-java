@@ -83,6 +83,10 @@ Any setting can be overridden for one run with a system property named by its pa
 | `ui.video` | `-Dui.video=always` (keep videos of passed scenarios too; `off` records none, default `failed`) |
 | `ui.ignoreHttpsErrors` | `-Dui.ignoreHttpsErrors=true` (an environment with a self-signed certificate) |
 | `ui.maximize` | `-Dui.headless=false -Dui.maximize=true` (real, maximized window instead of the viewport; headed only) |
+| `ui.screenshots` | `-Dui.screenshots=failed` (only the failure screenshot; default `everyStep`, a screenshot after every step of a browser scenario) |
+| `api.relaxedHttps`, `api.*TimeoutMs` | `-Dapi.socketTimeoutMs=30000` (REST Assured setup of every API class, see [api.md](api.md)) |
+| `testCaseTag.required` | `-DtestCaseTag.required=false` (a missing or invalid `@PRKLM-` tag only logs a warning, see [hooks.md](hooks.md)) |
+| `reporting.publisher` | `-Dreporting.publisher=com.example.MyPublisher` (publishes the reports in the pipeline, see [reporting.md](reporting.md#test-execution-summary-and-publishing)) |
 | `ui.waits.actionMs` | `-Dui.waits.actionMs=30000` |
 | `services.<name>.baseUrl` | `-Dservices.customers.baseUrl=http://localhost:9000` |
 | `execution.defaultMode` | `-Dexecution.defaultMode=sequential` |

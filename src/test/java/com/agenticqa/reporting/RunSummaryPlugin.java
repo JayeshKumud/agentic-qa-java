@@ -102,6 +102,7 @@ public class RunSummaryPlugin implements ConcurrentEventListener {
         if (scenario == null) return;
         String name = event.getName() == null ? "" : event.getName();
         if (event.getMediaType().startsWith("image/")) {
+            if (name.equals("step-screenshot")) return; // only the failure screenshot belongs in the summary
             scenario.screenshots.add("data:" + event.getMediaType() + ";base64,"
                     + Base64.getEncoder().encodeToString(event.getData()));
         } else if (name.equals("trace")) {

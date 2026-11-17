@@ -20,9 +20,12 @@ import java.util.TreeMap;
  * @param cleanup         folders emptied before a run, and the run's log file
  * @param healing         self-healing locator settings; defaults apply when the section is missing
  * @param retry           which failed scenarios are run again, and how often; no retries when the section is missing
+ * @param api             REST Assured settings for every API class (HTTPS validation, timeouts)
+ * @param testCaseTag     the test-case tag every scenario needs, for example {@code @PRKLM-1001}
+ * @param reporting       the test execution summary written after the run, and who publishes the reports
  */
 public record Settings(Ui ui, Map<String, Service> services, Execution execution, Cleanup cleanup,
-                       Healing healing, Retry retry) {
+                       Healing healing, Retry retry, Api api, TestCaseTag testCaseTag, Reporting reporting) {
 
     /**
      * Browser settings, never null, with defaults for missing values.
@@ -31,11 +34,47 @@ public record Settings(Ui ui, Map<String, Service> services, Execution execution
      */
     @Override
     public Ui ui() {
-        Ui base = ui != null ? ui : new Ui(null, null, true, 0, null, false, false, null, null);
+        Ui base = ui != null ? ui : new Ui(null, null, true, 0, null, false, false, null, null, null);
         return new Ui(base.baseUrl(), base.browser() == null ? "chromium" : base.browser(), base.headless(),
                 base.slowMoMs(), base.viewport() != null ? base.viewport() : new Viewport(1366, 768),
                 base.maximize(), base.ignoreHttpsErrors(), base.video() == null ? "failed" : base.video(),
+                base.screenshots() == null ? "everystep" : base.screenshots(),
                 base.waits() != null ? base.waits() : Waits.defaults());
+    }
+
+    /**
+     * API settings, never null.
+     *
+     * @return the api section, or {@link Api#defaults()}
+     */
+    @Override
+    public Api api() {
+        return api != null ? api : Api.defaults();
+    }
+
+    /**
+     * Test-case tag settings, never null.
+     *
+     * @return the testCaseTag section, or {@link TestCaseTag#defaults()}
+     */
+    @Override
+    public TestCaseTag testCaseTag() {
+        if (testCaseTag == null) return TestCaseTag.defaults();
+        return new TestCaseTag(testCaseTag.prefix() == null || testCaseTag.prefix().isBlank()
+                ? TestCaseTag.defaults().prefix() : testCaseTag.prefix().trim(), testCaseTag.required());
+    }
+
+    /**
+     * Reporting settings, never null.
+     *
+     * @return the reporting section, or {@link Reporting#defaults()}
+     */
+    @Override
+    public Reporting reporting() {
+        if (reporting == null) return Reporting.defaults();
+        return new Reporting(reporting.summaryFile() == null || reporting.summaryFile().isBlank()
+                ? Reporting.defaults().summaryFile() : reporting.summaryFile(),
+                reporting.publisher() == null ? "" : reporting.publisher().trim());
     }
 
     /**
@@ -109,12 +148,14 @@ public record Settings(Ui ui, Map<String, Service> services, Execution execution
      * @param maximize          use the real window size instead of the viewport (maximized window); headed runs only
      * @param ignoreHttpsErrors accept invalid HTTPS certificates, for environments with self-signed certificates
      * @param video             off, failed (keep videos of failed scenarios only) or always
+     * @param screenshots       everyStep (a screenshot after every step of a browser scenario) or failed (only a
+     *                          full-page screenshot when the scenario fails); kept in lower case
      * @param waits             how long Playwright waits before it gives up
      */
     public record Ui(String baseUrl, String browser, boolean headless, int slowMoMs, Viewport viewport,
-                     boolean maximize, boolean ignoreHttpsErrors, String video, Waits waits) {
+                     boolean maximize, boolean ignoreHttpsErrors, String video, String screenshots, Waits waits) {
 
-        /** Normalizes and checks the video mode. */
+        /** Normalizes and checks the video and screenshot modes. */
         public Ui {
             if (video != null) {
                 video = video.trim().toLowerCase(Locale.ROOT);
@@ -122,11 +163,89 @@ public record Settings(Ui ui, Map<String, Service> services, Execution execution
                     throw new IllegalArgumentException("ui.video must be off, failed or always, not '" + video + "'");
                 }
             }
+            if (screenshots != null) {
+                screenshots = screenshots.trim().toLowerCase(Locale.ROOT);
+                if (!List.of("everystep", "failed").contains(screenshots)) {
+                    throw new IllegalArgumentException("ui.screenshots must be everyStep or failed, not '"
+                            + screenshots + "'");
+                }
+            }
         }
 
         /** @return true if the scenario's browser session is recorded */
         public boolean recordsVideo() {
             return video != null && !video.equals("off");
+        }
+
+        /** @return true if a screenshot is attached after every step of a browser scenario */
+        public boolean screenshotsEveryStep() {
+            return screenshots == null || screenshots.equals("everystep");
+        }
+    }
+
+    /**
+     * REST Assured settings applied once before the run, for every API class.
+     *
+     * @param relaxedHttps               accept any HTTPS certificate ({@code RestAssured.useRelaxedHTTPSValidation()})
+     * @param connectionTimeoutMs        time to open a connection ({@code http.connection.timeout})
+     * @param socketTimeoutMs            time to wait for response data ({@code http.socket.timeout})
+     * @param connectionManagerTimeoutMs time to get a pooled connection ({@code http.connection-manager.timeout})
+     */
+    public record Api(boolean relaxedHttps, int connectionTimeoutMs, int socketTimeoutMs,
+                      int connectionManagerTimeoutMs) {
+
+        /** Missing or zero timeouts use 90 seconds. */
+        public Api {
+            if (connectionTimeoutMs <= 0) connectionTimeoutMs = 90000;
+            if (socketTimeoutMs <= 0) socketTimeoutMs = 90000;
+            if (connectionManagerTimeoutMs <= 0) connectionManagerTimeoutMs = 90000;
+        }
+
+        /**
+         * Settings used when there is no api section.
+         *
+         * @return relaxed HTTPS, 90 s timeouts
+         */
+        public static Api defaults() {
+            return new Api(true, 90000, 90000, 90000);
+        }
+    }
+
+    /**
+     * The test-case tag every scenario carries, for example {@code @PRKLM-1001}: the first tag that starts with the
+     * prefix must be the prefix followed by digits only.
+     *
+     * @param prefix   the tag prefix, for example {@code @PRKLM-}
+     * @param required true fails a scenario whose tag is missing or invalid; false only logs a warning
+     */
+    public record TestCaseTag(String prefix, boolean required) {
+
+        /**
+         * Settings used when there is no testCaseTag section.
+         *
+         * @return prefix @PRKLM-, required
+         */
+        public static TestCaseTag defaults() {
+            return new TestCaseTag("@PRKLM-", true);
+        }
+    }
+
+    /**
+     * What happens with the results after the run.
+     *
+     * @param summaryFile JSON file with one result per scenario (test case id, name, status, duration)
+     * @param publisher   class name of a {@code ReportPublisher} that publishes the reports when the run is in the
+     *                    pipeline; empty for none
+     */
+    public record Reporting(String summaryFile, String publisher) {
+
+        /**
+         * Settings used when there is no reporting section.
+         *
+         * @return the summary in target/reports, no publisher
+         */
+        public static Reporting defaults() {
+            return new Reporting("target/reports/test-execution-summary.json", "");
         }
     }
 

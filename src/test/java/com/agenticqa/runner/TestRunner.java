@@ -1,20 +1,27 @@
 package com.agenticqa.runner;
 
+import com.agenticqa.apis.RestAssuredSetup;
 import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
 import com.agenticqa.config.Settings.Execution.Mode;
 import com.agenticqa.core.RunCleaner;
 import com.agenticqa.core.RunLog;
+import com.agenticqa.reporting.ReportPublisher;
+import com.agenticqa.reporting.TestExecutionResults;
 import io.cucumber.testng.AbstractTestNGCucumberTests;
 import io.cucumber.testng.CucumberOptions;
 import io.cucumber.testng.FeatureWrapper;
 import io.cucumber.testng.PickleWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Map;
 
 /**
  * Entry point for all feature files. Each Cucumber scenario is its own TestNG test.
@@ -32,7 +39,9 @@ import java.util.Arrays;
  *   <li>Run only the scenarios that failed last time (after retries):
  *       -Dcucumber.features=@target/reports/failed-scenarios.txt</li>
  *   <li>Reports in target/reports: run-summary.html (overview, failures, heals), cucumber.html (every step),
- *       extent/index.html (Extent Spark); Allure results in target/allure-results (mvn allure:report)</li>
+ *       extent/index.html (Extent Spark), test-execution-summary.json (one result per test case, printed after
+ *       the run); Allure results in target/allure-results (mvn allure:report)</li>
+ *   <li>REST Assured: relaxed HTTPS and HTTP client timeouts for every API class, from the api section</li>
  * </ul>
  */
 @CucumberOptions(
@@ -40,6 +49,8 @@ import java.util.Arrays;
         glue = {"com.agenticqa.steps", "com.agenticqa.hooks"},
         plugin = {"pretty",
                 "com.agenticqa.reporting.ReportSetupPlugin",
+
+
                 "html:target/reports/cucumber.html",
                 "json:target/reports/cucumber.json",
                 "com.agenticqa.reporting.RunSummaryPlugin:target/reports/run-summary.html",
@@ -48,22 +59,60 @@ import java.util.Arrays;
         monochrome = true)
 public class TestRunner extends AbstractTestNGCucumberTests {
 
+    private static final Logger logger = LoggerFactory.getLogger(TestRunner.class);
+
     /**
-     * Deletes the logs and reports of the previous run and starts the run log. Runs before
-     * {@code AbstractTestNGCucumberTests} creates Cucumber (in its {@code @BeforeClass}), so before any report
-     * plugin opens its output file.
+     * Deletes the logs and reports of the previous run, starts the run log and applies the global REST Assured
+     * setup (api section of config/common.yaml). Runs before {@code AbstractTestNGCucumberTests} creates Cucumber
+     * (in its {@code @BeforeClass}), so before any report plugin opens its output file.
      */
     @BeforeSuite(alwaysRun = true)
     public void prepareRun() {
-        Settings.Cleanup cleanup = EnvConfig.get().cleanup();
+        Settings settings = EnvConfig.get();
+        Settings.Cleanup cleanup = settings.cleanup();
         RunCleaner.clean(cleanup);
         RunLog.start(cleanup.logFile());
+        RestAssuredSetup.configure(settings.api());
     }
 
-    /** Closes the run log. */
+    /**
+     * Writes the test execution summary (one result per scenario, see {@link TestExecutionResults}). In the
+     * pipeline, the configured {@link ReportPublisher} publishes the reports first and its URLs are added to the
+     * summary. A publishing failure is logged and never stops the summary. Then the run log is closed.
+     */
     @AfterSuite(alwaysRun = true)
     public void finishRun() {
-        RunLog.stop();
+        Settings.Reporting reporting = EnvConfig.get().reporting();
+        Map<String, Object> summary = TestExecutionResults.summary();
+        try {
+            if (isRunningInPipeline() && !reporting.publisher().isEmpty()) {
+                Map<String, String> urls = ReportPublisher.create(reporting.publisher()).publish();
+                summary.putAll(urls);
+                urls.forEach((name, url) -> logger.info("{}: {}", name, url));
+            }
+        } catch (Exception e) {
+            logger.error("Error during report publishing", e);
+        } finally {
+            try {
+                TestExecutionResults.write(summary, Paths.get(reporting.summaryFile()));
+                System.out.println("[SUMMARY] " + Paths.get(reporting.summaryFile()).toAbsolutePath()
+                        + System.lineSeparator() + TestExecutionResults.toJson(summary));
+            } catch (RuntimeException e) {
+                logger.error("Could not write the test execution summary", e);
+            }
+            RunLog.stop();
+        }
+    }
+
+    /**
+     * Tells whether the run is in the pipeline: the CI environment variable is set (GitHub Actions, GitLab and
+     * Jenkins plugins set it), or the environment is ci (-Denv=ci).
+     *
+     * @return true in the pipeline
+     */
+    static boolean isRunningInPipeline() {
+        String ci = System.getenv("CI");
+        return (ci != null && !ci.isBlank() && !ci.equalsIgnoreCase("false")) || "ci".equals(EnvConfig.envName());
     }
 
     /**

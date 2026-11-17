@@ -14,6 +14,7 @@ ui:
   maximize: false            # true: real window size, maximized (headed runs only; headless keeps the viewport)
   ignoreHttpsErrors: false   # true only for environments with self-signed certificates; per run: -Dui.ignoreHttpsErrors=true
   video: failed              # off | failed (keep videos of failed scenarios) | always; per run: -Dui.video=always
+  screenshots: everyStep     # everyStep (after every step of a browser scenario) | failed; per run: -Dui.screenshots=failed
   # How long Playwright waits before it gives up (milliseconds). Per run: -Dui.waits.actionMs=30000 and so on.
   waits:
     actionMs: 15000          # click, fill, locator waits
@@ -57,3 +58,27 @@ healing:
 retry:
   count: 0
   tags: "not @noretry"
+
+# ------------------------------------------------------------------------------------------------ api
+# REST Assured settings, applied once before the run (TestRunner), so every API class uses them.
+# Per run: -Dapi.relaxedHttps=false -Dapi.socketTimeoutMs=30000
+api:
+  relaxedHttps: true                 # RestAssured.useRelaxedHTTPSValidation()
+  connectionTimeoutMs: 90000         # http.connection.timeout
+  socketTimeoutMs: 90000             # http.socket.timeout
+  connectionManagerTimeoutMs: 90000  # http.connection-manager.timeout
+
+# ------------------------------------------------------------------------------------------------ test case tag
+# Every scenario needs a test-case tag: the first tag starting with the prefix must be the prefix plus digits,
+# for example @PRKLM-1001. Scenarios tagged @mute are skipped. Per run: -DtestCaseTag.required=false
+testCaseTag:
+  prefix: "@PRKLM-"
+  required: true                     # false: a missing or invalid tag only logs a warning
+
+# ------------------------------------------------------------------------------------------------ reporting
+# After the run, one result per scenario (test case id, name, status, duration) is written here and printed.
+# In the pipeline (CI env var set, or -Denv=ci), the publisher class (a ReportPublisher) publishes the reports and
+# returns their URLs, which are added to the summary. Empty = no publishing.
+reporting:
+  summaryFile: target/reports/test-execution-summary.json
+  publisher: ""

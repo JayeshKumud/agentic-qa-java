@@ -79,7 +79,8 @@ public class CommonConfigTest {
 
     @Test
     public void serviceIsLookedUpByNameAndGetApiUrlReturnsItsBaseUrl() {
-        Settings settings = new Settings(null, Map.of("customers", new Settings.Service("http://c")), null, null, null, null);
+        Settings settings = new Settings(null, Map.of("customers", new Settings.Service("http://c")), null, null, null, null,
+                null, null, null);
         assertEquals(settings.service("customers").baseUrl(), "http://c");
         expectThrows(IllegalArgumentException.class, () -> settings.service("orders"));
         assertEquals(Config.getApiUrl("customers"), "http://127.0.0.1:8000", "dev: services.customers.baseUrl");
@@ -100,20 +101,50 @@ public class CommonConfigTest {
 
     @Test
     public void videoModeIsNormalizedCheckedAndDefaultsToFailed() {
-        assertEquals(new Settings(null, null, null, null, null, null).ui().video(), "failed");
-        Settings.Ui always = new Settings.Ui(null, null, true, 0, null, false, false, " Always ", null);
+        assertEquals(new Settings(null, null, null, null, null, null, null, null, null).ui().video(), "failed");
+        Settings.Ui always = new Settings.Ui(null, null, true, 0, null, false, false, " Always ", null, null);
         assertEquals(always.video(), "always");
         assertTrue(always.recordsVideo());
-        assertFalse(new Settings.Ui(null, null, true, 0, null, false, false, "off", null).recordsVideo());
+        assertFalse(new Settings.Ui(null, null, true, 0, null, false, false, "off", null, null).recordsVideo());
         expectThrows(IllegalArgumentException.class,
-                () -> new Settings.Ui(null, null, true, 0, null, false, false, "sometimes", null));
+                () -> new Settings.Ui(null, null, true, 0, null, false, false, "sometimes", null, null));
+    }
+
+    @Test
+    public void screenshotModeIsNormalizedCheckedAndDefaultsToEveryStep() {
+        Settings empty = new Settings(null, null, null, null, null, null, null, null, null);
+        assertTrue(empty.ui().screenshotsEveryStep(), "every step by default");
+        Settings.Ui failedOnly = new Settings.Ui(null, null, true, 0, null, false, false, null, " Failed ", null);
+        assertEquals(failedOnly.screenshots(), "failed");
+        assertFalse(failedOnly.screenshotsEveryStep());
+        assertTrue(new Settings.Ui(null, null, true, 0, null, false, false, null, "everyStep", null)
+                .screenshotsEveryStep());
+        expectThrows(IllegalArgumentException.class,
+                () -> new Settings.Ui(null, null, true, 0, null, false, false, null, "sometimes", null));
+    }
+
+    @Test
+    public void apiTestCaseTagAndReportingHaveDefaultsAndAreReadFromCommonYaml() {
+        Settings empty = new Settings(null, null, null, null, null, null, null, null, null);
+        assertEquals(empty.api(), Settings.Api.defaults());
+        assertEquals(new Settings.Api(false, 0, 0, 0).socketTimeoutMs(), 90000, "zero uses the default");
+        assertEquals(empty.testCaseTag(), new Settings.TestCaseTag("@PRKLM-", true));
+        assertEquals(empty.reporting().summaryFile(), "target/reports/test-execution-summary.json");
+        assertEquals(empty.reporting().publisher(), "");
+
+        Settings settings = EnvConfig.get();
+        assertTrue(settings.api().relaxedHttps());
+        assertEquals(settings.api().connectionTimeoutMs(), 90000);
+        assertEquals(settings.testCaseTag().prefix(), "@PRKLM-");
+        assertTrue(settings.testCaseTag().required());
+        assertTrue(settings.ui().screenshotsEveryStep());
     }
 
     @Test
     public void maximizeOnlyAppliesToHeadedRuns() {
         assertTrue(com.agenticqa.core.BrowserPool.maximized(
-                new Settings.Ui(null, null, false, 0, null, true, false, null, null)));
+                new Settings.Ui(null, null, false, 0, null, true, false, null, null, null)));
         assertFalse(com.agenticqa.core.BrowserPool.maximized(
-                new Settings.Ui(null, null, true, 0, null, true, false, null, null)), "headless keeps the viewport");
+                new Settings.Ui(null, null, true, 0, null, true, false, null, null, null)), "headless keeps the viewport");
     }
 }
