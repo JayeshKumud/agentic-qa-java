@@ -23,7 +23,6 @@ Everything is local files under `target/`. No reporting server is involved.
 | `target/reports/allure/index.html` | `mvn allure:report` | **Allure** report: overview, suites, timeline, retries, categories, environment. |
 | `target/artifacts/traces/<time>_<scenario>_<thread>.zip` | `TestSession.close` | Playwright trace, **failed scenarios only**. |
 | `target/artifacts/videos/<time>_<scenario>_<thread>.webm` | `TestSession.close` | Video of the page, by `ui.video`: **failed scenarios only** (default), `always` or `off`. Its path is attached to the report as `video`. |
-| `target/reports/test-execution-summary.json` | `TestRunner` (`@AfterSuite`) | One result per test case: `testCaseId` (the `@PRKLM-` tag), `testCaseName`, `status` (Passed, Failed, Skipped), `durationSeconds`, plus totals and, in the pipeline, the report URLs from the publisher. Printed at the end of the run as `[SUMMARY]`. |
 | `target/healing/heals.jsonl` | `Healer` | One JSON line per healed locator (see [healing.md](healing.md)). |
 | `target/surefire-reports/` | Maven Surefire | Plain TestNG results, including unit tests such as `HealingScorerTest`. |
 | console | `pretty` plugin, `Healer`, `RunSummaryPlugin` | Steps as they run, `[HEAL]` lines, `Trace saved: …`, and the final `[REPORT]` line. |
@@ -94,44 +93,11 @@ The hook runs after every scenario, in this order, and attaches evidence with `s
 |---|---|---|---|
 | `self-healing` | `text/plain` | at least one locator healed | `Locators healed - update the locator file (src/main/resources/locators):` followed by one `HealEvent.summary()` per line |
 | `failure-screenshot` | `image/png` | scenario failed **and** a page was opened (`session.hasPage()`) | full-page screenshot. If it fails, the error is ignored so the real failure stays visible. |
-| `debug-info` | `text/plain` | scenario failed | page URL and title (if a page was opened) and the last API response (`Keys.RESPONSE`: status line and up to 4000 characters of the body) |
 | `trace` | `text/plain` | a trace zip was saved (failure with a browser context) | absolute path of the zip |
-| `video` | `text/plain` | a video was kept (`ui.video`) | absolute path of the webm |
-| `step-screenshot` | `image/png` | after **every step**, when `ui.screenshots` is `everyStep` (default) and a page was opened; attached by the `@AfterStep` hook | viewport screenshot |
 
-The kept trace zip and video are also attached **as files** to Allure (`Allure.addAttachment`, `application/zip` and `video/webm`), so they can be downloaded from the Allure report. The other reports only get their paths, so `cucumber.html` does not embed large files.
+The `hasPage()` check makes sure the hook never opens a browser only to take a screenshot of an API-only scenario.
 
-The `hasPage()` check makes sure the hooks never open a browser only to take a screenshot of an API-only scenario.
-
-**The attachment names are a contract.** `RunSummaryPlugin` recognises the `trace` and `self-healing` attachments by name, and images by their `image/` media type; it skips `step-screenshot`, so `run-summary.html` shows only the failure screenshot. If you rename an attachment in the hook, change the plugin too.
-
-The full order of all hooks (tag checks, step screenshots, cleanup) is in [hooks.md](hooks.md).
-
-### Test execution summary and publishing
-
-After every scenario `Hooks` records a [`TestExecutionResult`](../src/test/java/com/agenticqa/reporting/TestExecutionResult.java) (test case id, name, status, duration) in [`TestExecutionResults`](../src/test/java/com/agenticqa/reporting/TestExecutionResults.java). The results are keyed by feature file and line, so a retried scenario keeps only its last attempt. After the suite, `TestRunner.finishRun()`:
-
-1. builds the summary (totals and one row per scenario),
-2. **in the pipeline only** (the `CI` environment variable is set, or `-Denv=ci`) and only if `reporting.publisher` names a class: creates that [`ReportPublisher`](../src/test/java/com/agenticqa/reporting/ReportPublisher.java), calls `publish()` and adds the URLs it returns to the summary. If publishing fails, the error is logged (`Error during report publishing`) and the run goes on,
-3. always (in `finally`) writes `reporting.summaryFile` and prints it.
-
-To publish to an artifact repository, implement the interface in one class and name it in `common.yaml`:
-
-```java
-public class JfrogReportPublisher implements ReportPublisher {
-    @Override
-    public Map<String, String> publish() throws Exception {
-        // upload target/reports/extent and target/reports/allure ...
-        return Map.of("artifact_report_url", "https://.../extent/index.html",
-                      "allure_report_url", "https://.../allure/index.html");
-    }
-}
-```
-
-```yaml
-reporting:
-  publisher: com.agenticqa.reporting.JfrogReportPublisher
-```
+**The attachment names are a contract.** `RunSummaryPlugin` recognises the `trace` and `self-healing` attachments by name, and images by their `image/` media type. If you rename an attachment in the hook, change the plugin too.
 
 ## 2. Per run: `RunSummaryPlugin`
 

@@ -15,24 +15,6 @@ through the API and check it in the browser, or the other way round.
 | API classes | `src/test/java/com/agenticqa/apis/` | `CustomerApi`, `WebserviceAdapterValidationApi`: one method per call, REST Assured, `Assert.fail` on an unexpected status |
 | Models | `src/test/java/com/agenticqa/apis/model/` | `Customer`: the request and response body, serialized by Jackson |
 | Steps | `src/test/java/com/agenticqa/steps/CustomerApiSteps.java` | Call the API classes and store the result in the `TestSession` |
-| `RestAssuredSetup` | `src/test/java/com/agenticqa/apis/RestAssuredSetup.java` | Global REST Assured setup, applied once by `TestRunner` before the run: relaxed HTTPS validation and HTTP client timeouts |
-
-### Global REST Assured setup
-
-`TestRunner.prepareRun()` (`@BeforeSuite`) calls `RestAssuredSetup.configure(settings.api())`, so every
-`RestAssured.given()` in every API class uses the same settings without repeating them. The values are in the
-`api` section of `common.yaml` and can be overridden per environment or per run (`-Dapi.socketTimeoutMs=30000`):
-
-```yaml
-api:
-  relaxedHttps: true                 # RestAssured.useRelaxedHTTPSValidation()
-  connectionTimeoutMs: 90000         # http.connection.timeout
-  socketTimeoutMs: 90000             # http.socket.timeout
-  connectionManagerTimeoutMs: 90000  # http.connection-manager.timeout
-```
-
-It runs only through `TestRunner`. A feature started on its own from the IDE's Cucumber runner uses REST Assured's
-defaults.
 
 ## An API class
 

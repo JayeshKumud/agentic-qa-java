@@ -301,5 +301,4 @@ To add a suite, add its tag to `matrix.suite`.
 | [docs/page-components.md](docs/page-components.md) | Page objects per scenario: `TestSession.pageComponent` line by line, why a `Supplier`, `type.cast`, `synchronized`, and where the pages end |
 | [docs/locators.md](docs/locators.md) | Locators in JSON files and how page objects use them |
 | [docs/healing.md](docs/healing.md) | How self-healing locators and fingerprints work |
-| [docs/hooks.md](docs/hooks.md) | What runs before and after every scenario and step: `@mute`, the `@PRKLM-` test-case tag, step screenshots, cleanup, results |
-| [docs/reporting.md](docs/reporting.md) | Every report (run summary, Allure, Extent, Cucumber, test execution summary), attachment, publishing and CI artifact |
+| [docs/reporting.md](docs/reporting.md) | Every report (run summary, Allure, Extent, Cucumber), attachment and CI artifact |
