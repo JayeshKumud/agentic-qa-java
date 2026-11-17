@@ -2,19 +2,21 @@
 Feature: Customers REST API
   The customers endpoint supports the full create, read, update and delete cycle.
 
-  @smoke
+  @smoke @PRGBATR-1003
   Scenario: Create and find a customer
     When I create a customer named "Ada Lovelace"
     Then the API responds with status 201
     And the customer can be found by id with status "active"
     And the customer appears in the customer list
 
+  @PRGBATR-1004
   Scenario: Update a customer's status
     Given a customer named "Grace Hopper" exists
     When I change the customer status to "inactive"
     Then the API responds with status 200
     And the customer can be found by id with status "inactive"
 
+  @PRGBATR-1005
   Scenario: Delete a customer
     Given a customer named "Alan Turing" exists
     When I delete the customer

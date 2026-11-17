@@ -28,7 +28,7 @@ flowchart TB
 
     subgraph Glue["Glue (src/test/java)"]
         R["TestRunner<br/>Cucumber + TestNG, parallel<br/>ScenarioRetry"]
-        H["Hooks<br/>@Before / @After"]
+        H["TestInitializeHooks<br/>@Before / @After"]
         ST["Step definitions<br/>CustomerApiSteps · CustomerUiSteps<br/>HomeSteps · ZoneSteps"]
         CL["Cleanup<br/>ServiceCleanup"]
         subgraph APIS["apis (REST Assured)"]
@@ -81,7 +81,7 @@ flowchart TB
 |---|---|---|
 | Specification | `features/` | What is tested, in Gherkin |
 | Runner | `runner.TestRunner` | Finds the features, wires glue and plugins, runs scenarios in parallel through a TestNG `DataProvider` |
-| Hooks | `hooks.Hooks` | Names the session and binds it to the thread before each scenario. After it, attaches heals and a screenshot, then closes the session |
+| TestInitializeHooks | `hooks.TestInitializeHooks` | Names the session and binds it to the thread before each scenario. After it, attaches heals and a screenshot, then closes the session |
 | Steps | `steps.*` | Turn Gherkin into calls on page objects and API classes. No selectors and no raw URLs |
 | Cleanup | `ServiceCleanup` | Delete what the scenario created, newest first, in `@After` |
 | Session | `core.TestSession` | Lazily starts Playwright, holds the page, healer and the typed data store shared by API and GUI steps |
@@ -195,7 +195,7 @@ sequenceDiagram
     participant M as Maven Surefire
     participant R as TestRunner (TestNG)
     participant C as Cucumber + PicoContainer
-    participant H as Hooks
+    participant H as TestInitializeHooks
     participant St as Steps
     participant S as TestSession
     participant P as Playwright
@@ -237,13 +237,13 @@ sequenceDiagram
    `dataproviderthreadcount = ${threads}`, so up to N scenarios run at once.
 3. **Wiring.** For each scenario, PicoContainer builds a fresh object graph: `TestSession`, the step classes and
    the cleanup class. Classes that ask for the same type get the same instance.
-4. **Before.** `Hooks.before` stores the scenario name, which is used for trace file names, and binds the session
+4. **Before.** `TestInitializeHooks.bindSession` stores the scenario name, which is used for trace file names, and binds the session
    to the thread for `TestSession.current()`.
 5. **Steps.** Steps call page objects and API classes. The first call to the browser starts Playwright with the
    configured browser, headless mode, base URL, timeout and tracing.
 6. **After.** First, the cleanup classes (`@After(order = 20000)`; for `@After` hooks a higher order runs first)
    delete the resources the scenario registered, newest first, while the session is still open. Then
-   `Hooks.after` attaches heal events (always) and a full-page screenshot (on failure only), and closes the
+   `TestInitializeHooks.closeBrowser` attaches heal events (always) and a full-page screenshot (on failure only), and closes the
    session. The trace and video are kept only on failure.
 7. **Reporting.** Cucumber's `pretty`, `html` and `json` plugins and `RunSummaryPlugin` collect events
    throughout the run. At the end, `RunSummaryPlugin` writes the summary.

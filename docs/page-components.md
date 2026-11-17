@@ -108,7 +108,7 @@ same thread) does not deadlock.
 
 ## Where the pages end
 
-`TestSession.close(failed)`, which `Hooks.after` calls pass or fail, does:
+`TestSession.close(failed)`, which `TestInitializeHooks.closeBrowser` calls pass or fail, does:
 
 ```java
 context = null;

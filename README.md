@@ -72,7 +72,7 @@ agentic-qa-java/
     │   └── locators/                    locators, one JSON file per page
     ├── test/java/com/agenticqa/
     │   ├── runner/                      TestRunner (Cucumber + TestNG, parallel), ScenarioRetry
-    │   ├── hooks/Hooks.java             @Before / @After around every scenario
+    │   ├── hooks/TestInitializeHooks.java             @Before / @After around every scenario
     │   ├── apis/                        API classes (CustomerApi, WebserviceAdapterValidationApi), REST Assured
     │   │   └── model/                   request and response models (Customer)
     │   ├── steps/                       step definitions and cleanup

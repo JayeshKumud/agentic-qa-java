@@ -43,7 +43,7 @@ public class TestSession {
     private static final DateTimeFormatter FILE_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
     /**
-     * The session of the scenario running on each thread. It points to the session PicoContainer created (Hooks
+     * The session of the scenario running on each thread. It points to the session PicoContainer created (TestInitializeHooks
      * binds it before every scenario, {@link #close} removes it), so static code and injected code see the same
      * session. It is the only ThreadLocal of the session: per-scenario data lives in the session's own fields and
      * store, so nothing else has to be cleared.
@@ -250,7 +250,7 @@ public class TestSession {
     }
 
     /**
-     * Makes this the current session of this thread, so {@link #current()} finds it. Hooks calls it before every
+     * Makes this the current session of this thread, so {@link #current()} finds it. TestInitializeHooks calls it before every
      * scenario; {@link #close} undoes it.
      */
     public void bindToCurrentThread() {
@@ -269,7 +269,7 @@ public class TestSession {
         TestSession session = CURRENT.get();
         if (session == null) {
             throw new IllegalStateException("No scenario is running on this thread. TestSession.current() works"
-                    + " inside a scenario, after Hooks.before has bound the session, and only on the scenario's thread.");
+                    + " inside a scenario, after TestInitializeHooks.bindSession has bound the session, and only on the scenario's thread.");
         }
         return session;
     }

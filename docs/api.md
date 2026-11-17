@@ -100,7 +100,7 @@ cleanup.add("customer " + id, () -> ApiFactory.getApi(CustomerApi.class).deleteC
 cleanup.cancel("customer " + id);   // the scenario deleted it itself
 ```
 
-The deletes run newest first in an `@After(order = 20000)` hook, before `Hooks.after` closes the browser. They
+The deletes run newest first in an `@After(order = 20000)` hook, before `TestInitializeHooks.closeBrowser` closes the browser. They
 are best effort: a failing delete (including an `Assert.fail` inside an API class) is ignored, so it cannot
 hide the real result of the scenario.
 

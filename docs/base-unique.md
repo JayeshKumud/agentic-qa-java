@@ -85,7 +85,7 @@ without it, a retry that runs differently, or a new `ThreadLocal` someone adds t
 `clear()`. Each of these leaks data into a later scenario, and the failure shows up in that later scenario, far
 from the cause.
 
-Here the clean-up is the end of the session, which always happens: `Hooks.after` closes it, pass or fail, and
+Here the clean-up is the end of the session, which always happens: `TestInitializeHooks.closeBrowser` closes it, pass or fail, and
 PicoContainer drops it. There is nothing to forget, for this key or any key added later.
 
 ### 3. Wrong use fails loudly instead of returning wrong data

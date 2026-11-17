@@ -41,7 +41,7 @@ public class ServiceCleanup {
         deletes.remove(key);
     }
 
-    /** Runs the registered deletes, newest first, before Hooks.after closes the session (higher order runs first). */
+    /** Runs the registered deletes, newest first, before TestInitializeHooks closes the session (higher order runs first). */
     @After(order = 20000)
     public synchronized void cleanUp() {
         String[] keys = deletes.keySet().toArray(new String[0]);

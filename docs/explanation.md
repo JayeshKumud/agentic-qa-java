@@ -4,7 +4,7 @@ Questions asked while working on this framework, with the answers.
 
 ---
 
-## Q1. When the debugger reaches `private final Map<DataKey<?>, Object> store = new HashMap<>();`, why does it then jump to `public Hooks(TestSession session)`?
+## Q1. When the debugger reaches `private final Map<DataKey<?>, Object> store = new HashMap<>();`, why does it then jump to `public TestInitializeHooks(TestSession session)`?
 
 This is normal Java behaviour combined with Cucumber's dependency injection (PicoContainer).
 
@@ -27,25 +27,25 @@ public TestSession() {
 
 So when the debugger stops on lines 40-47, you are actually inside `new TestSession()`.
 
-### PicoContainer builds `TestSession` because `Hooks` needs it
+### PicoContainer builds `TestSession` because `TestInitializeHooks` needs it
 
-`Hooks` asks for a `TestSession` in its constructor:
+`TestInitializeHooks` asks for a `TestSession` in its constructor:
 
 ```java
-public Hooks(TestSession session) {    // Hooks.java:27
+public TestInitializeHooks(TestSession session) {    // TestInitializeHooks.java:27
     this.session = session;
 }
 ```
 
-To create `Hooks`, PicoContainer has to create a `TestSession` first:
+To create `TestInitializeHooks`, PicoContainer has to create a `TestSession` first:
 
-1. It needs a `Hooks` object and sees that the constructor takes a `TestSession`.
+1. It needs a `TestInitializeHooks` object and sees that the constructor takes a `TestSession`.
 2. It creates the `TestSession` with `new TestSession()`, which runs the field initializers (lines 40 → 42 → 47).
-3. That constructor returns, and PicoContainer calls `new Hooks(session)` with the new object. The debugger then
-   lands on `Hooks.java:27`.
+3. That constructor returns, and PicoContainer calls `new TestInitializeHooks(session)` with the new object. The debugger then
+   lands on `TestInitializeHooks.java:27`.
 
-So the jump from line 42 to the `Hooks` constructor means `TestSession` is fully built and is now being handed to
-`Hooks`. (Stepping once more from line 42 may first show line 47, `scenarioName = "scenario"`.)
+So the jump from line 42 to the `TestInitializeHooks` constructor means `TestSession` is fully built and is now being handed to
+`TestInitializeHooks`. (Stepping once more from line 42 may first show line 47, `scenarioName = "scenario"`.)
 
 ---
 
@@ -70,7 +70,7 @@ Cucumber scans those packages for classes that have step or hook annotations (`@
 
 | Glue class             | Why it is glue           |
 |------------------------|--------------------------|
-| `Hooks`                | `@Before`, `@After`      |
+| `TestInitializeHooks`                | `@Before`, `@After`      |
 | `CustomerApiSteps`     | `@Given/@When/@Then`     |
 | `CustomerUiSteps`      | `@Given/@When/@Then`     |
 | `HomeSteps`            | `@When`                  |
@@ -107,7 +107,7 @@ Objects are created lazily, the first time the scenario needs them. PicoContaine
 ```java
 public CustomerApiSteps(TestSession session, ServiceCleanup cleanup)
 public ServiceCleanup()
-public Hooks(TestSession session)
+public TestInitializeHooks(TestSession session)
 ```
 
 Within one scenario:
@@ -115,10 +115,10 @@ Within one scenario:
 ```
 Scenario starts → new empty container
 │
-├─ @Before Hooks.before() needs a Hooks
-│    └─ Hooks(TestSession) needs a TestSession
+├─ @Before TestInitializeHooks.bindSession() needs a TestInitializeHooks
+│    └─ TestInitializeHooks(TestSession) needs a TestSession
 │         └─ new TestSession()                  ← created (field initializers run)
-│    └─ new Hooks(session)                       ← created
+│    └─ new TestInitializeHooks(session)                       ← created
 │
 ├─ step "I create a customer named {string}" needs a CustomerApiSteps
 │    ├─ TestSession    → already in container    ← reused, not created again
@@ -128,7 +128,7 @@ Scenario starts → new empty container
 ├─ later steps in CustomerApiSteps → same CustomerApiSteps instance reused
 ├─ a GUI step needs a CustomerUiSteps → new CustomerUiSteps(session, cleanup), same session and cleanup
 │
-├─ @After hooks run (ServiceCleanup order 20000 runs before Hooks.after)
+├─ @After hooks run (ServiceCleanup order 20000 runs before TestInitializeHooks.closeBrowser)
 │
 Scenario ends → container and all its objects are discarded
 ```
@@ -138,10 +138,10 @@ which keeps one instance of each for the whole run (see [api.md](api.md)).
 
 ### Why this matters: sharing state between step classes
 
-`Hooks`, `CustomerApiSteps`, `CustomerUiSteps` and the others all receive **the same `TestSession` object**
+`TestInitializeHooks`, `CustomerApiSteps`, `CustomerUiSteps` and the others all receive **the same `TestSession` object**
 during a scenario. That is how they share things without static fields:
 
-- the browser `page` opened by a UI step is the one `Hooks.after()` screenshots on failure;
+- the browser `page` opened by a UI step is the one `TestInitializeHooks.closeBrowser()` screenshots on failure;
 - data one step stores is the data the next step reads, API or GUI: the customer an API step created is the one
   the GUI step searches for.
 
@@ -161,7 +161,7 @@ so each has its own `TestSession`, browser context and data. Parallel scenarios 
 - **No cycles**: if `A` needs `B` and `B` needs `A`, creation fails.
 - Do not call `new` on step classes yourself. You would get a separate object that does not share the
   scenario's state.
-- Clean-up is not automatic. Throwing the container away does not close a browser, so `Hooks.after()` calls
+- Clean-up is not automatic. Throwing the container away does not close a browser, so `TestInitializeHooks.closeBrowser()` calls
   `session.close(failed)` explicitly.
 
 ---
@@ -181,19 +181,19 @@ class and hook that asks for it in its constructor. When the scenario ends, it i
 | `context`      | The Playwright browser context, with tracing switched on      | lazily, on first `page()`            |
 | `page`         | The browser page                                              | lazily, on first `page()`            |
 | `healer`       | The self-healing locator engine                               | lazily, on first `healer()`          |
-| `scenarioName` | The scenario name, used to name the trace file                | set by `Hooks.before()`              |
+| `scenarioName` | The scenario name, used to name the trace file                | set by `TestInitializeHooks.bindSession()`              |
 
 ### What it does
 
 - **Browser access.** `page()` returns the scenario's browser page. API calls do not go through the session:
   the API classes call their services directly with REST Assured (see [api.md](api.md)).
 - **Lazy start.** The browser context is only opened the first time a step calls `page()`. An API-only scenario
-  never opens one. `hasPage()` lets `Hooks.after()` check whether there is a page to
+  never opens one. `hasPage()` lets `TestInitializeHooks.closeBrowser()` check whether there is a page to
   screenshot without opening a new one.
 - **One browser per thread.** The context is opened in the current thread's browser (`BrowserPool`). Closing the
   session closes only the context. The browser stays open for the next scenario on that thread, which is faster.
 - **Self-healing.** `healer()` returns the scenario's healer, and `healEvents()` lists the locators it healed, so
-  `Hooks.after()` can report them.
+  `TestInitializeHooks.closeBrowser()` can report them.
 - **Data store.** `put`, `get` and `has` share typed values between steps (see Q4).
 - **Clean-up.** `close(failed)` stops tracing and closes the context. The trace zip is saved under
   `target/artifacts/traces/` only when the scenario failed. Each close is attempted separately, so a clean-up
@@ -203,10 +203,10 @@ class and hook that asks for it in its constructor. When the scenario ends, it i
 
 ```
 PicoContainer:  new TestSession()        settings and store created
-Hooks.before(): scenarioName(...)        name remembered for the trace file; bound to the thread
+TestInitializeHooks.bindSession(): scenarioName(...)        name remembered for the trace file; bound to the thread
 steps:          page()                   browser context opened on first use
                 put(...) / get(...)      data shared between steps, API and GUI
-Hooks.after():  healEvents(), screenshot if failed
+TestInitializeHooks.closeBrowser():  healEvents(), screenshot if failed
                 close(failed)            tracing stopped, context closed
 PicoContainer:  container discarded      TestSession thrown away
 ```
@@ -330,7 +330,7 @@ PicoContainer works out what to inject from the parameter **type** in a construc
 or the parameter. If the class were renamed to `ScenarioContext`, this would work just like before:
 
 ```java
-public Hooks(ScenarioContext session) { ... }
+public TestInitializeHooks(ScenarioContext session) { ... }
 ```
 
 PicoContainer would still create one `ScenarioContext` per scenario and give it to every class that asks for one.
@@ -346,7 +346,7 @@ can call.
 The name appears in a dozen files:
 
 - **Java (must change or it won't compile):** `TestSession.java` itself (the file name has to match the class),
-  `Hooks`, the step classes (`CustomerApiSteps`, `CustomerUiSteps`, `ZoneSteps`), `PageComponentFactory` and the
+  `TestInitializeHooks`, the step classes (`CustomerApiSteps`, `CustomerUiSteps`, `ZoneSteps`), `PageComponentFactory` and the
   unit tests that use it.
 - **Docs and comments (won't break anything if missed, but would be out of date):** `README.md`, the files in
   `docs/` (including this one), and comments in two feature files.
@@ -393,7 +393,7 @@ The full description is in [api.md](api.md).
 
 ## TestSession.current(): the session from static code
 
-PicoContainer still creates one `TestSession` per scenario and injects it. `Hooks.before` (the first `@Before`
+PicoContainer still creates one `TestSession` per scenario and injects it. `TestInitializeHooks.bindSession` (the first `@Before`
 hook, `order = 0`) binds that same object to the scenario's thread, so code that Pico does not create can reach it:
 
 ```java
@@ -404,7 +404,7 @@ HomePage home = PageComponentFactory.get(HomePage.class);
 
 There is exactly **one** ThreadLocal, the pointer to the session. Per-scenario data is not kept in separate
 static ThreadLocals; it lives in the session, so it is dropped with the session and nothing has to be cleared.
-`TestSession.close` (called by `Hooks.after`, pass or fail) removes the pointer.
+`TestSession.close` (called by `TestInitializeHooks.closeBrowser`, pass or fail) removes the pointer.
 
 Lists that steps add to during a scenario use a list key and the list helpers:
 
@@ -419,7 +419,7 @@ List<InstMan> created = TestSession.current().requireList(CREATED_INST_MAN); // 
 List<Unit.UnitKL> units = TestSession.current().list(UNIT_KL);           // empty list if none
 ```
 
-`current()` fails with a clear message outside a scenario, before `Hooks.before`, and on another thread
+`current()` fails with a clear message outside a scenario, before `TestInitializeHooks.bindSession`, and on another thread
 (`CompletableFuture`, parallel streams): a session belongs to the thread that runs its scenario.
 
 ## API classes in the existing framework's style (`Api`, `ApiFactory`)

@@ -85,19 +85,47 @@ Each close step is wrapped separately, so a cleanup error can never hide the rea
 
 To open a trace: `npx playwright show-trace "<path>"`, or drag the zip onto <https://trace.playwright.dev>.
 
-### The `@After` hook ([`Hooks`](../src/test/java/com/agenticqa/hooks/Hooks.java))
+### The hooks ([`TestInitializeHooks`](../src/test/java/com/agenticqa/hooks/TestInitializeHooks.java))
 
-The hook runs after every scenario, in this order, and attaches evidence with `scenario.attach(data, mediaType, name)`:
+Adapted from the existing framework's `TestInitializeHooks`. `@Before` hooks run lowest order first, `@After`
+hooks highest order first:
+
+| Hook | Order | What it does |
+|---|---|---|
+| `bindSession` | `@Before` 0 | starts the scenario clock, binds the `TestSession` to the thread |
+| `beforeScenario(Scenario)` | `@Before` 2 | logs the tags; a tag containing `@MUTED` skips the scenario (`SkipException`); otherwise the first tag starting with `@PRGBATR-` must be `@PRGBATR-` plus 4 to 6 digits, or the scenario fails |
+| `beforeScenario()` | `@Before` 10000 | creates `TestBaseDataSetup` (placeholder) |
+| `afterStep` | `@AfterStep` | a screenshot after every step of a scenario that opened a page, named after the scenario |
+| `ServiceCleanup.cleanUp` | `@After` 20000 | deletes the test data registered by the steps |
+| `attachHealsAndFailureScreenshot` | `@After` 6 | the attachments below, while the page is still open |
+| `collectDebugInformation` | `@After` 5 | on failure, `DebugInformationCollector`: page URL and title, last API response, attached to Allure as `debug-info` |
+| `saveVideo` | `@After` 4 | on failure with a page, closes the browser context first, so the video is complete |
+| `closeBrowser` | `@After` 3 | `session.close(failed)`; a kept trace zip and video are attached as paths, and as files to Allure |
+| `teardownData` | `@After` 1 | deletes the zone in `Keys.ZONE_ID` (not for `@TelephoneInstructions`) with `UnitManagerApi` / `EnergyProfileCalculatorApi` (placeholders), then records the result in `testExecutionMap` |
+
+[`JsonReporter`](../src/test/java/com/agenticqa/reporting/JsonReporter.java) (a Cucumber plugin) turns
+`testExecutionMap` into `target/reports/test-execution-summary.json` when the run finishes. `TestRunner.afterSuite`
+publishes the reports in the pipeline (`ArtifactoryPublisher`, `AllurePublisher`: placeholders), adds their URLs
+and prints the summary. `TestRunner`'s static block also registers `ExtentReportLogFilter` and
+`AllureReportLogFilter`, which log every REST Assured request and response in the Extent step and as Allure
+attachments.
+
+**Placeholders.** `FeatureAwareManager` (runs every scenario), `ArtifactoryPublisher`, `AllurePublisher`,
+`UnitManagerApi`, `EnergyProfileCalculatorApi` and `TestBaseDataSetup` keep the names of the company classes but do
+nothing except log a warning. Paste the real code into them.
+
+Attachments of `attachHealsAndFailureScreenshot` and `closeBrowser`, made with `scenario.attach(data, mediaType, name)`:
 
 | Attachment name | Media type | When | Content |
 |---|---|---|---|
 | `self-healing` | `text/plain` | at least one locator healed | `Locators healed - update the locator file (src/main/resources/locators):` followed by one `HealEvent.summary()` per line |
 | `failure-screenshot` | `image/png` | scenario failed **and** a page was opened (`session.hasPage()`) | full-page screenshot. If it fails, the error is ignored so the real failure stays visible. |
 | `trace` | `text/plain` | a trace zip was saved (failure with a browser context) | absolute path of the zip |
+| `video` | `text/plain` | a video was kept (`ui.video`) | absolute path of the webm |
 
-The `hasPage()` check makes sure the hook never opens a browser only to take a screenshot of an API-only scenario.
+The `hasPage()` check makes sure the hooks never open a browser only to take a screenshot of an API-only scenario.
 
-**The attachment names are a contract.** `RunSummaryPlugin` recognises the `trace` and `self-healing` attachments by name, and images by their `image/` media type. If you rename an attachment in the hook, change the plugin too.
+**The attachment names are a contract.** `RunSummaryPlugin` recognises the `trace` and `self-healing` attachments by name, and keeps only the image named `failure-screenshot` (the step screenshots stay in the other reports). If you rename an attachment in the hook, change the plugin too.
 
 ## 2. Per run: `RunSummaryPlugin`
 
@@ -255,6 +283,6 @@ Then open `target/reports/run-summary.html` or `target/reports/extent/index.html
 
 ## Extending
 
-- **New evidence for every scenario** (for example console logs or a HAR file): attach it in `Hooks.after` with a distinct name. It appears in `cucumber.html` automatically. To show it in the run summary, add a branch for that name in `RunSummaryPlugin.onEmbed`, add a field to `ScenarioResult`, and render it in `failureCard` or `json`.
+- **New evidence for every scenario** (for example console logs or a HAR file): attach it in `TestInitializeHooks.closeBrowser` with a distinct name. It appears in `cucumber.html` automatically. To show it in the run summary, add a branch for that name in `RunSummaryPlugin.onEmbed`, add a field to `ScenarioResult`, and render it in `failureCard` or `json`.
 - **New fields for CI:** add them in `RunSummaryPlugin.json` first, then read them in `job_summary.py`. The JSON file is the only interface between the two.
 - **Another report** (Xray, ReportPortal, …): add its Cucumber plugin to `@CucumberOptions.plugin`, as was done for Allure and Extent. The existing reports keep working next to it.

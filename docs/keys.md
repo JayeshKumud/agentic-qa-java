@@ -66,9 +66,9 @@ The map is stored **inside the scenario's `TestSession`**, so it lives exactly a
 | Moment | What happens to the data |
 |---|---|
 | scenario starts | PicoContainer creates a **new** `TestSession` with an **empty** store |
-| `Hooks.before` | binds that session to the thread, so `TestSession.current()` finds it |
+| `TestInitializeHooks.bindSession` | binds that session to the thread, so `TestSession.current()` finds it |
 | steps run | `put` / `add` fill **this session's** store; parallel scenarios fill their own sessions |
-| `Hooks.after` | `session.close(failed)` runs, **pass or fail**, and removes the one ThreadLocal pointer |
+| `TestInitializeHooks.closeBrowser` | `session.close(failed)` runs, **pass or fail**, and removes the one ThreadLocal pointer |
 | scenario ends | PicoContainer discards the session, and the map goes with it |
 | next scenario, same thread | gets a new session with an empty store: nothing to clear |
 
@@ -82,7 +82,7 @@ scenario on the same thread starts empty).
 ### The only ThreadLocal left
 
 `TestSession` keeps exactly one `ThreadLocal`: a pointer from the thread to its current session, for
-`TestSession.current()`. It holds no data of its own. `Hooks.before` sets it and `TestSession.close()` removes it,
+`TestSession.current()`. It holds no data of its own. `TestInitializeHooks.bindSession` sets it and `TestSession.close()` removes it,
 and both are framework code that runs for every scenario, so step and helper code never deals with it.
 
 ### When you would still remove something
@@ -262,7 +262,7 @@ public BackUniqueTransit(String time, String uniqueIds) {
 
 - **inside a method or constructor**, called when the value is needed. Never keep it in a `static` field: that
   would hold on to the first scenario's session for the whole run;
-- **while a scenario runs**, after `Hooks.before` binds the session and before `Hooks.after` closes it;
+- **while a scenario runs**, after `TestInitializeHooks.bindSession` binds the session and before `TestInitializeHooks.closeBrowser` closes it;
 - **on the scenario's thread only.** Inside a `CompletableFuture`, a `parallelStream()` or your own thread pool it
   fails with `No scenario is running on this thread`. Read the session first, on the scenario's thread, and hand
   the object in.

@@ -73,13 +73,13 @@ public class BackUniqueTransitTest {
                 int n = i;
                 results.add(pool.submit(() -> {
                     TestSession own = new TestSession();             // what PicoContainer does per scenario
-                    own.bindToCurrentThread();                       // what Hooks.before does
+                    own.bindToCurrentThread();                       // what TestInitializeHooks.bindSession does
                     try {
                         own.put(Keys.BASE_UNIQUE, "U1", new Unique("REG-" + n));   // same name, own value
                         Thread.sleep(5);                             // let the scenarios overlap
                         return new BackUniqueTransit("10:00", "U1").getUniqueRegIds();
                     } finally {
-                        own.close(false);                            // what Hooks.after does
+                        own.close(false);                            // what TestInitializeHooks.closeBrowser does
                     }
                 }));
             }

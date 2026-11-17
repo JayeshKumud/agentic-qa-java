@@ -3,6 +3,7 @@ Feature: Self-healing locators
   When an element's selector stops matching, the framework finds the element by its last known fingerprint,
   keeps the test running and reports the change so the page object can be updated.
 
+  @PRGBATR-1012
   Scenario: Search keeps working after the search box id changes
     Given a customer named "Ada Lovelace" exists
     And I search the customers page for that customer
@@ -12,6 +13,7 @@ Feature: Self-healing locators
     Then the results show only that customer with status "active"
     And the "search input" locator was healed to "#customer-search"
 
+  @PRGBATR-1013
   Scenario: Adding a customer keeps working after the button id changes
     Given I add a customer named "Alan Turing" through the form
     And the app's HTML renames the id "add-customer-button" to "create-customer"

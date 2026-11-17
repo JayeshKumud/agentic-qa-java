@@ -195,7 +195,7 @@ Healer ──► console            [HEAL] HEALED …
        ──► target/healing/heals.jsonl        (one JSON line per heal, whole run)
        ──► Healer.events() ──► TestSession.healEvents()
                                    │
-              Hooks @After ────────┘  attaches "Locators healed - update the locator file (src/main/resources/locators): …"
+              TestInitializeHooks @After ────────┘  attaches "Locators healed - update the locator file (src/main/resources/locators): …"
                                       to the scenario (text/plain, name "self-healing")
                                    │
               RunSummaryPlugin ────┘  reads that attachment:
