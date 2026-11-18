@@ -96,10 +96,11 @@ hooks highest order first:
 | `checkTags` | `@Before` 2 | logs the tags; a tag containing `@MUTED` skips the scenario (`SkipException`); otherwise the first tag starting with `@PRGBATR-` must be `@PRGBATR-` plus 4 to 6 digits, or the scenario fails |
 | `setUpBaseData` | `@Before` 3 | creates `TestBaseDataSetup` (placeholder) |
 | `afterStep` | `@AfterStep` | a screenshot after every step of a scenario that opened a page, named after the scenario |
-| `attachHealsAndFailureScreenshot` | `@After` 6 | the attachments below, while the page is still open |
-| `collectDebugInformation` | `@After` 5 | on failure, `DebugInformationCollector`: page URL and title, last API response, attached to Allure as `debug-info` |
-| `saveVideo` | `@After` 4 | on failure with a page, closes the browser context first, so the video is complete |
-| `closeBrowser` | `@After` 3 | `session.close(failed)`; a kept trace zip and video are attached as paths, and as files to Allure |
+| `attachHealsAndFailureScreenshot` | `@After` 7 | the attachments below, while the page is still open |
+| `collectDebugInformation` | `@After` 6 | on failure, `DebugInformationCollector`: page URL and title, last API response, attached to Allure as `debug-info` |
+| `saveVideo` | `@After` 5 | on failure with a page, closes the browser context first, so the video is complete |
+| `closeBrowser` | `@After` 4 | `session.close(failed)`; a kept trace zip and video are attached as paths, and as files to Allure |
+| `cleanVideoFolder` | `@After` 3 | deletes this scenario's leftover raw recording in `target/artifacts/videos/recording`, if `close` could not; never the whole folder (parallel scenarios share it) and never a kept video |
 | `ServiceCleanup.cleanUp` | `@After` 2 | deletes the test data registered by the steps, newest first |
 | `teardownData` | `@After` 1 | deletes the zone in `Keys.ZONE_ID` (not for `@TelephoneInstructions`) with `UnitManagerApi` / `EnergyProfileCalculatorApi` (placeholders), then records the result in `testExecutionMap` |
 

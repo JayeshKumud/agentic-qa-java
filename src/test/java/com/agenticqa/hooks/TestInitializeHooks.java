@@ -37,21 +37,23 @@ import java.util.stream.Collectors;
  *       later hook and step.</li>
  *   <li>BrowserFactory / PageComponentFactory calls are TestSession calls; {@code session.close} stops the trace
  *       and saves the video, so stopTraces is part of {@link #closeBrowser}.</li>
- *   <li>No per-scenario deletion of the traces and videos folders (it would delete the files of scenarios running
- *       in parallel): {@code RunCleaner} empties target/artifacts once, before the run.</li>
+ *   <li>{@link #cleanVideoFolder} deletes only this scenario's own leftover recording, not the whole traces or
+ *       videos folder (that would delete the files of scenarios running in parallel): {@code RunCleaner} empties
+ *       target/artifacts once, before the run.</li>
  *   <li>No ScenarioContext.clear(): the session and its data end with the scenario.</li>
  * </ul>
  * Run order: the order number is the hook's place in the sequence. {@code @Before} runs lowest first (1, 2, 3);
- * {@code @After} runs highest first, so its numbers count down (6 runs first, 1 runs last):
+ * {@code @After} runs highest first, so its numbers count down (7 runs first, 1 runs last):
  * <pre>
  * &#64;Before  1   bindSession            session usable by everything after it
  * &#64;Before  2   checkTags              skip or fail early, before any setup work
  * &#64;Before  3   setUpBaseData
  * &#64;AfterStep   afterStep              screenshot after every step
- * &#64;After   6   attachHealsAndFailureScreenshot   evidence first, while the page is open
- * &#64;After   5   collectDebugInformation           reads the page and the last API response
- * &#64;After   4   saveVideo              failed only: closes the context so the video is complete
- * &#64;After   3   closeBrowser           trace, video, close the context
+ * &#64;After   7   attachHealsAndFailureScreenshot   evidence first, while the page is open
+ * &#64;After   6   collectDebugInformation           reads the page and the last API response
+ * &#64;After   5   saveVideo              failed only: closes the context so the video is complete
+ * &#64;After   4   closeBrowser           trace, video, close the context
+ * &#64;After   3   cleanVideoFolder       delete this scenario's leftover raw recording
  * &#64;After   2   ServiceCleanup.cleanUp delete the data the steps registered, newest first
  * &#64;After   1   teardownData           delete the zone, then record the result (last, so it has the full duration)
  * </pre>
@@ -155,7 +157,7 @@ public class TestInitializeHooks {
      *
      * @param scenario the finished scenario
      */
-    @After(order = 6)
+    @After(order = 7)
     public void attachHealsAndFailureScreenshot(Scenario scenario) {
         List<HealEvent> heals = session.healEvents();
         if (!heals.isEmpty()) {
@@ -173,18 +175,18 @@ public class TestInitializeHooks {
         }
     }
 
-    @After(order = 5)
+    @After(order = 6)
     public void collectDebugInformation(Scenario scenario) {
         if (scenario.isFailed()) {
             new DebugInformationCollector().collect();
         }
     }
 
-    @After(order = 4)
+    @After(order = 5)
     public void saveVideo(Scenario scenario) {
         if (scenario.isFailed() && session.hasPage()) {
             // the video is complete only after the browser context is closed, so close it here;
-            // closeBrowser (order 3) then finds nothing left to close
+            // closeBrowser (order 4) then finds nothing left to close
             closeBrowser(scenario);
         }
     }
@@ -196,7 +198,7 @@ public class TestInitializeHooks {
      *
      * @param scenario the finished scenario
      */
-    @After(order = 3)
+    @After(order = 4)
     public void closeBrowser(Scenario scenario) {
         TestSession.SavedFiles saved = session.close(scenario.isFailed());
         String name = scenario.getName().replaceAll(" ", "");
@@ -207,6 +209,18 @@ public class TestInitializeHooks {
         if (saved.video() != null) {
             scenario.attach(saved.video().toAbsolutePath().toString(), "text/plain", "video");
             attachToAllure(name, "video/webm", saved.video(), "webm");
+        }
+    }
+
+    /**
+     * Deletes this scenario's raw recording under target/artifacts/videos/recording if {@link #closeBrowser} left
+     * it behind. Only this scenario's file: parallel scenarios record into the same folder. A kept video
+     * (target/artifacts/videos, failed scenarios) is not touched.
+     */
+    @After(order = 3)
+    public void cleanVideoFolder() {
+        if (session.deleteVideoRecording()) {
+            logger.info("Deleted the leftover video recording of this scenario");
         }
     }
 

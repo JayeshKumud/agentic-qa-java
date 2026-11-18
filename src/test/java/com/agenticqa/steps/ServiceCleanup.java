@@ -43,7 +43,7 @@ public class ServiceCleanup {
 
     /**
      * Runs the registered deletes, newest first. Order 2: after TestInitializeHooks has captured the failure
-     * evidence and closed the browser (3 and up), before teardownData deletes the zone and records the result (1).
+     * evidence and closed the browser (3 and up: closeBrowser 4, cleanVideoFolder 3), before teardownData deletes the zone and records the result (1).
      * For {@code @After} hooks a higher order runs first.
      */
     @After(order = 2)

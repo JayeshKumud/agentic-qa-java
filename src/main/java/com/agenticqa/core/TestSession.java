@@ -12,6 +12,7 @@ import com.microsoft.playwright.Tracing;
 import com.microsoft.playwright.Video;
 import com.microsoft.playwright.assertions.PlaywrightAssertions;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -68,6 +69,8 @@ public class TestSession {
     private BrowserContext context;
     private Page page;
     private Healer healer;
+    /** This scenario's raw recording under videos/recording, remembered by {@link #close} for {@link #deleteVideoRecording}. */
+    private Path videoRecording;
     private String scenarioName = "scenario";
 
     /**
@@ -372,6 +375,7 @@ public class TestSession {
         Video video = null;
         try {
             if (page != null) video = page.video(); // null when video is off
+            if (video != null) videoRecording = video.path();
         } catch (RuntimeException ignored) {
             // best effort
         }
@@ -382,6 +386,25 @@ public class TestSession {
         pageComponents.clear();
         if (CURRENT.get() == this) CURRENT.remove(); // the next scenario on this thread cannot see this one
         return new SavedFiles(trace, keptVideo);
+    }
+
+    /**
+     * Deletes this scenario's raw recording under target/artifacts/videos/recording, if {@link #close} could not.
+     * Only this scenario's own file: parallel scenarios record into the same folder, so the folder itself is never
+     * emptied. Kept videos (target/artifacts/videos) are not touched. Best effort; calling it again does nothing.
+     *
+     * @return true if a leftover recording was deleted
+     */
+    public synchronized boolean deleteVideoRecording() {
+        Path file = videoRecording;
+        videoRecording = null;
+        if (file == null) return false;
+        try {
+            return Files.deleteIfExists(file);
+        } catch (Exception e) {
+            System.out.println("Could not delete video recording " + file + ": " + e.getMessage());
+            return false;
+        }
     }
 
     /**

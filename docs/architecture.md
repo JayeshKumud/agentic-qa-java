@@ -216,8 +216,9 @@ sequenceDiagram
             A-->>St: responses / DOM
             St->>St: assertions
         end
-        C->>H: @After 6-4: attach heals, screenshot and debug info (failed)
-        H->>S: @After 3: close(failed) → save trace and video if failed, close context
+        C->>H: @After 7-5: attach heals, screenshot and debug info (failed)
+        H->>S: @After 4: close(failed) → save trace and video if failed, close context
+        H->>S: @After 3: delete this scenario's leftover raw recording
         C->>St: cleanup @After(order = 2): delete created resources
         C->>H: @After 1: delete the zone, record the result
         C->>Rep: TestCaseFinished (status, attachments)
