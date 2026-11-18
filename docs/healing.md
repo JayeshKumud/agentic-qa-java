@@ -17,7 +17,7 @@ Healing does not replace fixing selectors. It keeps one renamed id from failing 
 
 ## Configuration
 
-Each environment file (`src/main/resources/config/env/dev.yaml`, `test.yaml`, `uat.yaml`, `ci.yaml`) has a `healing` section. If the section is missing, `Settings.Healing.defaults()` gives the same values:
+The `healing` section is in `src/main/resources/config/common.yaml`; an environment file can override any of it:
 
 ```yaml
 healing:

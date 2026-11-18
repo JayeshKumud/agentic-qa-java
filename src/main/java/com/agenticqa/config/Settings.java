@@ -1,330 +1,106 @@
 package com.agenticqa.config;
 
-import io.cucumber.tagexpressions.Expression;
 import io.cucumber.tagexpressions.TagExpressionParser;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
- * Typed view of the run's settings: config/common.yaml with config/env/NAME.yaml merged on top (see
- * {@link EnvConfig}). Every value can be overridden for one run with a system property named by its path, for
- * example {@code -Dui.headless=false} or {@code -Dservices.customers.baseUrl=http://...}. Read it anywhere with
- * {@code EnvConfig.get()}:
- * <pre>
- * String baseUrl = EnvConfig.get().apiUrl("customers");   // services.customers.baseUrl
- * String user    = EnvConfig.get().jks().username();      // jks.username
- * </pre>
- *
- * @param ui              browser settings and waits
- * @param services        the HTTP services tests talk to, by name, for example "customers" ({@link #apiUrl})
- * @param execution       how scenarios without @Parallel or @Sequential run
- * @param cleanup         folders emptied before a run, and the run's log file
- * @param healing         self-healing locator settings; defaults apply when the section is missing
- * @param retry           which failed scenarios are run again, and how often; no retries when the section is missing
- * @param jks             Java keystore credentials ({@link #jks()}); only in the environments that need them
+ * The run's settings: config/common.yaml with config/env/NAME.yaml on top. Read with {@code EnvConfig.get()}.
  */
 public record Settings(Ui ui, Map<String, Service> services, Execution execution, Cleanup cleanup,
-                       Healing healing, Retry retry, Jks jks) {
+                       Healing healing, Retry retry, Jks jks, Url url, Sct sct) {
 
-    /**
-     * Browser settings, never null, with defaults for missing values.
-     *
-     * @return the ui section
-     */
-    @Override
-    public Ui ui() {
-        Ui base = ui != null ? ui : new Ui(null, null, true, 0, null, false, false, null, null);
-        return new Ui(base.baseUrl(), base.browser() == null ? "chromium" : base.browser(), base.headless(),
-                base.slowMoMs(), base.viewport() != null ? base.viewport() : new Viewport(1366, 768),
-                base.maximize(), base.ignoreHttpsErrors(), base.video() == null ? "failed" : base.video(),
-                base.waits() != null ? base.waits() : Waits.defaults());
-    }
-
-    /**
-     * Retry settings, never null.
-     *
-     * @return the retry section, or no retries
-     */
-    @Override
-    public Retry retry() {
-        Retry base = retry != null ? retry : Retry.none();
-        return new Retry(base.count(), base.tags() == null ? "" : base.tags());
-    }
-
-    /**
-     * Execution settings, never null.
-     *
-     * @return the execution section, or parallel by default
-     */
-    @Override
-    public Execution execution() {
-        return execution != null && execution.defaultMode() != null ? execution : new Execution("parallel");
-    }
-
-    /**
-     * Cleanup settings, never null.
-     *
-     * @return the cleanup section, or no cleanup and no log file
-     */
-    @Override
-    public Cleanup cleanup() {
-        if (cleanup == null) return new Cleanup(false, List.of(), null);
-        return new Cleanup(cleanup.beforeRun(), cleanup.folders() == null ? List.of() : List.copyOf(cleanup.folders()),
-                cleanup.logFile());
-    }
-
-    /**
-     * Settings of one named service.
-     *
-     * @param name the service name
-     * @return the service settings
-     * @throws IllegalArgumentException if no service with that name is configured
-     */
-    public Service service(String name) {
-        Service service = services == null ? null : services.get(name);
-        if (service == null) {
-            throw new IllegalArgumentException("Unknown service '" + name + "'. Configured services: "
-                    + (services == null ? "none" : new TreeMap<>(services).keySet())
-                    + ". Add it under 'services:' in config/env/" + EnvConfig.envName() + ".yaml");
-        }
-        return service;
-    }
-
-    /**
-     * Base URL of a service of the active environment, {@code services.<name>.baseUrl}. API classes read it in their
-     * constructor: {@code this.baseUrl = EnvConfig.get().apiUrl("customers");}
-     *
-     * @param name the service name, for example "customers"
-     * @return the base URL, for example http://127.0.0.1:8000
-     * @throws IllegalArgumentException if the service is not configured
-     * @throws IllegalStateException    if the service has no baseUrl
-     */
+    /** Base URL of a service, {@code services.<name>.baseUrl}. */
     public String apiUrl(String name) {
-        String baseUrl = service(name).baseUrl();
-        if (baseUrl == null || baseUrl.isBlank()) {
-            throw new IllegalStateException("services." + name + ".baseUrl is not set in config/env/"
+        Service service = services == null ? null : services.get(name);
+        if (service == null || service.baseUrl() == null || service.baseUrl().isBlank()) {
+            throw new IllegalArgumentException("services." + name + ".baseUrl is not set in config/env/"
                     + EnvConfig.envName() + ".yaml");
         }
-        return baseUrl;
+        return service.baseUrl();
     }
 
-    /**
-     * Java keystore credentials, {@code jks:} in the environment file.
-     *
-     * @return the jks section
-     * @throws IllegalStateException if the active environment has no jks section
-     */
-    @Override
-    public Jks jks() {
-        if (jks == null) {
-            throw new IllegalStateException("No 'jks:' section in config/env/" + EnvConfig.envName() + ".yaml");
-        }
-        return jks;
-    }
-
-    /** @return true if the active environment has a jks section */
-    public boolean hasJks() {
-        return jks != null;
-    }
-
-    /**
-     * Healing settings, never null.
-     *
-     * @return the configured section, or {@link Healing#defaults()} if there is none
-     */
-    @Override
-    public Healing healing() {
-        return healing != null ? healing : Healing.defaults();
-    }
-
-    /**
-     * Browser and GUI settings.
-     *
-     * @param baseUrl  application URL; relative paths such as "/" resolve against it
-     * @param browser  chromium, firefox or webkit
-     * @param headless run without a visible browser window
-     * @param slowMoMs artificial delay per action in milliseconds, useful when debugging
-     * @param viewport          browser window size, used unless {@code maximize} is on
-     * @param maximize          use the real window size instead of the viewport (maximized window); headed runs only
-     * @param ignoreHttpsErrors accept invalid HTTPS certificates, for environments with self-signed certificates
-     * @param video             off, failed (keep videos of failed scenarios only) or always
-     * @param waits             how long Playwright waits before it gives up
-     */
+    /** Browser settings. */
     public record Ui(String baseUrl, String browser, boolean headless, int slowMoMs, Viewport viewport,
                      boolean maximize, boolean ignoreHttpsErrors, String video, Waits waits) {
 
-        /** Normalizes and checks the video mode. */
-        public Ui {
-            if (video != null) {
-                video = video.trim().toLowerCase(Locale.ROOT);
-                if (!List.of("off", "failed", "always").contains(video)) {
-                    throw new IllegalArgumentException("ui.video must be off, failed or always, not '" + video + "'");
-                }
-            }
+        /** True unless video is off. */
+        public boolean recordsVideo() {
+            return !"off".equalsIgnoreCase(video);
         }
 
-        /** @return true if the scenario's browser session is recorded */
-        public boolean recordsVideo() {
-            return video != null && !video.equals("off");
+        /** True if the video of a passed scenario is kept too. */
+        public boolean keepsAllVideos() {
+            return "always".equalsIgnoreCase(video);
         }
     }
 
-    /**
-     * Browser window size.
-     *
-     * @param width  pixels
-     * @param height pixels
-     */
+    /** Browser window size in pixels. */
     public record Viewport(int width, int height) {}
 
-    /**
-     * Playwright wait times in milliseconds. A missing or zero value uses the default.
-     *
-     * @param actionMs     click, fill and locator waits
-     * @param navigationMs page navigation and load
-     * @param assertionMs  {@code assertThat(...)} web assertions
-     */
-    public record Waits(int actionMs, int navigationMs, int assertionMs) {
+    /** Playwright wait times in milliseconds. */
+    public record Waits(int actionMs, int navigationMs, int assertionMs) {}
 
-        /** Normalizes missing values. */
-        public Waits {
-            if (actionMs <= 0) actionMs = 15000;
-            if (navigationMs <= 0) navigationMs = actionMs * 2;
-            if (assertionMs <= 0) assertionMs = actionMs;
-        }
-
-        /**
-         * Waits used when the file has none.
-         *
-         * @return 15 s actions and assertions, 30 s navigation
-         */
-        public static Waits defaults() {
-            return new Waits(15000, 30000, 15000);
-        }
-    }
-
-    /**
-     * One HTTP service (microservice).
-     *
-     * @param baseUrl service URL, read by API classes with {@code EnvConfig.get().apiUrl(name)}
-     */
+    /** One HTTP service. */
     public record Service(String baseUrl) {}
 
-    /**
-     * Java keystore credentials.
-     *
-     * @param username keystore user
-     * @param password keystore password; masked in {@link #toString()}, so it never appears in logs
-     */
-    public record Jks(String username, String password) {
-        @Override
-        public String toString() {
-            return "Jks[username=" + username + ", password=" + (password == null ? null : "****") + "]";
-        }
-    }
-
-    /**
-     * How scenarios run.
-     *
-     * @param defaultMode parallel or sequential, for scenarios tagged neither @Parallel nor @Sequential
-     */
+    /** How scenarios without @Parallel or @Sequential run: parallel or sequential. */
     public record Execution(String defaultMode) {
 
-        /** Tag that makes a feature or scenario run in parallel with the others. */
         public static final String PARALLEL_TAG = "@Parallel";
-        /** Tag that makes a feature or scenario run alone; wins over {@link #PARALLEL_TAG}. */
         public static final String SEQUENTIAL_TAG = "@Sequential";
 
-        /** How one scenario runs. */
         public enum Mode { PARALLEL, SEQUENTIAL }
 
-        /**
-         * Chooses the mode of a scenario from its tags (including those inherited from the feature). Tags are
-         * compared ignoring case. Pure logic, unit tested.
-         *
-         * @param tags the scenario's tags
-         * @return SEQUENTIAL if tagged @Sequential, else PARALLEL if tagged @Parallel, else the default mode
-         * @throws IllegalArgumentException if defaultMode is neither parallel nor sequential
-         */
+        /** Mode of a scenario: @Sequential wins, then @Parallel, then defaultMode. */
         public Mode modeOf(Collection<String> tags) {
             if (tags.stream().anyMatch(SEQUENTIAL_TAG::equalsIgnoreCase)) return Mode.SEQUENTIAL;
             if (tags.stream().anyMatch(PARALLEL_TAG::equalsIgnoreCase)) return Mode.PARALLEL;
-            return switch (defaultMode.trim().toLowerCase(Locale.ROOT)) {
+            return switch (defaultMode.trim().toLowerCase()) {
                 case "parallel" -> Mode.PARALLEL;
                 case "sequential" -> Mode.SEQUENTIAL;
-                default -> throw new IllegalArgumentException("execution.defaultMode must be parallel or "
-                        + "sequential, not '" + defaultMode + "'");
+                default -> throw new IllegalArgumentException(
+                        "execution.defaultMode must be parallel or sequential, not '" + defaultMode + "'");
             };
         }
     }
 
-    /**
-     * What is removed before a run, so logs and reports show only the new run.
-     *
-     * @param beforeRun false keeps everything from earlier runs
-     * @param folders   folders emptied before the run, relative to the project folder
-     * @param logFile   file that receives a copy of everything printed during the run; null for none
-     */
+    /** Folders emptied before a run, and the run's log file. */
     public record Cleanup(boolean beforeRun, List<String> folders, String logFile) {}
 
-    /**
-     * Self-healing locator settings.
-     *
-     * @param enabled          false makes every locator behave exactly like a plain Playwright locator
-     * @param probeTimeoutMs   how long the original selector may take to appear before healing starts
-     * @param minScore         lowest similarity (0..1) accepted for a replacement element
-     * @param fingerprintsFile JSON file with the last known fingerprint of every element (keep it under version
-     *                         control: it is the baseline healing compares against)
-     * @param reportFile       JSON-lines file; one line is appended per heal
-     */
+    /** Self-healing locator settings. */
     public record Healing(boolean enabled, int probeTimeoutMs, double minScore,
-                          String fingerprintsFile, String reportFile) {
+                          String fingerprintsFile, String reportFile) {}
 
-        /**
-         * Settings used when there is no healing section.
-         *
-         * @return enabled, 2 s probe, score 0.6, default file locations
-         */
-        public static Healing defaults() {
-            return new Healing(true, 2000, 0.6, "healing/fingerprints.json", "target/healing/heals.jsonl");
-        }
-    }
-
-    /**
-     * Retry of failed scenarios. Only the scenario that failed runs again, immediately, in a new session (new
-     * browser context, new {@code {unique}} token); passed scenarios never run twice.
-     *
-     * @param count how often a failed scenario may run again; 0 switches retries off
-     * @param tags  Cucumber tag expression choosing which scenarios may be retried, for example
-     *              {@code "@api and not @noretry"}; empty means every scenario
-     */
+    /** Retry of failed scenarios: how often, and which ones (a Cucumber tag expression, empty for all). */
     public record Retry(int count, String tags) {
 
-        /**
-         * No retries.
-         *
-         * @return count 0
-         */
-        public static Retry none() {
-            return new Retry(0, "");
-        }
-
-        /**
-         * Tells whether a scenario with these tags may be retried.
-         *
-         * @param scenarioTags the scenario's tags, including those inherited from the feature
-         * @return true if retries are on and the tag expression matches
-         * @throws IllegalArgumentException if the tag expression is malformed
-         */
+        /** True if a scenario with these tags may be retried. */
         public boolean appliesTo(Collection<String> scenarioTags) {
             if (count <= 0) return false;
             if (tags == null || tags.isBlank()) return true;
-            Expression expression = TagExpressionParser.parse(tags);
-            return expression.evaluate(List.copyOf(scenarioTags));
+            return TagExpressionParser.parse(tags).evaluate(List.copyOf(scenarioTags));
+        }
+    }
+
+    /** Java keystore credentials. The password is masked when printed. */
+    public record Jks(String username, String password) {
+        @Override
+        public String toString() {
+            return "Jks[username=" + username + ", password=****]";
+        }
+    }
+
+    /** The url section of common.yaml. */
+    public record Url(String mark, String klmhh) {}
+
+    /** The sct section of the environment file. callps is masked when printed. */
+    public record Sct(String cllid, String callps) {
+        @Override
+        public String toString() {
+            return "Sct[cllid=" + cllid + ", callps=****]";
         }
     }
 }

@@ -5,6 +5,10 @@
 # Placeholders work here too: ${NAME} is the system property NAME (-DNAME=...) or else the environment variable
 # NAME; ${NAME:-fallback} uses the fallback when neither is set.
 
+
+url:
+  mark: kl-mmknbj-cd
+  klmhh: jhshdajh
 # ------------------------------------------------------------------------------------------------ browser
 ui:
   browser: chromium          # chromium, firefox or webkit; per run: -Dui.browser=firefox

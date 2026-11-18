@@ -78,24 +78,25 @@ public class CommonConfigTest {
     }
 
     @Test
-    public void serviceIsLookedUpByNameAndApiUrlReturnsItsBaseUrl() {
-        Settings settings = new Settings(null, Map.of("customers", new Settings.Service("http://c")), null, null, null, null, null);
-        assertEquals(settings.service("customers").baseUrl(), "http://c");
-        expectThrows(IllegalArgumentException.class, () -> settings.service("orders"));
+    public void apiUrlReturnsTheServiceBaseUrl() {
+        Settings settings = new Settings(null, Map.of("customers", new Settings.Service("http://c")),
+                null, null, null, null, null, null, null);
         assertEquals(settings.apiUrl("customers"), "http://c");
         expectThrows(IllegalArgumentException.class, () -> settings.apiUrl("orders"));
         assertEquals(EnvConfig.get().apiUrl("customers"), "http://127.0.0.1:8000", "dev: services.customers.baseUrl");
     }
 
     @Test
-    public void jksIsReadFromTheEnvironmentFileAndItsPasswordIsMasked() {
-        Settings.Jks jks = EnvConfig.get().jks(); // dev
-        assertEquals(jks.username(), "system");
-        assertEquals(jks.password(), "system1");
-        assertFalse(jks.toString().contains("system1"), "password must not appear in logs");
-        Settings none = new Settings(null, null, null, null, null, null, null);
-        assertFalse(none.hasJks());
-        expectThrows(IllegalStateException.class, none::jks);
+    public void readsJksUrlAndSctAndMasksTheSecrets() {
+        Settings settings = EnvConfig.get(); // dev
+        assertEquals(settings.jks().username(), "system");
+        assertEquals(settings.jks().password(), "system1");
+        assertFalse(settings.jks().toString().contains("system1"), "password must not appear in logs");
+        assertEquals(settings.url().mark(), "kl-mmknbj-cd", "from common.yaml");
+        assertEquals(settings.url().klmhh(), "jhshdajh");
+        assertEquals(settings.sct().cllid(), "test", "from dev.yaml");
+        assertEquals(settings.sct().callps(), "tstps");
+        assertFalse(settings.sct().toString().contains("tstps"), "callps must not appear in logs");
     }
 
     @Test
@@ -104,7 +105,7 @@ public class CommonConfigTest {
         assertEquals(settings.ui().baseUrl(), "http://127.0.0.1:8000", "from the environment file");
         assertEquals(settings.ui().browser(), "chromium", "from common.yaml");
         assertTrue(settings.ui().waits().navigationMs() > 0);
-        assertEquals(settings.service("customers").baseUrl(), "http://127.0.0.1:8000", "from the environment file");
+        assertEquals(settings.apiUrl("customers"), "http://127.0.0.1:8000", "from the environment file");
         assertTrue(settings.cleanup().folders().contains("target/reports"));
         assertEquals(settings.ui().video(), "failed", "videos of failed scenarios by default");
         assertFalse(settings.ui().ignoreHttpsErrors());
@@ -112,14 +113,14 @@ public class CommonConfigTest {
     }
 
     @Test
-    public void videoModeIsNormalizedCheckedAndDefaultsToFailed() {
-        assertEquals(new Settings(null, null, null, null, null, null, null).ui().video(), "failed");
-        Settings.Ui always = new Settings.Ui(null, null, true, 0, null, false, false, " Always ", null);
-        assertEquals(always.video(), "always");
+    public void videoMode() {
+        Settings.Ui always = new Settings.Ui(null, null, true, 0, null, false, false, "Always", null);
         assertTrue(always.recordsVideo());
+        assertTrue(always.keepsAllVideos());
+        Settings.Ui failed = new Settings.Ui(null, null, true, 0, null, false, false, "failed", null);
+        assertTrue(failed.recordsVideo());
+        assertFalse(failed.keepsAllVideos());
         assertFalse(new Settings.Ui(null, null, true, 0, null, false, false, "off", null).recordsVideo());
-        expectThrows(IllegalArgumentException.class,
-                () -> new Settings.Ui(null, null, true, 0, null, false, false, "sometimes", null));
     }
 
     @Test

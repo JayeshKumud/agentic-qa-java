@@ -14,3 +14,7 @@ services:
 jks:
   username: system
   password: system1
+
+sct:
+  cllid: test
+  callps: tstps

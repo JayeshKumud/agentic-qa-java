@@ -416,7 +416,7 @@ public class TestSession {
      */
     private Path keepOrDelete(Video video, boolean failed) {
         Path kept = null;
-        if (failed || settings.ui().video().equals("always")) {
+        if (failed || settings.ui().keepsAllVideos()) {
             try {
                 Path file = artifactFile("videos", ".webm");
                 video.saveAs(file);
