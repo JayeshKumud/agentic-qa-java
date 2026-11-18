@@ -10,3 +10,6 @@ jks:
 sct:
   cllid: test
   callps: tstps
+
+baseUrl: .test
+environmentChunk: kt-5

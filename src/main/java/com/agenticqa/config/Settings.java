@@ -9,7 +9,17 @@ import java.util.List;
  * The run's settings: config/common.yaml with config/env/NAME.yaml on top. Read with {@code EnvConfig.get()}.
  */
 public record Settings(Ui ui, Execution execution, Cleanup cleanup,
-                       Healing healing, Retry retry, Jks jks, Url url, Sct sct, String cloud, String environment) {
+                       Healing healing, Retry retry, Jks jks, Url url, Sct sct, String cloud, String environment,
+                       String baseUrl, String environmentChunk) {
+
+    /** URL of an API: https:// + apiName + - + environmentChunk + baseUrl, for example https://customers-kt-5.test */
+    public String getApiUrl(String apiName) {
+        if (baseUrl == null || environmentChunk == null) {
+            throw new IllegalStateException("baseUrl and environmentChunk must be set in config/env/"
+                    + EnvConfig.envName() + ".yaml");
+        }
+        return "https://" + apiName + "-" + environmentChunk + baseUrl;
+    }
 
     /** Browser settings; baseUrl is also the base URL of the API classes. */
     public record Ui(String baseUrl, String browser, boolean headless, int slowMoMs, Viewport viewport,
@@ -75,7 +85,7 @@ public record Settings(Ui ui, Execution execution, Cleanup cleanup,
     public record Jks(String username, String password) {}
 
     /** The url section of common.yaml. */
-    public record Url(String mark, String klmhh) {}
+    public record Url(String feature, String klmhh) {}
 
     /** The sct section of the environment file. */
     public record Sct(String cllid, String callps) {}

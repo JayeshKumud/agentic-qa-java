@@ -81,8 +81,9 @@ public class CommonConfigTest {
         Settings settings = EnvConfig.get(); // dev
         assertEquals(settings.jks().username(), "system");
         assertEquals(settings.jks().password(), "system1");
-        assertEquals(settings.url().mark(), "kl-mmknbj-cd", "from common.yaml");
+        assertEquals(settings.url().feature(), "kl-mmknbj-cd", "from common.yaml");
         assertEquals(settings.url().klmhh(), "jhshdajh");
+        assertEquals(settings.getApiUrl("customers"), "https://customers-kt-5.test", "dev: baseUrl .test, environmentChunk kt-5");
         assertEquals(settings.cloud(), "testcould", "from common.yaml");
         assertEquals(settings.environment(), "dev", "environment: of common.yaml");
         assertEquals(EnvConfig.envName(), "dev");

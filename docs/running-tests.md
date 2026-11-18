@@ -78,7 +78,7 @@ jks:
 ```
 
 Read them with `EnvConfig.get().jks().username()` and `.password()`; `jks()` is null in an environment without
-the section. The same goes for the `url` section of common.yaml (`EnvConfig.get().url().mark()`) and the `sct`
+the section. The same goes for the `url` section of common.yaml (`EnvConfig.get().url().feature()`) and the `sct`
 section of dev.yaml (`EnvConfig.get().sct().cllid()`). All values, the password included, are printed as they
 are (`ConfigCheck`, logs). Override per run with `-Djks.password=...`, or use a
 placeholder such as `password: ${UAT_JKS_PASSWORD}` so the real value stays out of the file.
