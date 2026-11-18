@@ -31,6 +31,14 @@ public class SettingsTest {
     }
 
     @Test
+    public void environmentNameLosesSurroundingQuotes() {
+        assertEquals(EnvConfig.unquote("\"dev\""), "dev");
+        assertEquals(EnvConfig.unquote(" 'uat' "), "uat");
+        assertEquals(EnvConfig.unquote("dev"), "dev");
+        assertEquals(EnvConfig.unquote(null), "");
+    }
+
+    @Test
     public void retryAppliesByTagExpression() {
         String tags = "@ui and not @noretry";
         assertTrue(Settings.retryAppliesTo(List.of("@ui", "@smoke"), 2, tags));

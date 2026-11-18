@@ -31,10 +31,20 @@ public final class EnvConfig {
 
     /** Active environment: -Denv, else the ENV variable, else environment in common.properties, else dev. */
     public static String envName() {
-        String env = System.getProperty("env");
-        if (env == null || env.isBlank()) env = System.getenv("ENV");
-        if (env == null || env.isBlank()) env = defaultEnv();
-        return (env == null || env.isBlank()) ? "dev" : env.trim();
+        String env = unquote(System.getProperty("env"));
+        if (env.isEmpty()) env = unquote(System.getenv("ENV"));
+        if (env.isEmpty()) env = unquote(defaultEnv());
+        return env.isEmpty() ? "dev" : env;
+    }
+
+    /** Trims a value and removes surrounding quotes, so -Denv="dev" and environment="dev" also mean dev. */
+    static String unquote(String value) {
+        if (value == null) return "";
+        String v = value.trim();
+        while (v.length() >= 2 && ((v.startsWith("\"") && v.endsWith("\"")) || (v.startsWith("'") && v.endsWith("'")))) {
+            v = v.substring(1, v.length() - 1).trim();
+        }
+        return v;
     }
 
     /** The merged properties of the active environment, loaded once per JVM. */
