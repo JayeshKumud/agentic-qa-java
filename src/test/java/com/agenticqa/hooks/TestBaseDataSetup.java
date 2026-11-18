@@ -2,7 +2,7 @@ package com.agenticqa.hooks;
 
 /**
  * PLACEHOLDER for the company TestBaseDataSetup, created before every scenario by
- * {@code TestInitializeHooks.beforeScenario()}. This version prepares nothing. Paste the real implementation here.
+ * {@code TestInitializeHooks.setUpBaseData()}. This version prepares nothing. Paste the real implementation here.
  */
 public class TestBaseDataSetup {
 

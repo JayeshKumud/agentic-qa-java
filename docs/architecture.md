@@ -216,10 +216,10 @@ sequenceDiagram
             A-->>St: responses / DOM
             St->>St: assertions
         end
-        C->>St: cleanup @After(order = 20000): delete created resources
-        C->>H: @After (default order, runs after cleanup)
-        H->>H: attach heals, screenshot (failed)
-        H->>S: close(failed) → save trace if failed, close context
+        C->>H: @After 6-4: attach heals, screenshot and debug info (failed)
+        H->>S: @After 3: close(failed) → save trace and video if failed, close context
+        C->>St: cleanup @After(order = 2): delete created resources
+        C->>H: @After 1: delete the zone, record the result
         C->>Rep: TestCaseFinished (status, attachments)
         opt failed and retry.count / retry.tags allow it
             C->>C: ScenarioRetry: run the same scenario again (new objects)
@@ -241,10 +241,11 @@ sequenceDiagram
    to the thread for `TestSession.current()`.
 5. **Steps.** Steps call page objects and API classes. The first call to the browser starts Playwright with the
    configured browser, headless mode, base URL, timeout and tracing.
-6. **After.** First, the cleanup classes (`@After(order = 20000)`; for `@After` hooks a higher order runs first)
-   delete the resources the scenario registered, newest first, while the session is still open. Then
-   `TestInitializeHooks.closeBrowser` attaches heal events (always) and a full-page screenshot (on failure only), and closes the
-   session. The trace and video are kept only on failure.
+6. **After.** For `@After` hooks a higher order runs first. First the evidence, while the page is still open:
+   `TestInitializeHooks` attaches heal events (always), and on failure a full-page screenshot and the debug
+   information. Then `closeBrowser` closes the session; the trace and video are kept only on failure. Then the
+   cleanup classes (`@After(order = 2)`) delete the resources the scenario registered, newest first, and last
+   `teardownData` (1) deletes the zone and records the result.
 7. **Reporting.** Cucumber's `pretty`, `html` and `json` plugins and `RunSummaryPlugin` collect events
    throughout the run. At the end, `RunSummaryPlugin` writes the summary.
 

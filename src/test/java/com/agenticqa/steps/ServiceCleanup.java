@@ -41,8 +41,12 @@ public class ServiceCleanup {
         deletes.remove(key);
     }
 
-    /** Runs the registered deletes, newest first, before TestInitializeHooks closes the session (higher order runs first). */
-    @After(order = 20000)
+    /**
+     * Runs the registered deletes, newest first. Order 2: after TestInitializeHooks has captured the failure
+     * evidence and closed the browser (3 and up), before teardownData deletes the zone and records the result (1).
+     * For {@code @After} hooks a higher order runs first.
+     */
+    @After(order = 2)
     public synchronized void cleanUp() {
         String[] keys = deletes.keySet().toArray(new String[0]);
         for (int i = keys.length - 1; i >= 0; i--) {

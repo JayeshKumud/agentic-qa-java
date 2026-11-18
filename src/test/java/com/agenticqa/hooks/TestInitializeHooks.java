@@ -33,16 +33,28 @@ import java.util.stream.Collectors;
  * The pre and post actions of every scenario and step, adapted from the existing framework's TestInitializeHooks.
  * Differences, because the browser here belongs to the scenario's {@link TestSession} (PicoContainer injects it):
  * <ul>
- *   <li>{@link #bindSession} (order 0) binds the session first, so {@code TestSession.current()} works in every
+ *   <li>{@link #bindSession} (order 1) binds the session first, so {@code TestSession.current()} works in every
  *       later hook and step.</li>
  *   <li>BrowserFactory / PageComponentFactory calls are TestSession calls; {@code session.close} stops the trace
  *       and saves the video, so stopTraces is part of {@link #closeBrowser}.</li>
  *   <li>No per-scenario deletion of the traces and videos folders (it would delete the files of scenarios running
  *       in parallel): {@code RunCleaner} empties target/artifacts once, before the run.</li>
- *   <li>collectDebugInformation runs before the browser closes (order 5), so it can read the page.</li>
  *   <li>No ScenarioContext.clear(): the session and its data end with the scenario.</li>
  * </ul>
- * Test data registered with {@code ServiceCleanup} is deleted before all of these (order 20000).
+ * Run order: the order number is the hook's place in the sequence. {@code @Before} runs lowest first (1, 2, 3);
+ * {@code @After} runs highest first, so its numbers count down (6 runs first, 1 runs last):
+ * <pre>
+ * &#64;Before  1   bindSession            session usable by everything after it
+ * &#64;Before  2   checkTags              skip or fail early, before any setup work
+ * &#64;Before  3   setUpBaseData
+ * &#64;AfterStep   afterStep              screenshot after every step
+ * &#64;After   6   attachHealsAndFailureScreenshot   evidence first, while the page is open
+ * &#64;After   5   collectDebugInformation           reads the page and the last API response
+ * &#64;After   4   saveVideo              failed only: closes the context so the video is complete
+ * &#64;After   3   closeBrowser           trace, video, close the context
+ * &#64;After   2   ServiceCleanup.cleanUp delete the data the steps registered, newest first
+ * &#64;After   1   teardownData           delete the zone, then record the result (last, so it has the full duration)
+ * </pre>
  */
 public class TestInitializeHooks {
     private static final Logger logger = LoggerFactory.getLogger(TestInitializeHooks.class);
@@ -65,19 +77,24 @@ public class TestInitializeHooks {
 
     /**
      * Binds the scenario's session to this thread, so {@code TestSession.current()} finds it, and starts the
-     * scenario's clock. Runs first (lowest order).
+     * scenario's clock. Runs first (order 1).
      *
      * @param scenario the running scenario
      */
-    @Before(order = 0)
+    @Before(order = 1)
     public void bindSession(Scenario scenario) {
         featureStartTime = System.currentTimeMillis();
         session.scenarioName(scenario.getName());
         session.bindToCurrentThread();
     }
 
+    /**
+     * Skips a {@code @MUTED} scenario and fails one without a valid {@code @PRGBATR-} tag, before any setup work.
+     *
+     * @param scenario the running scenario
+     */
     @Before(order = 2)
-    public void beforeScenario(Scenario scenario) throws Exception {
+    public void checkTags(Scenario scenario) {
         List<String> tags = new ArrayList<>(scenario.getSourceTagNames());
         logger.info("Tags found - {} ", tags);
         // RetryContext.setTags(tags) is not needed: ScenarioRetry reads the scenario's tags itself
@@ -110,11 +127,27 @@ public class TestInitializeHooks {
         }
     }
 
-    @Before()
-    public void beforeScenario() {
+    /** Prepares the base test data ({@link TestBaseDataSetup}, placeholder). */
+    @Before(order = 3)
+    public void setUpBaseData() {
         TestBaseDataSetup testDataBaseSetup = new TestBaseDataSetup();
         // testDataBaseSetup.tieBreak();
     }
+
+    @AfterStep
+    public void afterStep(Scenario scenario) {
+        if (session.hasPage()) {
+            try {
+                String screenshotName = scenario.getName().replaceAll(" ", "");
+                byte[] screenshot = session.page().screenshot();
+
+                scenario.attach(screenshot, "image/png", screenshotName);
+            } catch (Exception e) {
+                logger.error("Failed to take screenshot: {}", e.getMessage());
+            }
+        }
+    }
+
 
     /**
      * Attaches the healed locators, and a full-page screenshot if the scenario failed, while the page is still
@@ -153,20 +186,6 @@ public class TestInitializeHooks {
             // the video is complete only after the browser context is closed, so close it here;
             // closeBrowser (order 3) then finds nothing left to close
             closeBrowser(scenario);
-        }
-    }
-
-    @AfterStep
-    public void afterStep(Scenario scenario) {
-        if (session.hasPage()) {
-            try {
-                String screenshotName = scenario.getName().replaceAll(" ", "");
-                byte[] screenshot = session.page().screenshot();
-
-                scenario.attach(screenshot, "image/png", screenshotName);
-            } catch (Exception e) {
-                logger.error("Failed to take screenshot: {}", e.getMessage());
-            }
         }
     }
 

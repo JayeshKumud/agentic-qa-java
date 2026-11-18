@@ -100,7 +100,8 @@ cleanup.add("customer " + id, () -> ApiFactory.getApi(CustomerApi.class).deleteC
 cleanup.cancel("customer " + id);   // the scenario deleted it itself
 ```
 
-The deletes run newest first in an `@After(order = 20000)` hook, before `TestInitializeHooks.closeBrowser` closes the browser. They
+The deletes run newest first in an `@After(order = 2)` hook, after `TestInitializeHooks` has captured the failure evidence and
+closed the browser, and before `teardownData` deletes the zone. They
 are best effort: a failing delete (including an `Assert.fail` inside an API class) is ignored, so it cannot
 hide the real result of the scenario.
 

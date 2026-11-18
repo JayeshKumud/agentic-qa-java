@@ -92,15 +92,15 @@ hooks highest order first:
 
 | Hook | Order | What it does |
 |---|---|---|
-| `bindSession` | `@Before` 0 | starts the scenario clock, binds the `TestSession` to the thread |
-| `beforeScenario(Scenario)` | `@Before` 2 | logs the tags; a tag containing `@MUTED` skips the scenario (`SkipException`); otherwise the first tag starting with `@PRGBATR-` must be `@PRGBATR-` plus 4 to 6 digits, or the scenario fails |
-| `beforeScenario()` | `@Before` 10000 | creates `TestBaseDataSetup` (placeholder) |
+| `bindSession` | `@Before` 1 | starts the scenario clock, binds the `TestSession` to the thread |
+| `checkTags` | `@Before` 2 | logs the tags; a tag containing `@MUTED` skips the scenario (`SkipException`); otherwise the first tag starting with `@PRGBATR-` must be `@PRGBATR-` plus 4 to 6 digits, or the scenario fails |
+| `setUpBaseData` | `@Before` 3 | creates `TestBaseDataSetup` (placeholder) |
 | `afterStep` | `@AfterStep` | a screenshot after every step of a scenario that opened a page, named after the scenario |
-| `ServiceCleanup.cleanUp` | `@After` 20000 | deletes the test data registered by the steps |
 | `attachHealsAndFailureScreenshot` | `@After` 6 | the attachments below, while the page is still open |
 | `collectDebugInformation` | `@After` 5 | on failure, `DebugInformationCollector`: page URL and title, last API response, attached to Allure as `debug-info` |
 | `saveVideo` | `@After` 4 | on failure with a page, closes the browser context first, so the video is complete |
 | `closeBrowser` | `@After` 3 | `session.close(failed)`; a kept trace zip and video are attached as paths, and as files to Allure |
+| `ServiceCleanup.cleanUp` | `@After` 2 | deletes the test data registered by the steps, newest first |
 | `teardownData` | `@After` 1 | deletes the zone in `Keys.ZONE_ID` (not for `@TelephoneInstructions`) with `UnitManagerApi` / `EnergyProfileCalculatorApi` (placeholders), then records the result in `testExecutionMap` |
 
 [`JsonReporter`](../src/test/java/com/agenticqa/reporting/JsonReporter.java) (a Cucumber plugin) turns

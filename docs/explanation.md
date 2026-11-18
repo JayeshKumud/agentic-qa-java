@@ -75,7 +75,7 @@ Cucumber scans those packages for classes that have step or hook annotations (`@
 | `CustomerUiSteps`      | `@Given/@When/@Then`     |
 | `HomeSteps`            | `@When`                  |
 | `ZoneSteps`            | `@Given/@When/@Then`     |
-| `ServiceCleanup`       | `@After(order = 20000)`  |
+| `ServiceCleanup`       | `@After(order = 2)`      |
 
 When a class is registered, Cucumber also looks at its constructor parameters and registers those types as well,
 and then their parameter types, and so on. That is how `TestSession` and `Variables` become known to
@@ -128,7 +128,7 @@ Scenario starts → new empty container
 ├─ later steps in CustomerApiSteps → same CustomerApiSteps instance reused
 ├─ a GUI step needs a CustomerUiSteps → new CustomerUiSteps(session, cleanup), same session and cleanup
 │
-├─ @After hooks run (ServiceCleanup order 20000 runs before TestInitializeHooks.closeBrowser)
+├─ @After hooks run (evidence and closeBrowser first, then ServiceCleanup order 2, then teardownData)
 │
 Scenario ends → container and all its objects are discarded
 ```
@@ -394,7 +394,7 @@ The full description is in [api.md](api.md).
 ## TestSession.current(): the session from static code
 
 PicoContainer still creates one `TestSession` per scenario and injects it. `TestInitializeHooks.bindSession` (the first `@Before`
-hook, `order = 0`) binds that same object to the scenario's thread, so code that Pico does not create can reach it:
+hook, `order = 1`) binds that same object to the scenario's thread, so code that Pico does not create can reach it:
 
 ```java
 TestSession session = TestSession.current();   // the running scenario's session
