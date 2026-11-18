@@ -25,5 +25,6 @@ public class ConfigCheck {
         System.out.println("jks       : " + settings.jks());
         System.out.println("url       : " + settings.url());
         System.out.println("sct       : " + settings.sct());
+        System.out.println("cloud     : " + settings.cloud());
     }
 }

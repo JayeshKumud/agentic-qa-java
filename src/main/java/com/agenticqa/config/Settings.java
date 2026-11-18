@@ -10,7 +10,7 @@ import java.util.Map;
  * The run's settings: config/common.yaml with config/env/NAME.yaml on top. Read with {@code EnvConfig.get()}.
  */
 public record Settings(Ui ui, Map<String, Service> services, Execution execution, Cleanup cleanup,
-                       Healing healing, Retry retry, Jks jks, Url url, Sct sct) {
+                       Healing healing, Retry retry, Jks jks, Url url, Sct sct, String cloud) {
 
     /** Base URL of a service, {@code services.<name>.baseUrl}. */
     public String apiUrl(String name) {

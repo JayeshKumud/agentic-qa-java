@@ -80,7 +80,7 @@ public class CommonConfigTest {
     @Test
     public void apiUrlReturnsTheServiceBaseUrl() {
         Settings settings = new Settings(null, Map.of("customers", new Settings.Service("http://c")),
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         assertEquals(settings.apiUrl("customers"), "http://c");
         expectThrows(IllegalArgumentException.class, () -> settings.apiUrl("orders"));
         assertEquals(EnvConfig.get().apiUrl("customers"), "http://127.0.0.1:8000", "dev: services.customers.baseUrl");
@@ -94,6 +94,7 @@ public class CommonConfigTest {
         assertFalse(settings.jks().toString().contains("system1"), "password must not appear in logs");
         assertEquals(settings.url().mark(), "kl-mmknbj-cd", "from common.yaml");
         assertEquals(settings.url().klmhh(), "jhshdajh");
+        assertEquals(settings.cloud(), "testcould", "from common.yaml");
         assertEquals(settings.sct().cllid(), "test", "from dev.yaml");
         assertEquals(settings.sct().callps(), "tstps");
         assertFalse(settings.sct().toString().contains("tstps"), "callps must not appear in logs");
