@@ -3,9 +3,8 @@ package com.agenticqa.runner;
 import com.agenticqa.apis.AllureReportLogFilter;
 import com.agenticqa.apis.ExtentReportLogFilter;
 import com.agenticqa.config.Config;
-import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
-import com.agenticqa.config.Settings.Execution.Mode;
+import com.agenticqa.config.Settings.Mode;
 import com.agenticqa.core.RunCleaner;
 import com.agenticqa.core.RunLog;
 import com.agenticqa.reporting.AllurePublisher;
@@ -39,8 +38,8 @@ import java.util.List;
  *   <li>Parallel or sequential, per feature or scenario tag: {@code @Parallel} scenarios run side by side
  *       (-Dthreads=N, default 4, set in pom.xml); {@code @Sequential} scenarios run alone, one after the other,
  *       after the parallel ones. {@code @Sequential} wins when both apply. Untagged scenarios use
- *       {@code execution.defaultMode} of config/common.yaml (parallel).</li>
- *   <li>Before the run, the logs and reports of the previous run are deleted (cleanup in config/common.yaml;
+ *       {@code execution.defaultMode} of config/common.properties (parallel).</li>
+ *   <li>Before the run, the logs and reports of the previous run are deleted (cleanup in config/common.properties;
  *       -Dcleanup.beforeRun=false keeps them) and the console output is copied to target/logs/run.log.</li>
  *   <li>After the run, in the pipeline, the reports are published; the test execution summary is printed.</li>
  *   <li>Environment: -Denv=test (dev, test, uat, ci; default dev)</li>
@@ -119,16 +118,15 @@ public class TestRunner extends AbstractTestNGCucumberTests {
     }
 
     /**
-     * Deletes the Allure results, reports and logs of the previous run (cleanup.folders in config/common.yaml)
+     * Deletes the Allure results, reports and logs of the previous run (cleanup.folders in config/common.properties)
      * and starts the run log. Runs before {@code AbstractTestNGCucumberTests} creates Cucumber (in its
      * {@code @BeforeClass}), so before any report plugin opens its output file.
      */
     @BeforeSuite(alwaysRun = true)
     public void beforeSuite() {
         logger.info("Clearing Existing Allure Reports and Extent Reports");
-        Settings.Cleanup cleanup = EnvConfig.get().cleanup();
-        RunCleaner.clean(cleanup); // target/allure-results, target/reports (keeps the rerun file), ...
-        RunLog.start(cleanup.logFile());
+        RunCleaner.clean(); // target/allure-results, target/reports (keeps the rerun file), ...
+        RunLog.start(Settings.getLogFile());
     }
 
     @AfterSuite(alwaysRun = true)
@@ -208,9 +206,8 @@ public class TestRunner extends AbstractTestNGCucumberTests {
     }
 
     private Object[][] select(Mode mode) {
-        Settings.Execution execution = EnvConfig.get().execution();
         Object[][] rows = Arrays.stream(scenarios()) // feature-aware, see scenarios()
-                .filter(row -> execution.modeOf(((PickleWrapper) row[0]).getPickle().getTags()) == mode)
+                .filter(row -> Settings.modeOf(((PickleWrapper) row[0]).getPickle().getTags()) == mode)
                 .toArray(Object[][]::new);
         System.out.printf("[EXECUTION] %d scenario(s) run %s%n", rows.length,
                 mode == Mode.PARALLEL ? "in parallel" : "sequentially");

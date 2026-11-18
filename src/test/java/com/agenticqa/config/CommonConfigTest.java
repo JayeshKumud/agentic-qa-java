@@ -1,14 +1,10 @@
 package com.agenticqa.config;
 
-import com.agenticqa.config.Settings.Execution.Mode;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.agenticqa.config.Settings.Mode;
+import com.agenticqa.core.BrowserPool;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.Properties;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -17,108 +13,62 @@ import static org.testng.Assert.expectThrows;
 
 public class CommonConfigTest {
 
-    private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
-
-    private static ObjectNode yaml(String text) throws Exception {
-        return (ObjectNode) YAML.readTree(text);
+    @Test
+    public void environmentFileWinsOverCommon() {
+        assertEquals(Settings.getEnvironment(), "dev", "environment in common.properties");
+        assertEquals(Settings.getBaseUrl(), "http://127.0.0.1:8000", "from dev.properties");
+        assertFalse(Settings.isHeadless(), "dev.properties overrides common.properties");
+        assertEquals(Settings.getBrowser(), "chromium", "from common.properties");
+        assertEquals(Settings.getNavigationMs(), 30000);
+        assertTrue(Settings.getCleanupFolders().contains("target/reports"));
+        assertEquals(Settings.getVideo(), "failed");
+        assertFalse(Settings.isIgnoreHttpsErrors());
+        assertFalse(Settings.isMaximize());
     }
 
     @Test
-    public void environmentValuesWinAndSectionsMergeKeyByKey() throws Exception {
-        ObjectNode common = yaml("""
-                ui: { browser: chromium, headless: true, waits: { actionMs: 15000, navigationMs: 30000 } }
-                cleanup: { folders: [a, b] }
-                """);
-        JsonNode env = yaml("""
-                ui: { baseUrl: "http://env", headless: false, waits: { actionMs: 20000 } }
-                cleanup: { folders: [c] }
-                """);
-        JsonNode merged = EnvConfig.merge(common, env);
-        assertEquals(merged.at("/ui/browser").asText(), "chromium");
-        assertEquals(merged.at("/ui/baseUrl").asText(), "http://env");
-        assertFalse(merged.at("/ui/headless").asBoolean());
-        assertEquals(merged.at("/ui/waits/actionMs").asInt(), 20000);
-        assertEquals(merged.at("/ui/waits/navigationMs").asInt(), 30000);
-        assertEquals(merged.at("/cleanup/folders").size(), 1, "lists are replaced, not appended");
+    public void readsAnyKeyByName() {
+        assertEquals(Settings.getJksUsername(), "system");
+        assertEquals(Settings.getJksPassword(), "system1");
+        assertEquals(Settings.get("url.feature"), "kl-mmknbj-cd", "from common.properties");
+        assertEquals(Settings.get("url.klmhh"), "jhshdajh");
+        assertEquals(Settings.get("cloud"), "testcould");
+        assertEquals(Settings.get("sct.cllid"), "test", "from dev.properties");
+        assertEquals(Settings.get("sct.callps"), "tstps");
+        assertEquals(Settings.get("not.there"), null);
+        assertEquals(Settings.get("not.there", "fallback"), "fallback");
+        expectThrows(IllegalStateException.class, () -> Settings.require("not.there"));
     }
 
     @Test
-    public void systemPropertiesOverrideAnyPath() throws Exception {
-        ObjectNode tree = yaml("""
-                ui: { headless: true, waits: { actionMs: 1 } }
-                services: { customers: { baseUrl: a } }
-                """);
-        Properties props = new Properties();
-        props.setProperty("ui.headless", "false");
-        props.setProperty("ui.waits.actionMs", "30000");
-        props.setProperty("services.customers.baseUrl", "http://other");
-        props.setProperty("services.orders.baseUrl", "http://orders");
-        props.setProperty("java.version", "17");   // not a settings section: ignored
-        props.setProperty("ui", "x");              // no path: ignored
-        EnvConfig.applyOverrides(tree, props);
-        assertEquals(tree.at("/ui/headless").asText(), "false");
-        assertEquals(tree.at("/ui/waits/actionMs").asText(), "30000");
-        assertEquals(tree.at("/services/customers/baseUrl").asText(), "http://other");
-        assertEquals(tree.at("/services/orders/baseUrl").asText(), "http://orders");
-        assertFalse(tree.has("java"));
+    public void apiUrlIsBuiltFromBaseUrlAndEnvironmentChunk() {
+        assertEquals(Settings.getApiUrl("customers"), "https://customers-kt-5.test");
+    }
+
+    @Test
+    public void systemPropertyWins() {
+        System.setProperty("sct.cllid", "fromCommandLine");
+        try {
+            assertEquals(Settings.get("sct.cllid"), "fromCommandLine");
+        } finally {
+            System.clearProperty("sct.cllid");
+        }
     }
 
     @Test
     public void sequentialTagWinsThenParallelThenDefault() {
-        Settings.Execution parallel = new Settings.Execution("parallel");
-        Settings.Execution sequential = new Settings.Execution("Sequential");
-        assertEquals(parallel.modeOf(List.of("@api")), Mode.PARALLEL);
-        assertEquals(sequential.modeOf(List.of("@api")), Mode.SEQUENTIAL);
-        assertEquals(sequential.modeOf(List.of("@Parallel")), Mode.PARALLEL);
-        assertEquals(parallel.modeOf(List.of("@Sequential")), Mode.SEQUENTIAL);
-        assertEquals(parallel.modeOf(List.of("@Parallel", "@Sequential")), Mode.SEQUENTIAL);
-        assertEquals(parallel.modeOf(List.of("@sequential")), Mode.SEQUENTIAL, "case does not matter");
-        expectThrows(IllegalArgumentException.class, () -> new Settings.Execution("sometimes").modeOf(List.of()));
-    }
-
-    @Test
-    public void readsJksUrlAndSct() {
-        Settings settings = EnvConfig.get(); // dev
-        assertEquals(settings.jks().username(), "system");
-        assertEquals(settings.jks().password(), "system1");
-        assertEquals(settings.url().feature(), "kl-mmknbj-cd", "from common.yaml");
-        assertEquals(settings.url().klmhh(), "jhshdajh");
-        assertEquals(settings.getApiUrl("customers"), "https://customers-kt-5.test", "dev: baseUrl .test, environmentChunk kt-5");
-        assertEquals(settings.cloud(), "testcould", "from common.yaml");
-        assertEquals(settings.environment(), "dev", "environment: of common.yaml");
-        assertEquals(EnvConfig.envName(), "dev");
-        assertEquals(settings.sct().cllid(), "test", "from dev.yaml");
-        assertEquals(settings.sct().callps(), "tstps");
-    }
-
-    @Test
-    public void loadsCommonAndEnvironmentFilesTogether() {
-        Settings settings = EnvConfig.get(); // dev: common.yaml + env/dev.yaml
-        assertEquals(settings.ui().baseUrl(), "http://127.0.0.1:8000", "from the environment file");
-        assertEquals(settings.ui().browser(), "chromium", "from common.yaml");
-        assertTrue(settings.ui().waits().navigationMs() > 0);
-        assertTrue(settings.cleanup().folders().contains("target/reports"));
-        assertEquals(settings.ui().video(), "failed", "videos of failed scenarios by default");
-        assertFalse(settings.ui().ignoreHttpsErrors());
-        assertFalse(settings.ui().maximize());
-    }
-
-    @Test
-    public void videoMode() {
-        Settings.Ui always = new Settings.Ui(null, null, true, 0, null, false, false, "Always", null);
-        assertTrue(always.recordsVideo());
-        assertTrue(always.keepsAllVideos());
-        Settings.Ui failed = new Settings.Ui(null, null, true, 0, null, false, false, "failed", null);
-        assertTrue(failed.recordsVideo());
-        assertFalse(failed.keepsAllVideos());
-        assertFalse(new Settings.Ui(null, null, true, 0, null, false, false, "off", null).recordsVideo());
+        assertEquals(Settings.modeOf(List.of("@api"), "parallel"), Mode.PARALLEL);
+        assertEquals(Settings.modeOf(List.of("@api"), "Sequential"), Mode.SEQUENTIAL);
+        assertEquals(Settings.modeOf(List.of("@Parallel"), "sequential"), Mode.PARALLEL);
+        assertEquals(Settings.modeOf(List.of("@Sequential"), "parallel"), Mode.SEQUENTIAL);
+        assertEquals(Settings.modeOf(List.of("@Parallel", "@Sequential"), "parallel"), Mode.SEQUENTIAL);
+        assertEquals(Settings.modeOf(List.of("@sequential"), "parallel"), Mode.SEQUENTIAL, "case does not matter");
+        expectThrows(IllegalArgumentException.class, () -> Settings.modeOf(List.of(), "sometimes"));
     }
 
     @Test
     public void maximizeOnlyAppliesToHeadedRuns() {
-        assertTrue(com.agenticqa.core.BrowserPool.maximized(
-                new Settings.Ui(null, null, false, 0, null, true, false, null, null)));
-        assertFalse(com.agenticqa.core.BrowserPool.maximized(
-                new Settings.Ui(null, null, true, 0, null, true, false, null, null)), "headless keeps the viewport");
+        assertTrue(BrowserPool.maximized(true, false));
+        assertFalse(BrowserPool.maximized(true, true), "headless keeps the viewport");
     }
 }

@@ -11,7 +11,7 @@ import java.nio.file.Paths;
 
 /**
  * Copies everything the run prints (SLF4J log lines, the [BROWSER], [CLEANUP], [RETRY] lines, Cucumber's pretty output, errors)
- * into one log file, {@code cleanup.logFile} in config/common.yaml, while it still appears on the console. The
+ * into one log file, {@code cleanup.logFile} in config/common.properties, while it still appears on the console. The
  * file is emptied by {@link RunCleaner} before each run, so it always holds exactly the last run.
  */
 public final class RunLog {

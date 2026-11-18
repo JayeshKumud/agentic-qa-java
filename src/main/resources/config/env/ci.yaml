@@ -1,6 +1,0 @@
-# Used by GitHub Actions (mvn test -Denv=ci): headless, sample app started by the workflow on port 8000.
-# Shared settings are in config/common.yaml; this file holds only what differs here and wins over common.yaml.
-ui:
-  baseUrl: http://127.0.0.1:8000
-retry:
-  count: 1

@@ -1,6 +1,5 @@
 package com.agenticqa.core;
 
-import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
 import com.agenticqa.ui.PageComponent;
 import com.agenticqa.ui.healing.HealEvent;
@@ -62,7 +61,6 @@ public class TestSession {
      */
     public record SavedFiles(Path trace, Path video) {}
 
-    private final Settings settings = EnvConfig.get();
     private final Map<DataKey<?>, Object> store = new HashMap<>();
     private final Map<Class<? extends PageComponent>, PageComponent> pageComponents = new HashMap<>();
 
@@ -72,15 +70,6 @@ public class TestSession {
     /** This scenario's raw recording under videos/recording, remembered by {@link #close} for {@link #deleteVideoRecording}. */
     private Path videoRecording;
     private String scenarioName = "scenario";
-
-    /**
-     * Settings of the active environment.
-     *
-     * @return the typed settings
-     */
-    public Settings settings() {
-        return settings;
-    }
 
     /**
      * Remembers the scenario name; it is used to name the trace file when the scenario fails.
@@ -116,7 +105,7 @@ public class TestSession {
      * @return this scenario's healer
      */
     public synchronized Healer healer() {
-        if (healer == null) healer = new Healer(settings.healing());
+        if (healer == null) healer = new Healer();
         return healer;
     }
 
@@ -321,28 +310,28 @@ public class TestSession {
      * page object created later inherits them.
      */
     private void startBrowser() {
-        Settings.Ui ui = settings.ui();
-        Browser browser = BrowserPool.browser(ui);
-        boolean maximized = BrowserPool.maximized(ui);
+        Browser browser = BrowserPool.browser();
+        boolean maximized = BrowserPool.maximized();
+        int width = Settings.getViewportWidth();
+        int height = Settings.getViewportHeight();
         Browser.NewContextOptions options = new Browser.NewContextOptions()
-                .setBaseURL(ui.baseUrl())
-                .setIgnoreHTTPSErrors(ui.ignoreHttpsErrors());
+                .setBaseURL(Settings.getBaseUrl())
+                .setIgnoreHTTPSErrors(Settings.isIgnoreHttpsErrors());
         if (maximized) {
             options.setViewportSize(null); // the page uses the real, maximized window size
         } else {
-            options.setViewportSize(ui.viewport().width(), ui.viewport().height());
+            options.setViewportSize(width, height);
         }
-        if (ui.recordsVideo()) {
+        if (Settings.recordsVideo()) {
             options.setRecordVideoDir(VIDEO_RECORDING_DIR);
             if (!maximized) {
-                options.setRecordVideoSize(ui.viewport().width(), ui.viewport().height()); // full size, not scaled down
+                options.setRecordVideoSize(width, height); // full size, not scaled down
             }
         }
         context = browser.newContext(options);
-        Settings.Waits waits = ui.waits();
-        context.setDefaultTimeout(waits.actionMs());
-        context.setDefaultNavigationTimeout(waits.navigationMs());
-        PlaywrightAssertions.setDefaultAssertionTimeout(waits.assertionMs()); // assertThat would otherwise use 5 s
+        context.setDefaultTimeout(Settings.getActionMs());
+        context.setDefaultNavigationTimeout(Settings.getNavigationMs());
+        PlaywrightAssertions.setDefaultAssertionTimeout(Settings.getAssertionMs()); // assertThat would otherwise use 5 s
         context.tracing().start(new Tracing.StartOptions()
                 .setScreenshots(true).setSnapshots(true).setSources(false));
     }
@@ -416,7 +405,7 @@ public class TestSession {
      */
     private Path keepOrDelete(Video video, boolean failed) {
         Path kept = null;
-        if (failed || settings.ui().keepsAllVideos()) {
+        if (failed || Settings.keepsAllVideos()) {
             try {
                 Path file = artifactFile("videos", ".webm");
                 video.saveAs(file);

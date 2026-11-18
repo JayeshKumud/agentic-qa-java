@@ -66,19 +66,13 @@ public class Healer {
                 .map(el => ({ fingerprint: capture(el), selector: selectorFor(el) }));
             }""".formatted(Fingerprint.CAPTURE_JS);
 
-    private final Settings.Healing settings;
     private final FingerprintStore store;
     private final Map<String, String> healedSelectors = new HashMap<>();
     private final List<HealEvent> events = new ArrayList<>();
 
-    /**
-     * Creates the healer of one scenario.
-     *
-     * @param settings healing settings of the active environment
-     */
-    public Healer(Settings.Healing settings) {
-        this.settings = settings;
-        this.store = FingerprintStore.at(settings.fingerprintsFile());
+    /** Creates the healer of one scenario, with the healing settings of the active environment. */
+    public Healer() {
+        this.store = FingerprintStore.at(Settings.getFingerprintsFile());
     }
 
     /**
@@ -99,7 +93,7 @@ public class Healer {
      */
     public synchronized Locator resolve(Page page, SmartLocator element) {
         Locator original = page.locator(element.selector());
-        if (!settings.enabled()) return original;
+        if (!Settings.isHealingEnabled()) return original;
 
         String healed = healedSelectors.get(element.key());
         if (healed != null) return page.locator(healed);
@@ -120,7 +114,7 @@ public class Healer {
     private boolean appears(Locator locator) {
         try {
             locator.first().waitFor(new Locator.WaitForOptions()
-                    .setState(WaitForSelectorState.ATTACHED).setTimeout(settings.probeTimeoutMs()));
+                    .setState(WaitForSelectorState.ATTACHED).setTimeout(Settings.getProbeTimeoutMs()));
             return true;
         } catch (PlaywrightException timeout) {
             return false;
@@ -166,9 +160,9 @@ public class Healer {
         Candidate best = ranked.get(0);
         double runnerUp = ranked.size() > 1 ? ranked.get(1).score() : 0;
 
-        if (best.score() < settings.minScore()) {
+        if (best.score() < Settings.getMinScore()) {
             log("cannot heal %s: best match '%s' scores %.2f, below the minimum %.2f",
-                    element.description(), best.selector(), best.score(), settings.minScore());
+                    element.description(), best.selector(), best.score(), Settings.getMinScore());
             return original;
         }
         if (best.score() - runnerUp < MIN_MARGIN) {
@@ -211,7 +205,7 @@ public class Healer {
      * @param event the heal
      */
     private void appendToReport(HealEvent event) {
-        Path file = Paths.get(settings.reportFile());
+        Path file = Paths.get(Settings.getHealingReportFile());
         synchronized (Healer.class) {
             try {
                 if (file.getParent() != null) Files.createDirectories(file.getParent());

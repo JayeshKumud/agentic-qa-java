@@ -1,9 +1,8 @@
 package com.agenticqa.config;
 
 /**
- * Run-level switches that come from system properties and environment variables, not from the YAML files.
- * Settings from the YAML files (service base URLs, jks, ui, ...) are read with {@code EnvConfig.get()}, see
- * {@link Settings}.
+ * Run-level switches that come from system properties and environment variables, not from the properties
+ * files. Values from the properties files are read with {@link Settings}.
  */
 public final class Config {
 

@@ -22,7 +22,7 @@ import java.util.Map;
  * {@code environment.properties} and to the Extent report's system info.
  * <p>
  * The results of earlier runs are already gone by then: {@code TestRunner} empties the report folders, including
- * {@value #ALLURE_RESULTS}, before Cucumber starts (see {@code cleanup} in config/common.yaml). Without that,
+ * {@value #ALLURE_RESULTS}, before Cucumber starts (see {@code cleanup} in config/common.properties). Without that,
  * Allure would merge every run it finds there.
  * Listed before the Allure and Extent plugins in {@code @CucumberOptions}, so it runs first.
  */
@@ -57,16 +57,16 @@ public class ReportSetupPlugin implements ConcurrentEventListener {
      * @return label to value, in display order
      */
     private static Map<String, String> environment() {
-        Settings settings = EnvConfig.get();
-        Settings.Retry retry = settings.retry();
+        int retries = Settings.getRetryCount();
+        String retryTags = Settings.getRetryTags();
         Map<String, String> info = new LinkedHashMap<>();
         info.put("Environment", EnvConfig.envName());
-        info.put("UI URL", String.valueOf(settings.ui().baseUrl()));
-        info.put("Browser", settings.ui().browser() + (settings.ui().headless() ? " (headless)" : ""));
+        info.put("UI URL", String.valueOf(Settings.getBaseUrl()));
+        info.put("Browser", Settings.getBrowser() + (Settings.isHeadless() ? " (headless)" : ""));
         info.put("Threads", System.getProperty("threads", System.getProperty("dataproviderthreadcount", "?")));
-        info.put("Default mode", settings.execution().defaultMode() + " (@Parallel / @Sequential tags win)");
-        info.put("Retries", retry.count() == 0 ? "off" : retry.count() + " for " + (retry.tags().isBlank()
-                ? "all scenarios" : retry.tags()));
+        info.put("Default mode", Settings.getDefaultMode() + " (@Parallel / @Sequential tags win)");
+        info.put("Retries", retries == 0 ? "off" : retries + " for " + (retryTags.isBlank()
+                ? "all scenarios" : retryTags));
         info.put("Tags", System.getProperty("cucumber.filter.tags", "all"));
         info.put("Java", System.getProperty("java.version"));
         return info;

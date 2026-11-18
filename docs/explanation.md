@@ -17,7 +17,6 @@ appear in the file. In effect it becomes:
 ```java
 public TestSession() {
     super();
-    this.settings = EnvConfig.get();          // line 40
     this.store    = new HashMap<>();          // line 41
     this.pageComponents = new HashMap<>();    // line 42
     // context, page, healer have no initializer, so they stay null
@@ -384,7 +383,7 @@ public Response searchCustomers(String name) {
 **A new service:** yes, one API class per service, plus model classes for its bodies:
 
 1. Add `XxxApi implements Api` in `src/test/java/com/agenticqa/apis/` with a no-argument constructor that reads
-   `EnvConfig.get().ui().baseUrl()`.
+   `Settings.getBaseUrl()`.
 2. Add its request and response models in `apis/model/`.
 3. Call it from steps with `ApiFactory.getApi(XxxApi.class)`.
 
@@ -424,6 +423,6 @@ List<Unit.UnitKL> units = TestSession.current().list(UNIT_KL);           // empt
 ## API classes in the existing framework's style (`Api`, `ApiFactory`)
 
 The API part keeps the existing framework's shape: API classes with a no-argument constructor, base URL from
-`EnvConfig.get().ui().baseUrl()`, REST Assured calls, created once for the whole run by `ApiFactory.getApi(...)`. Only the
+`Settings.getBaseUrl()`, REST Assured calls, created once for the whole run by `ApiFactory.getApi(...)`. Only the
 GUI part uses the session setup above. API and GUI steps share data through the `TestSession` store. See
 [api.md](api.md).

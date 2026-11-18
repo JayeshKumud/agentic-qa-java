@@ -32,11 +32,11 @@ public class SettingsTest {
 
     @Test
     public void retryAppliesByTagExpression() {
-        Settings.Retry retry = new Settings.Retry(2, "@ui and not @noretry");
-        assertTrue(retry.appliesTo(List.of("@ui", "@smoke")));
-        assertFalse(retry.appliesTo(List.of("@ui", "@noretry")));
-        assertFalse(retry.appliesTo(List.of("@api")));
-        assertTrue(new Settings.Retry(1, "").appliesTo(List.of()));
-        assertFalse(new Settings.Retry(0, "").appliesTo(List.of("@ui")));
+        String tags = "@ui and not @noretry";
+        assertTrue(Settings.retryAppliesTo(List.of("@ui", "@smoke"), 2, tags));
+        assertFalse(Settings.retryAppliesTo(List.of("@ui", "@noretry"), 2, tags));
+        assertFalse(Settings.retryAppliesTo(List.of("@api"), 2, tags));
+        assertTrue(Settings.retryAppliesTo(List.of(), 1, ""));
+        assertFalse(Settings.retryAppliesTo(List.of("@ui"), 0, ""));
     }
 }

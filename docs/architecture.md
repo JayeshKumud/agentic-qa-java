@@ -13,7 +13,7 @@ This page explains how the framework is built, how its parts fit together, and w
 3. **API and UI share data through the session.** An API step stores what it created in the `TestSession`, and
    a GUI step of the same scenario reads it, and the other way round.
 4. **Config, not code, for environments.** The base URL (pages and API classes), waits and
-   healing settings come from `config/env/<env>.yaml` and can be overridden per run.
+   healing settings come from `config/common.properties` and `config/env/<env>.properties` and can be overridden per run.
 5. **Failures carry their evidence.** Screenshot, trace, video and heal events are attached automatically. No
    step has to remember to collect them.
 6. **Tests clean up after themselves**, whether they pass or fail.
@@ -49,13 +49,13 @@ flowchart TB
             SL["SmartLocator"]
             HE["Healer · HealingScorer<br/>FingerprintStore"]
         end
-        CFG["EnvConfig → Settings<br/>ui().baseUrl(), jks()"]
+        CFG["EnvConfig → Settings<br/>static getters"]
     end
 
     subgraph Ext["Outside the JVM"]
         PW["Playwright<br/>browser"]
         APP["Application under test<br/>(sample-target-app :8000)"]
-        YAML["config/common.yaml + config/env/*.yaml<br/>· locators/*.json"]
+        FILES["config/common.properties + config/env/*.properties<br/>· locators/*.json"]
         FP["healing/fingerprints.json"]
         OUT["target/reports · traces · healing"]
     end
@@ -70,7 +70,7 @@ flowchart TB
     H --> S
     PO --> SL --> HE
     S --> PW --> APP
-    S --> CFG --> YAML
+    S --> CFG --> FILES
     HE --> FP
     H --> OUT
     RP --> OUT
@@ -89,7 +89,7 @@ flowchart TB
 | API | `api.ApiFactory`, `apis.*` | `ApiFactory` creates each API class once; API classes call their service with REST Assured |
 | UI | `ui.*` | Page objects built from `SmartLocator`s |
 | Healing | `ui.healing.*` | Fingerprint capture, similarity scoring and replacement of broken selectors |
-| Config | `config.*` | Loads `config/env/<env>.yaml` once per JVM into a typed `Settings` record; `EnvConfig.get().ui().baseUrl()` and `.jks()` for API classes |
+| Config | `config.*` | `EnvConfig` loads `config/common.properties` + `config/env/<env>.properties` once per JVM; `Settings` has static getters (`Settings.getBaseUrl()`, `Settings.get(key)`) |
 | Reporting | `reporting.RunSummaryPlugin` | Cucumber event listener that writes `run-summary.html` and `.json` |
 
 ## Key components
@@ -120,8 +120,8 @@ classDiagram
         +deleteCustomer(id) Response
     }
     class Settings {
-        +ui() Ui
-        +jks() Jks
+        +getBaseUrl()$ String
+        +get(key)$ String
     }
     class CustomersPage
     class PageElements {
@@ -156,7 +156,7 @@ classDiagram
 API classes are written as in the existing framework (see [api.md](api.md)):
 
 1. An API class (`apis/CustomerApi`) implements `Api` and has a no-argument constructor that reads its base URL
-   with `EnvConfig.get().ui().baseUrl()`, which `-Dui.baseUrl` can override.
+   with `Settings.getBaseUrl()`, which `-Dui.baseUrl` can override.
 2. Each method calls the service with REST Assured, fails with `Assert.fail` on an unexpected status and returns
    the `Response`. Bodies are model classes (`apis/model/Customer`), serialized by Jackson.
 3. Steps get the class with `ApiFactory.getApi(CustomerApi.class)`, which creates it once and returns the same
@@ -182,8 +182,8 @@ The full algorithm is in [healing.md](healing.md).
 
 ```mermaid
 flowchart LR
-    P["-Denv=ci<br/>or ENV=ci<br/>(default: environment in common.yaml)"] --> E["EnvConfig.get()<br/>read once per JVM"]
-    Y["classpath:<br/>config/env/ci.yaml"] --> E
+    P["-Denv=ci<br/>or ENV=ci<br/>(default: environment in common.properties)"] --> E["EnvConfig.properties()<br/>read once per JVM"]
+    Y["classpath:<br/>config/env/ci.properties"] --> E
     E --> S["Settings<br/>ui · healing · jks"]
     O["-Dui.baseUrl"] --> S
 ```
@@ -292,11 +292,11 @@ doesn't cancel the other. A newer push to the same branch cancels the run that i
 | You want to… | Change |
 |---|---|
 | Test a new endpoint | A method on the service's API class in `apis/`, then a step that calls it |
-| Talk to a new microservice | An API class in `apis/` (base URL from `EnvConfig.get().ui().baseUrl()`) and its models in `apis/model/` |
+| Talk to a new microservice | An API class in `apis/` (base URL from `Settings.getBaseUrl()`) and its models in `apis/model/` |
 | Add API steps | A step class using `ApiFactory.getApi(XxxApi.class)`, storing results in the `TestSession` |
 | Test a new page | Add `locators/<page>.json`, a page object using `PageElements`, plus a step class |
 | Share data between step classes | Add a `DataKey` in `steps/Keys.java` and use `session.put` / `get` |
-| Add an environment | Add `config/env/<name>.yaml` (copy `test.yaml`) and run with `-Denv=<name>` |
+| Add an environment | Add `config/env/<name>.properties` (copy `test.properties`) and run with `-Denv=<name>` |
 | Retry more or fewer scenarios | `retry.count` / `retry.tags` in the env file, or `-Dretry.count` / `-Dretry.tags` |
 | Add a report output | Add a plugin to `@CucumberOptions(plugin = …)` in `TestRunner` |
 | Add a CI suite | Add the tag to `matrix.suite` in `tests.yml` |

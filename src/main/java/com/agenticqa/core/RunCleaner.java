@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * Empties the log and report folders of earlier runs ({@code cleanup.folders} in config/common.yaml) before a
+ * Empties the log and report folders of earlier runs ({@code cleanup.folders} in config/common.properties) before a
  * new run starts, so reports, traces, heal logs and the run log show only the new run, also without
  * {@code mvn clean}. Switch it off for one run with {@code -Dcleanup.beforeRun=false}.
  * <p>
@@ -30,17 +30,16 @@ public final class RunCleaner {
     /**
      * Empties the configured folders, if cleanup is on.
      *
-     * @param cleanup the cleanup settings
      * @return the folders that were emptied
      */
-    public static List<Path> clean(Settings.Cleanup cleanup) {
-        if (!cleanup.beforeRun()) {
+    public static List<Path> clean() {
+        if (!Settings.isCleanupBeforeRun()) {
             System.out.println("[CLEANUP] off (cleanup.beforeRun=false): reports of earlier runs are kept");
             return List.of();
         }
         List<Path> keep = rerunFiles(System.getProperty("cucumber.features"));
         List<Path> cleaned = new ArrayList<>();
-        for (String folder : cleanup.folders()) {
+        for (String folder : Settings.getCleanupFolders()) {
             Path path = Paths.get(folder).normalize();
             if (isUnsafe(path)) {
                 throw new IllegalStateException("cleanup.folders may only name folders inside the project, not '"

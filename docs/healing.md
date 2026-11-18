@@ -17,15 +17,19 @@ Healing does not replace fixing selectors. It keeps one renamed id from failing 
 
 ## Configuration
 
-The `healing` section is in `src/main/resources/config/common.yaml`; an environment file can override any of it:
+The `healing.*` keys are in `src/main/resources/config/common.properties`; an environment file can override any of them:
 
-```yaml
-healing:
-  enabled: true                               # false = every SmartLocator behaves like a plain Playwright locator
-  probeTimeoutMs: 2000                        # how long the original selector may take to appear before healing starts
-  minScore: 0.6                               # lowest similarity accepted for a replacement
-  fingerprintsFile: healing/fingerprints.json # the baseline (keep it in git)
-  reportFile: target/healing/heals.jsonl      # one JSON line appended per heal
+```properties
+# false = every SmartLocator behaves like a plain Playwright locator
+healing.enabled=true
+# how long the original selector may take to appear before healing starts
+healing.probeTimeoutMs=2000
+# lowest similarity accepted for a replacement
+healing.minScore=0.6
+# the baseline (keep it in git)
+healing.fingerprintsFile=healing/fingerprints.json
+# one JSON line appended per heal
+healing.reportFile=target/healing/heals.jsonl
 ```
 
 One rule is hard-coded: `Healer.MIN_MARGIN = 0.15`. The best candidate must beat the second best by at least this much.

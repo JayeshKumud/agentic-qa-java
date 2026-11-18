@@ -14,50 +14,70 @@ mvn test -Dcucumber.features=@target/reports/failed-scenarios.txt   # only what 
 mvn allure:report                                     # Allure HTML from the last run
 ```
 
-## Configuration: common.yaml plus one file per environment
+## Configuration: common.properties plus one file per environment
 
-Settings come from two files in [`src/main/resources/config`](../src/main/resources/config), merged at startup:
+Settings come from two properties files in [`src/main/resources/config`](../src/main/resources/config):
 
 | File | Holds |
 |---|---|
-| [`common.yaml`](../src/main/resources/config/common.yaml) | what every environment shares: browser, headless, viewport, **wait times**, execution mode, cleanup, healing, retry defaults |
-| `env/<name>.yaml` | only what differs per environment: the **base URL** (`ui.baseUrl`, used by the pages and the API classes), and the odd override (headless off in dev, longer waits in UAT, retry count) |
+| [`common.properties`](../src/main/resources/config/common.properties) | what every environment shares: browser, headless, viewport, **wait times**, execution mode, cleanup, healing, retry defaults |
+| `env/<name>.properties` | only what differs per environment: the **base URL** (`ui.baseUrl`, used by the pages and the API classes), and the odd override (headless off in dev, longer waits in UAT, retry count) |
 
-The environment file is merged on top of `common.yaml`: a key it sets wins, sections are merged key by key
-(setting `ui.waits.actionMs` keeps `ui.waits.navigationMs` from `common.yaml`), and lists are replaced.
+The environment file is loaded on top of `common.properties`: a key it sets wins, every other key comes from
+`common.properties`.
 
 | Environment file | Used for | Browser | Retries |
 |---|---|---|---|
-| `dev.yaml` | local runs against the sample app on `127.0.0.1:8000` (default) | visible | off |
-| `test.yaml` | the shared test environment | headless | 1 |
-| `uat.yaml` | user acceptance testing | headless | 2 |
-| `ci.yaml` | GitHub Actions, sample app started by the workflow | headless | 1 |
+| `dev.properties` | local runs against the sample app on `127.0.0.1:8000` (default) | visible | off |
+| `test.properties` | the shared test environment | headless | 1 |
+| `uat.properties` | user acceptance testing | headless | 2 |
+| `ci.properties` | GitHub Actions, sample app started by the workflow | headless | 1 |
 
 Choose one with `-Denv=<name>` or the `ENV` environment variable. An unknown name fails at startup and lists
 the known ones.
 
-### Browser and wait times (common.yaml)
+### Reading settings in code
 
-```yaml
-ui:
-  browser: chromium          # chromium, firefox or webkit
-  headless: true
-  slowMoMs: 0
-  viewport: { width: 1366, height: 768 }
-  waits:
-    actionMs: 15000          # click, fill, locator waits      -> context.setDefaultTimeout
-    navigationMs: 30000      # page.navigate, load             -> context.setDefaultNavigationTimeout
-    assertionMs: 15000       # assertThat(...) web assertions  -> PlaywrightAssertions.setDefaultAssertionTimeout
+`Settings` has static methods. Named getters for the framework's own settings, and generic ones for any key:
+
+```java
+Settings.getBaseUrl()                 // ui.baseUrl
+Settings.isHeadless()                 // ui.headless
+Settings.getActionMs()                // ui.waits.actionMs
+Settings.getJksUsername()             // jks.username
+Settings.getApiUrl("customers")       // https://customers-kt-5.test (https:// + name + - + environmentChunk + baseUrl)
+
+Settings.get("sct.cllid")             // any key, null if not set
+Settings.get("url.feature", "x")      // with a fallback
+Settings.require("cloud")             // fails if not set
+Settings.getInt("ui.slowMoMs", 0)     // also getBoolean, getDouble, getList (comma separated)
 ```
 
-An environment file overrides only what it needs; for example `uat.yaml` sets longer waits.
+### Browser and wait times (common.properties)
+
+```properties
+ui.browser=chromium
+ui.headless=true
+ui.slowMoMs=0
+ui.viewport.width=1366
+ui.viewport.height=768
+# click, fill, locator waits      -> context.setDefaultTimeout
+ui.waits.actionMs=15000
+# page.navigate, load             -> context.setDefaultNavigationTimeout
+ui.waits.navigationMs=30000
+# assertThat(...) web assertions  -> PlaywrightAssertions.setDefaultAssertionTimeout
+ui.waits.assertionMs=15000
+```
+
+An environment file overrides only what it needs; for example `uat.properties` sets longer waits.
 
 ### Default environment
 
-`environment:` in common.yaml chooses the environment when neither `-Denv` nor the `ENV` variable is set:
+`environment` in common.properties chooses the environment when neither `-Denv` nor the `ENV` variable is set
+(and `dev` is used if it is missing too):
 
-```yaml
-environment: dev
+```properties
+environment=dev
 ```
 
 ### Placeholders
@@ -65,27 +85,27 @@ environment: dev
 - `${NAME}` is filled from the system property `NAME` (`-DNAME=...`), or else the environment variable `NAME`.
 - `${NAME:-fallback}` uses the fallback when neither is set.
 - A placeholder without fallback and without value fails at startup with a message naming the variable.
-- Placeholders are filled after the YAML is parsed, so commented-out lines are never checked.
 
-### Keystore credentials (`jks`)
+### Keystore credentials and other keys
 
-An environment that needs Java keystore credentials has a `jks` section (dev has one):
+dev.properties has the keystore credentials and other keys:
 
-```yaml
-jks:
-  username: system
-  password: system1
+```properties
+jks.username=system
+jks.password=system1
+sct.cllid=test
+sct.callps=tstps
+baseUrl=.test
+environmentChunk=kt-5
 ```
 
-Read them with `EnvConfig.get().jks().username()` and `.password()`; `jks()` is null in an environment without
-the section. The same goes for the `url` section of common.yaml (`EnvConfig.get().url().feature()`) and the `sct`
-section of dev.yaml (`EnvConfig.get().sct().cllid()`). All values, the password included, are printed as they
-are (`ConfigCheck`, logs). Override per run with `-Djks.password=...`, or use a
-placeholder such as `password: ${UAT_JKS_PASSWORD}` so the real value stays out of the file.
+Read them with `Settings.getJksUsername()`, `Settings.getJksPassword()`, or any key with `Settings.get("sct.cllid")`.
+Values are printed as they are (`ConfigCheck`, logs). Override per run with `-Djks.password=...`, or use a
+placeholder such as `jks.password=${UAT_JKS_PASSWORD}` so the real value stays out of the file.
 
 ### One-off overrides
 
-Any setting can be overridden for one run with a system property named by its path, without editing a file:
+Any setting can be overridden for one run with a system property of the same key, without editing a file:
 
 | Property | Example |
 |---|---|
@@ -108,9 +128,9 @@ mvn -q compile exec:java -Dexec.mainClass=com.agenticqa.ConfigCheck -Denv=uat
 
 ### Adding an environment
 
-Copy `test.yaml` to `<name>.yaml`, change the hosts (or the variable names) and run with `-Denv=<name>`. Add
-the name to `EnvConfig.KNOWN` so it shows in the error message for unknown names. Anything the new environment
-shares with the others stays in `common.yaml`.
+Copy `test.properties` to `<name>.properties`, change the hosts (or the variable names) and run with
+`-Denv=<name>`. Add the name to `EnvConfig.KNOWN` so it shows in the error message for unknown names. Anything
+the new environment shares with the others stays in `common.properties`.
 
 ## Parallel or sequential: `@Parallel` and `@Sequential`
 
@@ -132,7 +152,7 @@ Feature: A zone id set in one step and read in the next steps
 |---|---|
 | `@Sequential` (also together with `@Parallel`) | alone, one after the other, after all parallel scenarios |
 | `@Parallel` | in parallel, up to `-Dthreads` at once |
-| neither | `execution.defaultMode` in `common.yaml` (`parallel`) |
+| neither | `execution.defaultMode` in `common.properties` (`parallel`) |
 
 Tags are compared ignoring case, but must be spelled `@Sequential` and `@Parallel`. `TestRunner` has two TestNG
 test methods: `runParallelScenario` with a `parallel = true` data provider, and `runSequentialScenario` with a
@@ -145,13 +165,12 @@ would disturb others. The console shows the split: `[EXECUTION] 30 scenario(s) r
 ## Clean logs and reports before each run
 
 Before a run starts, `TestRunner` (in `@BeforeSuite`, so before Cucumber opens any report file) empties the
-folders under `cleanup` in `common.yaml`:
+folders in `cleanup.folders` of `common.properties`:
 
-```yaml
-cleanup:
-  beforeRun: true
-  folders: [target/reports, target/allure-results, target/artifacts, target/healing, target/logs]
-  logFile: target/logs/run.log
+```properties
+cleanup.beforeRun=true
+cleanup.folders=target/reports,target/allure-results,target/artifacts,target/healing,target/logs
+cleanup.logFile=target/logs/run.log
 ```
 
 So the reports, traces, heal log and run log hold only the new run, also without `mvn clean`. Everything
@@ -193,12 +212,13 @@ and scenarios that passed, are not repeated. This is done by
 
 ### Configuration
 
-In `common.yaml` (default for all environments), overridden per environment file where needed:
+In `common.properties` (default for all environments), overridden per environment file where needed:
 
-```yaml
-retry:
-  count: 2                 # how often a failed scenario may run again; 0 = retries off
-  tags: "not @noretry"     # Cucumber tag expression: which scenarios may be retried; "" = all
+```properties
+# how often a failed scenario may run again; 0 = retries off
+retry.count=2
+# Cucumber tag expression: which scenarios may be retried; empty = all
+retry.tags=not @noretry
 ```
 
 Or per run, overriding the file: `-Dretry.count=1 -Dretry.tags="@ui and not @payments"`.

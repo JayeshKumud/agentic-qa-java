@@ -37,14 +37,13 @@ public final class BrowserPool {
     /**
      * The browser of the calling thread, launched on first use.
      *
-     * @param ui the browser settings (name, headless, slow motion)
      * @return a connected browser owned by this thread
      */
-    public static Browser browser(Settings.Ui ui) {
+    public static Browser browser() {
         Worker worker = WORKER.get();
         if (worker != null && worker.browser().isConnected()) return worker.browser();
         if (worker != null) close(worker); // crashed or closed: start a new one
-        worker = launch(ui);
+        worker = launch();
         WORKER.set(worker);
         ALL.add(worker);
         return worker.browser();
@@ -54,15 +53,19 @@ public final class BrowserPool {
      * Tells whether pages use the real, maximized window instead of the configured viewport. Only headed runs
      * can: a headless browser has no window, so it keeps the viewport and screenshots match on every machine.
      *
-     * @param ui the browser settings
      * @return true if {@code ui.maximize} is on and the run is headed
      */
-    public static boolean maximized(Settings.Ui ui) {
-        return ui.maximize() && !ui.headless();
+    public static boolean maximized() {
+        return maximized(Settings.isMaximize(), Settings.isHeadless());
     }
 
-    private static Worker launch(Settings.Ui ui) {
-        String name = ui.browser() == null ? "chromium" : ui.browser().toLowerCase();
+    /** True if maximize is on and the run is headed. */
+    public static boolean maximized(boolean maximize, boolean headless) {
+        return maximize && !headless;
+    }
+
+    private static Worker launch() {
+        String name = Settings.getBrowser().toLowerCase();
         Playwright playwright = Playwright.create();
         BrowserType type = switch (name) {
             case "firefox" -> playwright.firefox();
@@ -70,11 +73,11 @@ public final class BrowserPool {
             default -> playwright.chromium();
         };
         BrowserType.LaunchOptions launch = new BrowserType.LaunchOptions()
-                .setHeadless(ui.headless())
-                .setSlowMo(ui.slowMoMs());
+                .setHeadless(Settings.isHeadless())
+                .setSlowMo(Settings.getSlowMoMs());
         if (name.equals("chromium")) {
             List<String> args = new ArrayList<>(List.of("--disable-dev-shm-usage")); // needed inside containers
-            if (maximized(ui)) args.add("--start-maximized");
+            if (maximized()) args.add("--start-maximized");
             launch.setArgs(args);
         }
         System.out.printf("[BROWSER] %s launched for thread %s%n", name, Thread.currentThread().getName());

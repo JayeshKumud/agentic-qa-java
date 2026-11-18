@@ -1,38 +1,18 @@
 package com.agenticqa.config;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
-import java.util.Iterator;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Loads the settings of the active environment. Two files on the classpath (src/main/resources) are read and
- * merged: {@value #COMMON} holds what every environment shares (browser, waits, execution mode, cleanup,
- * healing, retry), and config/env/NAME.yaml holds what differs per environment (the base URL, overrides). A key set in the environment file wins; nested sections are merged key by key,
- * lists are replaced. Choose the environment with -Denv=test or the ENV variable; the default is the
- * {@code environment:} value of common.yaml (dev if it has none).
- * <p>
- * Any value can be overridden for one run with a system property named by its path, for example
- * {@code -Dui.headless=false}, {@code -Dui.waits.actionMs=30000}, {@code -Dui.baseUrl=http://...},
- * {@code -Dretry.count=2} or {@code -Dexecution.defaultMode=sequential}.
- * <p>
- * Values may contain placeholders, so URLs and secrets of shared environments (test, uat) need not be committed:
- * {@code ${NAME}} is replaced by the system property NAME (-DNAME=...) or else the environment variable NAME, and
- * {@code ${NAME:-fallback}} uses the fallback when neither is set. A placeholder without fallback whose value is
- * missing fails at startup, naming the variable. Placeholders in YAML comments are ignored.
+ * Loads config/common.properties with config/env/NAME.properties on top (a key in the environment file wins) and
+ * fills in ${NAME} / ${NAME:-fallback} placeholders. Values are read through {@link Settings}.
  */
 public final class EnvConfig {
 
@@ -40,21 +20,16 @@ public final class EnvConfig {
     public static final String KNOWN = "dev, test, uat, ci";
 
     /** Classpath resource with the settings shared by every environment. */
-    public static final String COMMON = "/config/common.yaml";
+    public static final String COMMON = "/config/common.properties";
 
     private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([A-Za-z0-9_.]+)(?::-([^}]*))?}");
 
-    private static volatile Settings settings;
+    private static volatile Properties properties;
+    private static volatile String defaultEnv;
 
-    /** Utility class, not instantiable. */
     private EnvConfig() {}
 
-    /**
-     * Name of the active environment.
-     *
-     * @return the -Denv system property, else the ENV environment variable, else {@code environment} of
-     *         common.yaml, else "dev"
-     */
+    /** Active environment: -Denv, else the ENV variable, else environment in common.properties, else dev. */
     public static String envName() {
         String env = System.getProperty("env");
         if (env == null || env.isBlank()) env = System.getenv("ENV");
@@ -62,41 +37,17 @@ public final class EnvConfig {
         return (env == null || env.isBlank()) ? "dev" : env.trim();
     }
 
-    private static volatile String defaultEnv;
-
-    /** The {@code environment:} value of common.yaml, read once. */
-    private static String defaultEnv() {
-        if (defaultEnv == null) {
-            JsonNode value = read(new ObjectMapper(new YAMLFactory()), COMMON, "Shared settings file not found on classpath: "
-                    + COMMON).path("environment");
-            defaultEnv = value.isTextual() ? value.asText() : "";
-        }
-        return defaultEnv;
-    }
-
-    /**
-     * Settings of the active environment. The file is read once per JVM; the call is thread-safe.
-     *
-     * @return the typed settings
-     * @throws IllegalStateException if config/env/NAME.yaml does not exist or a placeholder has no value
-     */
-    public static Settings get() {
-        if (settings == null) {
+    /** The merged properties of the active environment, loaded once per JVM. */
+    public static Properties properties() {
+        if (properties == null) {
             synchronized (EnvConfig.class) {
-                if (settings == null) settings = load();
+                if (properties == null) properties = load();
             }
         }
-        return settings;
+        return properties;
     }
 
-    /**
-     * Replaces every {@code ${NAME}} and {@code ${NAME:-fallback}} in a text. Pure logic, unit tested.
-     *
-     * @param text   the text
-     * @param lookup gives the value of a name, or null if it is not set
-     * @return the text with all placeholders filled in
-     * @throws IllegalStateException if a placeholder without fallback has no value
-     */
+    /** Replaces every ${NAME} and ${NAME:-fallback} in a text; fails if a placeholder without fallback has no value. */
     public static String fill(String text, UnaryOperator<String> lookup) {
         Matcher matcher = PLACEHOLDER.matcher(text);
         StringBuilder out = new StringBuilder();
@@ -105,10 +56,9 @@ public final class EnvConfig {
             String value = lookup.apply(name);
             if (value == null) value = matcher.group(2);
             if (value == null) {
-                throw new IllegalStateException("config/common.yaml or config/env/" + envName() + ".yaml uses ${"
-                        + name + "}, but it is "
-                        + "not set. Set the environment variable " + name + ", pass -D" + name + "=..., or write "
-                        + "${" + name + ":-default} in the file.");
+                throw new IllegalStateException("config/common.properties or config/env/" + envName()
+                        + ".properties uses ${" + name + "}, but it is not set. Set the environment variable "
+                        + name + ", pass -D" + name + "=..., or write ${" + name + ":-default} in the file.");
             }
             matcher.appendReplacement(out, Matcher.quoteReplacement(value));
         }
@@ -116,124 +66,35 @@ public final class EnvConfig {
         return out.toString();
     }
 
-    /**
-     * Deep-merges one parsed YAML tree into another: objects are merged key by key (recursively), any other
-     * value, lists included, replaces the old one. Pure logic, unit tested.
-     *
-     * @param base     the tree to change, for example common.yaml
-     * @param override the tree whose values win, for example the environment file
-     * @return the merged tree (base, changed, when both are objects)
-     */
-    public static JsonNode merge(JsonNode base, JsonNode override) {
-        if (override == null || override.isMissingNode() || override.isNull()) return base;
-        if (!(base instanceof ObjectNode target) || !(override instanceof ObjectNode source)) return override;
-        Iterator<Map.Entry<String, JsonNode>> fields = source.fields();
-        while (fields.hasNext()) {
-            Map.Entry<String, JsonNode> field = fields.next();
-            JsonNode current = target.get(field.getKey());
-            target.set(field.getKey(), current == null ? field.getValue() : merge(current, field.getValue()));
+    private static String defaultEnv() {
+        if (defaultEnv == null) {
+            String value = read(COMMON, "Shared settings file not found on classpath: " + COMMON).getProperty("environment");
+            defaultEnv = value == null ? "" : value.trim();
         }
-        return target;
+        return defaultEnv;
     }
 
-    /**
-     * Applies -D overrides: every system property whose name is a path into one of the tree's top-level
-     * sections ({@code ui.headless}, {@code ui.baseUrl}, ...) replaces that value; missing
-     * sections on the way are created. Properties of other names (env, threads, java.version, ...) are ignored.
-     * Pure logic, unit tested.
-     *
-     * @param tree       the merged settings
-     * @param properties the system properties
-     */
-    public static void applyOverrides(ObjectNode tree, Properties properties) {
-        for (String name : properties.stringPropertyNames()) {
-            String[] path = name.split("\\.");
-            if (path.length < 2 || !(tree.get(path[0]) instanceof ObjectNode)) continue;
-            String value = properties.getProperty(name);
-            if (value == null || value.isBlank()) continue;
-            ObjectNode node = tree;
-            for (int i = 0; i < path.length - 1; i++) {
-                JsonNode child = node.get(path[i]);
-                node = child instanceof ObjectNode object ? object : node.putObject(path[i]);
-            }
-            node.put(path[path.length - 1], value.trim());
+    private static Properties load() {
+        String resource = "/config/env/" + envName() + ".properties";
+        Properties merged = read(COMMON, "Shared settings file not found on classpath: " + COMMON);
+        merged.putAll(read(resource, "Environment file not found on classpath: " + resource
+                + ". Known environments: " + KNOWN + " (src/main/resources/config/env)."));
+        UnaryOperator<String> lookup = name -> System.getProperty(name, System.getenv(name));
+        for (String key : merged.stringPropertyNames()) {
+            merged.setProperty(key, fill(merged.getProperty(key), lookup).trim());
         }
+        merged.setProperty("environment", envName()); // the environment that actually runs, also with -Denv
+        return merged;
     }
 
-    /**
-     * Reads common.yaml and the environment file, merges them, fills in placeholders, applies -D overrides and
-     * binds the result.
-     *
-     * @return the typed settings
-     * @throws IllegalStateException if a file does not exist or a placeholder has no value
-     * @throws UncheckedIOException  if a file cannot be read or parsed
-     */
-    private static Settings load() {
-        String resource = "/config/env/" + envName() + ".yaml";
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        JsonNode common = read(mapper, COMMON, "Shared settings file not found on classpath: " + COMMON
-                + " (src/main/resources/config/common.yaml).");
-        JsonNode env = read(mapper, resource, "Environment file not found on classpath: " + resource
-                + ". Known environments: " + KNOWN + " (src/main/resources/config/env).");
-        JsonNode tree = merge(common, env);
-        ((ObjectNode) tree).put("environment", envName()); // the environment that actually runs, also with -Denv
-        fillTree(tree);
-        applyOverrides((ObjectNode) tree, System.getProperties());
-        try {
-            return mapper.treeToValue(tree, Settings.class);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Cannot bind " + COMMON + " + " + resource, e);
-        }
-    }
-
-    /**
-     * Parses one YAML resource.
-     *
-     * @param mapper   the YAML mapper
-     * @param resource the classpath resource
-     * @param missing  the error message if it does not exist
-     * @return the parsed tree; an empty object for an empty file
-     */
-    private static ObjectNode read(ObjectMapper mapper, String resource, String missing) {
+    private static Properties read(String resource, String missing) {
         try (InputStream in = EnvConfig.class.getResourceAsStream(resource)) {
             if (in == null) throw new IllegalStateException(missing);
-            JsonNode tree = mapper.readTree(in);
-            if (tree == null || tree.isMissingNode() || tree.isNull()) return mapper.createObjectNode();
-            if (!(tree instanceof ObjectNode object)) {
-                throw new IllegalStateException(resource + " must be a YAML mapping (key: value), not " + tree.getNodeType());
-            }
-            return object;
+            Properties props = new Properties();
+            props.load(new InputStreamReader(in, StandardCharsets.UTF_8));
+            return props;
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot read " + resource, e);
-        }
-    }
-
-    /**
-     * Fills placeholders in every text value of the parsed file (after parsing, so comments are never touched).
-     *
-     * @param node the parsed YAML
-     */
-    private static void fillTree(JsonNode node) {
-        UnaryOperator<String> lookup = name -> {
-            String value = System.getProperty(name);
-            return value != null ? value : System.getenv(name);
-        };
-        if (node instanceof ObjectNode object) {
-            Iterator<Map.Entry<String, JsonNode>> fields = object.fields();
-            while (fields.hasNext()) {
-                Map.Entry<String, JsonNode> field = fields.next();
-                if (field.getValue().isTextual()) {
-                    field.setValue(TextNode.valueOf(fill(field.getValue().asText(), lookup)));
-                } else {
-                    fillTree(field.getValue());
-                }
-            }
-        } else if (node instanceof ArrayNode array) {
-            for (int i = 0; i < array.size(); i++) {
-                if (array.get(i).isTextual()) array.set(i, TextNode.valueOf(fill(array.get(i).asText(), lookup)));
-                else fillTree(array.get(i));
-            }
         }
     }
 }

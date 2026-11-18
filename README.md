@@ -10,16 +10,16 @@ scenarios. One scenario can call several REST services, drive a real browser and
 | API | [REST Assured](https://rest-assured.io/) 5.5, API classes created by `ApiFactory` |
 | BDD | Cucumber 7 (Gherkin feature files), PicoContainer for dependency injection |
 | Runner | TestNG, with scenarios running in parallel and configurable retries |
-| Config | `common.yaml` for shared settings, plus one YAML file per environment (dev, test, uat, ci) with `${VAR}` placeholders for URLs |
+| Config | `common.properties` for shared settings, plus one properties file per environment (dev, test, uat, ci) with `${VAR}` placeholders for URLs |
 | Reports | Run summary, Cucumber, Allure and Extent |
 | CI | GitHub Actions, one job per test suite |
 
 ## What the framework does
 
-- **Shared and per-environment config.** `config/common.yaml` holds what all environments share (browser,
-  headless, wait times). `dev`, `test`, `uat` and `ci` each have a small YAML file with their URLs, including
-  the base URL the pages and the API classes use (`EnvConfig.get().ui().baseUrl()`). The default environment is
-  `environment:` in common.yaml (dev); choose another with `-Denv=uat`.
+- **Shared and per-environment config.** `config/common.properties` holds what all environments share (browser,
+  headless, wait times). `dev`, `test`, `uat` and `ci` each have a small properties file with their URLs, including
+  the base URL the pages and the API classes use (`Settings.getBaseUrl()`). The default environment is
+  `environment` in common.properties (dev); choose another with `-Denv=uat`.
   See [docs/running-tests.md](docs/running-tests.md).
 - **Parallel or sequential, by tag.** `@Parallel` scenarios run on several threads (4 by default,
   `-Dthreads=N`); `@Sequential` ones run alone, one after the other. Each worker thread keeps one browser, and
@@ -32,7 +32,7 @@ scenarios. One scenario can call several REST services, drive a real browser and
   an API step stores the customer it created as "the customer", and the GUI steps search for it and compare the
   page with it (and the other way round).
 - **API classes as in the existing framework.** Each service has an API class with a no-argument constructor
-  that reads its base URL with `EnvConfig.get().ui().baseUrl()` and calls the service with REST Assured
+  that reads its base URL with `Settings.getBaseUrl()` and calls the service with REST Assured
   (`CustomerApi.postCustomer(customer)` returns the `Response`). `ApiFactory.getApi(CustomerApi.class)` creates
   each API class once and hands out the same instance. Request and response bodies are model classes
   (`apis/model/Customer`). See [docs/api.md](docs/api.md).
@@ -62,13 +62,13 @@ agentic-qa-java/
 │   └── scripts/job_summary.py           turns run-summary.json into a GitHub job summary
 └── src/
     ├── main/java/com/agenticqa/
-    │   ├── config/                      EnvConfig (loads the YAML), Settings (typed config)
+    │   ├── config/                      EnvConfig (loads the properties), Settings (static getters)
     │   ├── core/                        TestSession, BrowserPool, DataKey, Variables, TestData
     │   ├── api/                         Api (marker interface), ApiFactory
     │   └── ui/                          CustomersPage (page object), LocatorRepository, PageElements
     │       └── healing/                 SmartLocator, Healer, HealingScorer, Fingerprint(Store), HealEvent
     ├── main/resources/
-    │   ├── config/common.yaml           shared: browser, waits, execution, cleanup, healing, retry
+    │   ├── config/common.properties     shared: browser, waits, execution, cleanup, healing, retry
     │   ├── config/env/                  per environment: UI URL and service base URLs (dev, test, uat, ci)
     │   └── locators/                    locators, one JSON file per page
     ├── test/java/com/agenticqa/
@@ -133,7 +133,7 @@ This prints the active environment and the settings it will use, with placeholde
 | One suite, by tag | `mvn test -Dcucumber.filter.tags="@api"` |
 | Combined tags | `mvn test -Dcucumber.filter.tags="@ui and not @healing"` |
 | Smoke tests | `mvn test -Dcucumber.filter.tags="@smoke"` |
-| Another environment | `mvn test -Denv=test` or `-Denv=uat` (reads `config/env/<name>.yaml`) |
+| Another environment | `mvn test -Denv=test` or `-Denv=uat` (reads `config/env/<name>.properties`) |
 | More or fewer threads | `mvn test -Dthreads=8` (`-Dthreads=1` runs one scenario at a time) |
 | Retry failed scenarios | `mvn test -Dretry.count=2 -Dretry.tags="@ui"` (default: the `retry` section of the env file) |
 | Re-run what failed last time | `mvn test -Dcucumber.features=@target/reports/failed-scenarios.txt` |
@@ -199,7 +199,7 @@ public class OrderApi implements Api {
     private final String ordersPath;
 
     public OrderApi() {
-        this.baseUrl = EnvConfig.get().ui().baseUrl();
+        this.baseUrl = Settings.getBaseUrl();
         this.ordersPath = "/orders";
     }
 
@@ -264,7 +264,7 @@ To share data between step classes, use `session.put(key, value)` / `session.get
 
 ### 5. A new environment
 
-Copy `src/main/resources/config/env/test.yaml` to `<name>.yaml`, change the URLs (or the variable names) and run
+Copy `src/main/resources/config/env/test.properties` to `<name>.properties`, change the URLs (or the variable names) and run
 with `-Denv=<name>`.
 
 ## CI
@@ -287,7 +287,7 @@ To add a suite, add its tag to `matrix.suite`.
 | Document | Contents |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | Layers, components, the scenario lifecycle and the workflow from start to finish |
-| [docs/running-tests.md](docs/running-tests.md) | common.yaml and environment files, wait times, @Parallel / @Sequential, cleanup before a run, retries, re-running failed scenarios |
+| [docs/running-tests.md](docs/running-tests.md) | common.properties and environment files, wait times, @Parallel / @Sequential, cleanup before a run, retries, re-running failed scenarios |
 | [docs/api.md](docs/api.md) | API classes, ApiFactory, models, sharing data with GUI steps, cleanup |
 | [docs/keys.md](docs/keys.md) | Sharing data with `Keys`: why, the keys there are, `of` / `listOf` / `mapOf`, use in steps and other classes |
 | [docs/base-unique.md](docs/base-unique.md) | Base uniques: `TestSession.put(Keys.BASE_UNIQUE, ...)` compared with the old static ThreadLocal `setBaseUniqueMap` |

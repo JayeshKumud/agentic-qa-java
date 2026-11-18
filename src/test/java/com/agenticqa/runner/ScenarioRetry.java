@@ -1,6 +1,5 @@
 package com.agenticqa.runner;
 
-import com.agenticqa.config.EnvConfig;
 import com.agenticqa.config.Settings;
 import io.cucumber.testng.Pickle;
 import io.cucumber.testng.PickleWrapper;
@@ -26,17 +25,16 @@ public class ScenarioRetry implements IRetryAnalyzer {
 
     @Override
     public boolean retry(ITestResult result) {
-        Settings.Retry settings = EnvConfig.get().retry();
         Object[] parameters = result.getParameters();
         if (parameters.length == 0 || !(parameters[0] instanceof PickleWrapper wrapper)) return false;
         Pickle pickle = wrapper.getPickle();
-        if (!settings.appliesTo(pickle.getTags())) return false;
+        if (!Settings.retryAppliesTo(pickle.getTags())) return false;
 
         String key = pickle.getUri() + ":" + pickle.getScenarioLine();
         int retry = RETRIES.merge(key, 1, Integer::sum);
-        if (retry > settings.count()) return false;
+        if (retry > Settings.getRetryCount()) return false;
         System.out.printf("[RETRY] %s (%s) failed; running it again, retry %d of %d%n",
-                pickle.getName(), key.substring(key.lastIndexOf('/') + 1), retry, settings.count());
+                pickle.getName(), key.substring(key.lastIndexOf('/') + 1), retry, Settings.getRetryCount());
         return true;
     }
 }
