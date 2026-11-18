@@ -21,12 +21,12 @@ import java.util.regex.Pattern;
 /**
  * Loads the settings of the active environment. Two files on the classpath (src/main/resources) are read and
  * merged: {@value #COMMON} holds what every environment shares (browser, waits, execution mode, cleanup,
- * healing, retry), and config/env/NAME.yaml holds what differs per environment (the UI URL, service base URLs,
- * overrides). A key set in the environment file wins; nested sections are merged key by key,
- * lists are replaced. Choose the environment with -Denv=test or the ENV variable; the default is dev.
+ * healing, retry), and config/env/NAME.yaml holds what differs per environment (the base URL, overrides). A key set in the environment file wins; nested sections are merged key by key,
+ * lists are replaced. Choose the environment with -Denv=test or the ENV variable; the default is the
+ * {@code environment:} value of common.yaml (dev if it has none).
  * <p>
  * Any value can be overridden for one run with a system property named by its path, for example
- * {@code -Dui.headless=false}, {@code -Dui.waits.actionMs=30000}, {@code -Dservices.customers.baseUrl=http://...},
+ * {@code -Dui.headless=false}, {@code -Dui.waits.actionMs=30000}, {@code -Dui.baseUrl=http://...},
  * {@code -Dretry.count=2} or {@code -Dexecution.defaultMode=sequential}.
  * <p>
  * Values may contain placeholders, so URLs and secrets of shared environments (test, uat) need not be committed:
@@ -52,12 +52,26 @@ public final class EnvConfig {
     /**
      * Name of the active environment.
      *
-     * @return the -Denv system property, else the ENV environment variable, else "dev"
+     * @return the -Denv system property, else the ENV environment variable, else {@code environment} of
+     *         common.yaml, else "dev"
      */
     public static String envName() {
         String env = System.getProperty("env");
         if (env == null || env.isBlank()) env = System.getenv("ENV");
+        if (env == null || env.isBlank()) env = defaultEnv();
         return (env == null || env.isBlank()) ? "dev" : env.trim();
+    }
+
+    private static volatile String defaultEnv;
+
+    /** The {@code environment:} value of common.yaml, read once. */
+    private static String defaultEnv() {
+        if (defaultEnv == null) {
+            JsonNode value = read(new ObjectMapper(new YAMLFactory()), COMMON, "Shared settings file not found on classpath: "
+                    + COMMON).path("environment");
+            defaultEnv = value.isTextual() ? value.asText() : "";
+        }
+        return defaultEnv;
     }
 
     /**
@@ -124,7 +138,7 @@ public final class EnvConfig {
 
     /**
      * Applies -D overrides: every system property whose name is a path into one of the tree's top-level
-     * sections ({@code ui.headless}, {@code services.customers.baseUrl}, ...) replaces that value; missing
+     * sections ({@code ui.headless}, {@code ui.baseUrl}, ...) replaces that value; missing
      * sections on the way are created. Properties of other names (env, threads, java.version, ...) are ignored.
      * Pure logic, unit tested.
      *
@@ -163,6 +177,7 @@ public final class EnvConfig {
         JsonNode env = read(mapper, resource, "Environment file not found on classpath: " + resource
                 + ". Known environments: " + KNOWN + " (src/main/resources/config/env).");
         JsonNode tree = merge(common, env);
+        ((ObjectNode) tree).put("environment", envName()); // the environment that actually runs, also with -Denv
         fillTree(tree);
         applyOverrides((ObjectNode) tree, System.getProperties());
         try {

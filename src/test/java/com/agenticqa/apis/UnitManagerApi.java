@@ -6,8 +6,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * PLACEHOLDER for the company UnitManagerApi, used by {@code TestInitializeHooks.teardownData} to delete the zone
- * a scenario created. This version calls no service and deletes nothing. Paste the real API class here (and add
- * its service under {@code services:} in the environment files, read with {@code EnvConfig.get().apiUrl}).
+ * a scenario created. This version calls no service and deletes nothing. Paste the real API class here (its
+ * base URL is {@code EnvConfig.get().ui().baseUrl()}).
  */
 public class UnitManagerApi implements Api {
     private static final Logger logger = LoggerFactory.getLogger(UnitManagerApi.class);

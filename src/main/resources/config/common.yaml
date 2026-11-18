@@ -10,6 +10,8 @@ url:
   mark: kl-mmknbj-cd
   klmhh: jhshdajh
 
+environment: dev
+
 cloud: testcould
 # ------------------------------------------------------------------------------------------------ browser
 ui:

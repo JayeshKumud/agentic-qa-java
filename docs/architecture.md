@@ -12,7 +12,7 @@ This page explains how the framework is built, how its parts fit together, and w
    locator files and page objects, HTTP calls in API classes, each in one place.
 3. **API and UI share data through the session.** An API step stores what it created in the `TestSession`, and
    a GUI step of the same scenario reads it, and the other way round.
-4. **Config, not code, for environments and services.** The UI URL, the base URL of every service, waits and
+4. **Config, not code, for environments.** The base URL (pages and API classes), waits and
    healing settings come from `config/env/<env>.yaml` and can be overridden per run.
 5. **Failures carry their evidence.** Screenshot, trace, video and heal events are attached automatically. No
    step has to remember to collect them.
@@ -49,7 +49,7 @@ flowchart TB
             SL["SmartLocator"]
             HE["Healer · HealingScorer<br/>FingerprintStore"]
         end
-        CFG["EnvConfig → Settings<br/>apiUrl(name), jks()"]
+        CFG["EnvConfig → Settings<br/>ui().baseUrl(), jks()"]
     end
 
     subgraph Ext["Outside the JVM"]
@@ -89,7 +89,7 @@ flowchart TB
 | API | `api.ApiFactory`, `apis.*` | `ApiFactory` creates each API class once; API classes call their service with REST Assured |
 | UI | `ui.*` | Page objects built from `SmartLocator`s |
 | Healing | `ui.healing.*` | Fingerprint capture, similarity scoring and replacement of broken selectors |
-| Config | `config.*` | Loads `config/env/<env>.yaml` once per JVM into a typed `Settings` record; `EnvConfig.get().apiUrl(name)` and `.jks()` for API classes |
+| Config | `config.*` | Loads `config/env/<env>.yaml` once per JVM into a typed `Settings` record; `EnvConfig.get().ui().baseUrl()` and `.jks()` for API classes |
 | Reporting | `reporting.RunSummaryPlugin` | Cucumber event listener that writes `run-summary.html` and `.json` |
 
 ## Key components
@@ -120,7 +120,7 @@ classDiagram
         +deleteCustomer(id) Response
     }
     class Settings {
-        +apiUrl(name) String
+        +ui() Ui
         +jks() Jks
     }
     class CustomersPage
@@ -156,7 +156,7 @@ classDiagram
 API classes are written as in the existing framework (see [api.md](api.md)):
 
 1. An API class (`apis/CustomerApi`) implements `Api` and has a no-argument constructor that reads its base URL
-   with `EnvConfig.get().apiUrl("customers")`, which `-Dservices.customers.baseUrl` can override.
+   with `EnvConfig.get().ui().baseUrl()`, which `-Dui.baseUrl` can override.
 2. Each method calls the service with REST Assured, fails with `Assert.fail` on an unexpected status and returns
    the `Response`. Bodies are model classes (`apis/model/Customer`), serialized by Jackson.
 3. Steps get the class with `ApiFactory.getApi(CustomerApi.class)`, which creates it once and returns the same
@@ -182,10 +182,10 @@ The full algorithm is in [healing.md](healing.md).
 
 ```mermaid
 flowchart LR
-    P["-Denv=ci<br/>or ENV=ci<br/>(default dev)"] --> E["EnvConfig.get()<br/>read once per JVM"]
+    P["-Denv=ci<br/>or ENV=ci<br/>(default: environment in common.yaml)"] --> E["EnvConfig.get()<br/>read once per JVM"]
     Y["classpath:<br/>config/env/ci.yaml"] --> E
-    E --> S["Settings<br/>ui · services · healing"]
-    O["-Dservices.NAME.baseUrl"] --> S
+    E --> S["Settings<br/>ui · healing · jks"]
+    O["-Dui.baseUrl"] --> S
 ```
 
 ## Workflow: what happens on `mvn test`
@@ -292,7 +292,7 @@ doesn't cancel the other. A newer push to the same branch cancels the run that i
 | You want to… | Change |
 |---|---|
 | Test a new endpoint | A method on the service's API class in `apis/`, then a step that calls it |
-| Talk to a new microservice | Its `baseUrl` under `services:` in each `config/env/*.yaml`, an API class in `apis/` and its models in `apis/model/` |
+| Talk to a new microservice | An API class in `apis/` (base URL from `EnvConfig.get().ui().baseUrl()`) and its models in `apis/model/` |
 | Add API steps | A step class using `ApiFactory.getApi(XxxApi.class)`, storing results in the `TestSession` |
 | Test a new page | Add `locators/<page>.json`, a page object using `PageElements`, plus a step class |
 | Share data between step classes | Add a `DataKey` in `steps/Keys.java` and use `session.put` / `get` |

@@ -3,14 +3,6 @@
 ui:
   baseUrl: http://127.0.0.1:8000
   headless: false            # watch the browser locally
-# Every HTTP service the API classes talk to, by name: EnvConfig.get().apiUrl("customers") returns its baseUrl.
-# Override a URL per run with -Dservices.customers.baseUrl=http://...
-services:
-  customers:
-    baseUrl: http://127.0.0.1:8000
-  appWebserviceAdapter:
-    baseUrl: ${DEV_WEBSERVICE_ADAPTER_URL:-https://127.0.0.1:8443}
-# Java keystore credentials: EnvConfig.get().jks().username() / .password(). Override with -Djks.password=...
 jks:
   username: system
   password: system1

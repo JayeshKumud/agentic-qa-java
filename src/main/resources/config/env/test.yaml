@@ -11,10 +11,5 @@ ui:
     actionMs: 20000
     navigationMs: 40000
     assertionMs: 20000
-services:
-  customers:
-    baseUrl: ${TEST_CUSTOMERS_URL:-https://test-api.customers.example.com}
-  appWebserviceAdapter:
-    baseUrl: ${TEST_WEBSERVICE_ADAPTER_URL:-https://test-webservice-adapter.example.com}
 retry:
   count: 1

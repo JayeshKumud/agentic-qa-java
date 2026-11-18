@@ -4,25 +4,14 @@ import io.cucumber.tagexpressions.TagExpressionParser;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  * The run's settings: config/common.yaml with config/env/NAME.yaml on top. Read with {@code EnvConfig.get()}.
  */
-public record Settings(Ui ui, Map<String, Service> services, Execution execution, Cleanup cleanup,
-                       Healing healing, Retry retry, Jks jks, Url url, Sct sct, String cloud) {
+public record Settings(Ui ui, Execution execution, Cleanup cleanup,
+                       Healing healing, Retry retry, Jks jks, Url url, Sct sct, String cloud, String environment) {
 
-    /** Base URL of a service, {@code services.<name>.baseUrl}. */
-    public String apiUrl(String name) {
-        Service service = services == null ? null : services.get(name);
-        if (service == null || service.baseUrl() == null || service.baseUrl().isBlank()) {
-            throw new IllegalArgumentException("services." + name + ".baseUrl is not set in config/env/"
-                    + EnvConfig.envName() + ".yaml");
-        }
-        return service.baseUrl();
-    }
-
-    /** Browser settings. */
+    /** Browser settings; baseUrl is also the base URL of the API classes. */
     public record Ui(String baseUrl, String browser, boolean headless, int slowMoMs, Viewport viewport,
                      boolean maximize, boolean ignoreHttpsErrors, String video, Waits waits) {
 
@@ -42,9 +31,6 @@ public record Settings(Ui ui, Map<String, Service> services, Execution execution
 
     /** Playwright wait times in milliseconds. */
     public record Waits(int actionMs, int navigationMs, int assertionMs) {}
-
-    /** One HTTP service. */
-    public record Service(String baseUrl) {}
 
     /** How scenarios without @Parallel or @Sequential run: parallel or sequential. */
     public record Execution(String defaultMode) {
@@ -85,22 +71,12 @@ public record Settings(Ui ui, Map<String, Service> services, Execution execution
         }
     }
 
-    /** Java keystore credentials. The password is masked when printed. */
-    public record Jks(String username, String password) {
-        @Override
-        public String toString() {
-            return "Jks[username=" + username + ", password=****]";
-        }
-    }
+    /** Java keystore credentials. */
+    public record Jks(String username, String password) {}
 
     /** The url section of common.yaml. */
     public record Url(String mark, String klmhh) {}
 
-    /** The sct section of the environment file. callps is masked when printed. */
-    public record Sct(String cllid, String callps) {
-        @Override
-        public String toString() {
-            return "Sct[cllid=" + cllid + ", callps=****]";
-        }
-    }
+    /** The sct section of the environment file. */
+    public record Sct(String cllid, String callps) {}
 }

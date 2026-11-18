@@ -18,7 +18,8 @@ scenarios. One scenario can call several REST services, drive a real browser and
 
 - **Shared and per-environment config.** `config/common.yaml` holds what all environments share (browser,
   headless, wait times). `dev`, `test`, `uat` and `ci` each have a small YAML file with their URLs, including
-  the base URL of every service the API classes call (`EnvConfig.get().apiUrl(name)`). Choose one with `-Denv=uat`.
+  the base URL the pages and the API classes use (`EnvConfig.get().ui().baseUrl()`). The default environment is
+  `environment:` in common.yaml (dev); choose another with `-Denv=uat`.
   See [docs/running-tests.md](docs/running-tests.md).
 - **Parallel or sequential, by tag.** `@Parallel` scenarios run on several threads (4 by default,
   `-Dthreads=N`); `@Sequential` ones run alone, one after the other. Each worker thread keeps one browser, and
@@ -31,7 +32,7 @@ scenarios. One scenario can call several REST services, drive a real browser and
   an API step stores the customer it created as "the customer", and the GUI steps search for it and compare the
   page with it (and the other way round).
 - **API classes as in the existing framework.** Each service has an API class with a no-argument constructor
-  that reads its base URL with `EnvConfig.get().apiUrl("customers")` and calls the service with REST Assured
+  that reads its base URL with `EnvConfig.get().ui().baseUrl()` and calls the service with REST Assured
   (`CustomerApi.postCustomer(customer)` returns the `Response`). `ApiFactory.getApi(CustomerApi.class)` creates
   each API class once and hands out the same instance. Request and response bodies are model classes
   (`apis/model/Customer`). See [docs/api.md](docs/api.md).
@@ -61,7 +62,7 @@ agentic-qa-java/
 │   └── scripts/job_summary.py           turns run-summary.json into a GitHub job summary
 └── src/
     ├── main/java/com/agenticqa/
-    │   ├── config/                      EnvConfig (loads the YAML), Settings (typed config), EnvConfig.get().apiUrl
+    │   ├── config/                      EnvConfig (loads the YAML), Settings (typed config)
     │   ├── core/                        TestSession, BrowserPool, DataKey, Variables, TestData
     │   ├── api/                         Api (marker interface), ApiFactory
     │   └── ui/                          CustomersPage (page object), LocatorRepository, PageElements
@@ -137,7 +138,7 @@ This prints the active environment and the settings it will use, with placeholde
 | Retry failed scenarios | `mvn test -Dretry.count=2 -Dretry.tags="@ui"` (default: the `retry` section of the env file) |
 | Re-run what failed last time | `mvn test -Dcucumber.features=@target/reports/failed-scenarios.txt` |
 | Allure HTML report | `mvn allure:report` after the run (`mvn allure:serve` opens it) |
-| Point one service elsewhere | `mvn test -Dservices.customers.baseUrl=http://localhost:9000` |
+| Point the run elsewhere | `mvn test -Dui.baseUrl=http://localhost:9000` |
 | Unit tests only | `mvn test -Dtest='*Test'` |
 
 The environment can also be set with the `ENV` environment variable. The default is `dev`, which shows the
@@ -190,15 +191,7 @@ Feature: Customer journey
 
 ### 2. A new API class
 
-Add the service's base URL to every environment file:
-
-```yaml
-services:
-  orders:
-    baseUrl: http://127.0.0.1:8001
-```
-
-Then write an API class in `src/test/java/com/agenticqa/apis/`, in the same style as `CustomerApi`:
+Write an API class in `src/test/java/com/agenticqa/apis/`, in the same style as `CustomerApi`:
 
 ```java
 public class OrderApi implements Api {
@@ -206,7 +199,7 @@ public class OrderApi implements Api {
     private final String ordersPath;
 
     public OrderApi() {
-        this.baseUrl = EnvConfig.get().apiUrl("orders");
+        this.baseUrl = EnvConfig.get().ui().baseUrl();
         this.ordersPath = "/orders";
     }
 
@@ -295,7 +288,7 @@ To add a suite, add its tag to `matrix.suite`.
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | Layers, components, the scenario lifecycle and the workflow from start to finish |
 | [docs/running-tests.md](docs/running-tests.md) | common.yaml and environment files, wait times, @Parallel / @Sequential, cleanup before a run, retries, re-running failed scenarios |
-| [docs/api.md](docs/api.md) | API classes, ApiFactory, EnvConfig.get().apiUrl, models, sharing data with GUI steps, cleanup |
+| [docs/api.md](docs/api.md) | API classes, ApiFactory, models, sharing data with GUI steps, cleanup |
 | [docs/keys.md](docs/keys.md) | Sharing data with `Keys`: why, the keys there are, `of` / `listOf` / `mapOf`, use in steps and other classes |
 | [docs/base-unique.md](docs/base-unique.md) | Base uniques: `TestSession.put(Keys.BASE_UNIQUE, ...)` compared with the old static ThreadLocal `setBaseUniqueMap` |
 | [docs/page-components.md](docs/page-components.md) | Page objects per scenario: `TestSession.pageComponent` line by line, why a `Supplier`, `type.cast`, `synchronized`, and where the pages end |

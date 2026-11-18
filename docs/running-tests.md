@@ -21,7 +21,7 @@ Settings come from two files in [`src/main/resources/config`](../src/main/resour
 | File | Holds |
 |---|---|
 | [`common.yaml`](../src/main/resources/config/common.yaml) | what every environment shares: browser, headless, viewport, **wait times**, execution mode, cleanup, healing, retry defaults |
-| `env/<name>.yaml` | only what differs per environment: the **UI URL**, the **base URL of every service** (read by the API classes with `EnvConfig.get().apiUrl`), and the odd override (headless off in dev, longer waits in UAT, retry count) |
+| `env/<name>.yaml` | only what differs per environment: the **base URL** (`ui.baseUrl`, used by the pages and the API classes), and the odd override (headless off in dev, longer waits in UAT, retry count) |
 
 The environment file is merged on top of `common.yaml`: a key it sets wins, sections are merged key by key
 (setting `ui.waits.actionMs` keeps `ui.waits.navigationMs` from `common.yaml`), and lists are replaced.
@@ -52,19 +52,15 @@ ui:
 
 An environment file overrides only what it needs; for example `uat.yaml` sets longer waits.
 
-### Service URLs (environment files)
+### Default environment
 
-Each environment file lists the services the API classes talk to, by name, with their base URL:
+`environment:` in common.yaml chooses the environment when neither `-Denv` nor the `ENV` variable is set:
 
 ```yaml
-services:
-  customers:
-    baseUrl: ${UAT_CUSTOMERS_URL:-https://uat-api.customers.example.com}
-  appWebserviceAdapter:
-    baseUrl: ${UAT_WEBSERVICE_ADAPTER_URL:-https://uat-webservice-adapter.example.com}
+environment: dev
 ```
 
-An API class reads it in its constructor with `EnvConfig.get().apiUrl("customers")`; see [api.md](api.md).
+### Placeholders
 
 - `${NAME}` is filled from the system property `NAME` (`-DNAME=...`), or else the environment variable `NAME`.
 - `${NAME:-fallback}` uses the fallback when neither is set.
@@ -83,8 +79,8 @@ jks:
 
 Read them with `EnvConfig.get().jks().username()` and `.password()`; `jks()` is null in an environment without
 the section. The same goes for the `url` section of common.yaml (`EnvConfig.get().url().mark()`) and the `sct`
-section of dev.yaml (`EnvConfig.get().sct().cllid()`). The password and `callps` are masked as
-`****` when the settings are printed (`ConfigCheck`, logs). Override per run with `-Djks.password=...`, or use a
+section of dev.yaml (`EnvConfig.get().sct().cllid()`). All values, the password included, are printed as they
+are (`ConfigCheck`, logs). Override per run with `-Djks.password=...`, or use a
 placeholder such as `password: ${UAT_JKS_PASSWORD}` so the real value stays out of the file.
 
 ### One-off overrides
@@ -100,7 +96,6 @@ Any setting can be overridden for one run with a system property named by its pa
 | `ui.ignoreHttpsErrors` | `-Dui.ignoreHttpsErrors=true` (an environment with a self-signed certificate) |
 | `ui.maximize` | `-Dui.headless=false -Dui.maximize=true` (real, maximized window instead of the viewport; headed only) |
 | `ui.waits.actionMs` | `-Dui.waits.actionMs=30000` |
-| `services.<name>.baseUrl` | `-Dservices.customers.baseUrl=http://localhost:9000` |
 | `execution.defaultMode` | `-Dexecution.defaultMode=sequential` |
 | `cleanup.beforeRun` | `-Dcleanup.beforeRun=false` |
 | `retry.count`, `retry.tags` | see [Retries](#retries-of-failed-scenarios) |

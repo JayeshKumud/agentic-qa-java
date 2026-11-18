@@ -18,8 +18,8 @@
     <restassured.version>5.5.0</restassured.version>
     <allure.version>2.29.0</allure.version>
     <extent.adapter.version>1.14.0</extent.adapter.version>
-    <!-- overridable: mvn test -Denv=test -Dthreads=8 -->
-    <env>dev</env>
+    <!-- overridable: mvn test -Denv=test -Dthreads=8; empty env = the environment: value of config/common.yaml -->
+    <env></env>
     <threads>4</threads>
   </properties>
 

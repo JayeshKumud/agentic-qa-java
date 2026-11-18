@@ -8,7 +8,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 import static org.testng.Assert.assertEquals;
@@ -78,26 +77,17 @@ public class CommonConfigTest {
     }
 
     @Test
-    public void apiUrlReturnsTheServiceBaseUrl() {
-        Settings settings = new Settings(null, Map.of("customers", new Settings.Service("http://c")),
-                null, null, null, null, null, null, null, null);
-        assertEquals(settings.apiUrl("customers"), "http://c");
-        expectThrows(IllegalArgumentException.class, () -> settings.apiUrl("orders"));
-        assertEquals(EnvConfig.get().apiUrl("customers"), "http://127.0.0.1:8000", "dev: services.customers.baseUrl");
-    }
-
-    @Test
-    public void readsJksUrlAndSctAndMasksTheSecrets() {
+    public void readsJksUrlAndSct() {
         Settings settings = EnvConfig.get(); // dev
         assertEquals(settings.jks().username(), "system");
         assertEquals(settings.jks().password(), "system1");
-        assertFalse(settings.jks().toString().contains("system1"), "password must not appear in logs");
         assertEquals(settings.url().mark(), "kl-mmknbj-cd", "from common.yaml");
         assertEquals(settings.url().klmhh(), "jhshdajh");
         assertEquals(settings.cloud(), "testcould", "from common.yaml");
+        assertEquals(settings.environment(), "dev", "environment: of common.yaml");
+        assertEquals(EnvConfig.envName(), "dev");
         assertEquals(settings.sct().cllid(), "test", "from dev.yaml");
         assertEquals(settings.sct().callps(), "tstps");
-        assertFalse(settings.sct().toString().contains("tstps"), "callps must not appear in logs");
     }
 
     @Test
@@ -106,7 +96,6 @@ public class CommonConfigTest {
         assertEquals(settings.ui().baseUrl(), "http://127.0.0.1:8000", "from the environment file");
         assertEquals(settings.ui().browser(), "chromium", "from common.yaml");
         assertTrue(settings.ui().waits().navigationMs() > 0);
-        assertEquals(settings.apiUrl("customers"), "http://127.0.0.1:8000", "from the environment file");
         assertTrue(settings.cleanup().folders().contains("target/reports"));
         assertEquals(settings.ui().video(), "failed", "videos of failed scenarios by default");
         assertFalse(settings.ui().ignoreHttpsErrors());

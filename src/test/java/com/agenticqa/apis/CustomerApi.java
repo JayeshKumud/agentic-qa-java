@@ -16,7 +16,7 @@ public class CustomerApi implements Api {
     private final String customersPath;
 
     public CustomerApi() {
-        this.baseUrl = EnvConfig.get().apiUrl("customers");
+        this.baseUrl = EnvConfig.get().ui().baseUrl();
         this.customersPath = "/customers";
     }
 

@@ -11,10 +11,5 @@ ui:
     actionMs: 30000
     navigationMs: 60000
     assertionMs: 30000
-services:
-  customers:
-    baseUrl: ${UAT_CUSTOMERS_URL:-https://uat-api.customers.example.com}
-  appWebserviceAdapter:
-    baseUrl: ${UAT_WEBSERVICE_ADAPTER_URL:-https://uat-webservice-adapter.example.com}
 retry:
   count: 2

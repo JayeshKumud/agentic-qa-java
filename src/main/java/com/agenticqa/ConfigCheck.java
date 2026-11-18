@@ -18,7 +18,6 @@ public class ConfigCheck {
         System.out.println("env       : " + EnvConfig.envName());
         var settings = EnvConfig.get();
         System.out.println("ui        : " + settings.ui());
-        System.out.println("services  : " + settings.services());
         System.out.println("execution : " + settings.execution());
         System.out.println("cleanup   : " + settings.cleanup());
         System.out.println("retry     : " + settings.retry());

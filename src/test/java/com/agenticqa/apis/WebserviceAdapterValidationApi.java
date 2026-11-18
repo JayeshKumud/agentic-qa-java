@@ -15,7 +15,7 @@ public class WebserviceAdapterValidationApi implements Api {
     private final DateTimeFormatter formatter;
 
     public WebserviceAdapterValidationApi() {
-        this.baseUrl = EnvConfig.get().apiUrl("appWebserviceAdapter");
+        this.baseUrl = EnvConfig.get().ui().baseUrl();
         this.defaultingPath = "/sendNackHeartBeat";
         this.formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
     }

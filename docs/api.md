@@ -11,7 +11,7 @@ through the API and check it in the browser, or the other way round.
 |---|---|---|
 | `Api` | `src/main/java/com/agenticqa/api/Api.java` | Marker interface every API class implements |
 | `ApiFactory` | `src/main/java/com/agenticqa/api/ApiFactory.java` | `getApi(XxxApi.class)` creates each API class once and returns the same instance on every call |
-| `EnvConfig.get().apiUrl(name)` | `src/main/java/com/agenticqa/config/Settings.java` | Base URL of a service in the active environment: `services.<name>.baseUrl` |
+| `EnvConfig.get().ui().baseUrl()` | `src/main/java/com/agenticqa/config/Settings.java` | Base URL of the active environment: `ui.baseUrl` |
 | API classes | `src/test/java/com/agenticqa/apis/` | `CustomerApi`, `WebserviceAdapterValidationApi`: one method per call, REST Assured, `Assert.fail` on an unexpected status |
 | Models | `src/test/java/com/agenticqa/apis/model/` | `Customer`: the request and response body, serialized by Jackson |
 | Steps | `src/test/java/com/agenticqa/steps/CustomerApiSteps.java` | Call the API classes and store the result in the `TestSession` |
@@ -24,7 +24,7 @@ public class CustomerApi implements Api {
     private final String customersPath;
 
     public CustomerApi() {                                    // no-argument constructor, called by ApiFactory
-        this.baseUrl = EnvConfig.get().apiUrl("customers");         // services.customers.baseUrl of the active env
+        this.baseUrl = EnvConfig.get().ui().baseUrl();               // ui.baseUrl of the active env
         this.customersPath = "/customers";
     }
 
@@ -50,10 +50,9 @@ service.
 - **One instance for the whole run.** `ApiFactory.getApi` creates each API class once and returns the same
   instance to every scenario and thread. An API class therefore keeps no per-scenario state, only final
   settings such as its base URL and paths. Per-scenario data goes into the `TestSession`.
-- **Base URLs per environment.** `EnvConfig.get().apiUrl(name)` reads `services.<name>.baseUrl` from the merged config
-  (common.yaml, the environment file, `-D` overrides), so `-Denv=uat` or
-  `-Dservices.customers.baseUrl=http://...` switches the API classes too. A service that is not configured
-  fails with a message that names the environment file.
+- **Base URL per environment.** API classes use `EnvConfig.get().ui().baseUrl()`, the same URL as the pages,
+  from the merged config (common.yaml, the environment file, `-D` overrides), so `-Denv=uat` or
+  `-Dui.baseUrl=http://...` switches the API classes too.
 - **Test scope.** REST Assured and TestNG are test dependencies, so API classes and models live under
   `src/test/java` and can use `Assert.fail`.
 - **No browser.** API classes call their services directly, so API-only scenarios never start a browser.
@@ -107,9 +106,8 @@ hide the real result of the scenario.
 
 ## Adding an API
 
-1. Add the service's base URL to every environment file under `services:`.
-2. Add an API class in `apis/` like `CustomerApi`: `implements Api`, a no-argument constructor with
-   `EnvConfig.get().apiUrl("<service>")`, one method per call that returns the `Response`.
-3. Add model classes in `apis/model/` for its bodies.
-4. Call it from steps with `ApiFactory.getApi(XxxApi.class)`, store results with `session.put(key, value)`, and
+1. Add an API class in `apis/` like `CustomerApi`: `implements Api`, a no-argument constructor with
+   `EnvConfig.get().ui().baseUrl()`, one method per call that returns the `Response`.
+2. Add model classes in `apis/model/` for its bodies.
+3. Call it from steps with `ApiFactory.getApi(XxxApi.class)`, store results with `session.put(key, value)`, and
    register what it creates with `cleanup.add(...)`.
