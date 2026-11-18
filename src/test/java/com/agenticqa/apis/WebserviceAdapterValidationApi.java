@@ -1,7 +1,7 @@
 package com.agenticqa.apis;
 
 import com.agenticqa.api.Api;
-import com.agenticqa.config.Config;
+import com.agenticqa.config.EnvConfig;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
@@ -15,7 +15,7 @@ public class WebserviceAdapterValidationApi implements Api {
     private final DateTimeFormatter formatter;
 
     public WebserviceAdapterValidationApi() {
-        this.baseUrl = Config.getApiUrl("appWebserviceAdapter");
+        this.baseUrl = EnvConfig.get().apiUrl("appWebserviceAdapter");
         this.defaultingPath = "/sendNackHeartBeat";
         this.formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
     }

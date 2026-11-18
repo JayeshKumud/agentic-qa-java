@@ -23,5 +23,6 @@ public class ConfigCheck {
         System.out.println("execution : " + settings.execution());
         System.out.println("cleanup   : " + settings.cleanup());
         System.out.println("retry     : " + settings.retry());
+        System.out.println("jks       : " + (settings.hasJks() ? settings.jks() : "not configured"));
     }
 }

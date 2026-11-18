@@ -1,7 +1,7 @@
 package com.agenticqa.apis;
 
 import com.agenticqa.api.Api;
-import com.agenticqa.config.Config;
+import com.agenticqa.config.EnvConfig;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
@@ -16,7 +16,7 @@ public class CustomerApi implements Api {
     private final String customersPath;
 
     public CustomerApi() {
-        this.baseUrl = Config.getApiUrl("customers");
+        this.baseUrl = EnvConfig.get().apiUrl("customers");
         this.customersPath = "/customers";
     }
 

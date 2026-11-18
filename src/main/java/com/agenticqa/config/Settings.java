@@ -12,17 +12,23 @@ import java.util.TreeMap;
 /**
  * Typed view of the run's settings: config/common.yaml with config/env/NAME.yaml merged on top (see
  * {@link EnvConfig}). Every value can be overridden for one run with a system property named by its path, for
- * example {@code -Dui.headless=false} or {@code -Dservices.customers.baseUrl=http://...}.
+ * example {@code -Dui.headless=false} or {@code -Dservices.customers.baseUrl=http://...}. Read it anywhere with
+ * {@code EnvConfig.get()}:
+ * <pre>
+ * String baseUrl = EnvConfig.get().apiUrl("customers");   // services.customers.baseUrl
+ * String user    = EnvConfig.get().jks().username();      // jks.username
+ * </pre>
  *
  * @param ui              browser settings and waits
- * @param services        the HTTP services tests talk to, by name, for example "customers" ({@link Config#getApiUrl})
+ * @param services        the HTTP services tests talk to, by name, for example "customers" ({@link #apiUrl})
  * @param execution       how scenarios without @Parallel or @Sequential run
  * @param cleanup         folders emptied before a run, and the run's log file
  * @param healing         self-healing locator settings; defaults apply when the section is missing
  * @param retry           which failed scenarios are run again, and how often; no retries when the section is missing
+ * @param jks             Java keystore credentials ({@link #jks()}); only in the environments that need them
  */
 public record Settings(Ui ui, Map<String, Service> services, Execution execution, Cleanup cleanup,
-                       Healing healing, Retry retry) {
+                       Healing healing, Retry retry, Jks jks) {
 
     /**
      * Browser settings, never null, with defaults for missing values.
@@ -86,6 +92,43 @@ public record Settings(Ui ui, Map<String, Service> services, Execution execution
                     + ". Add it under 'services:' in config/env/" + EnvConfig.envName() + ".yaml");
         }
         return service;
+    }
+
+    /**
+     * Base URL of a service of the active environment, {@code services.<name>.baseUrl}. API classes read it in their
+     * constructor: {@code this.baseUrl = EnvConfig.get().apiUrl("customers");}
+     *
+     * @param name the service name, for example "customers"
+     * @return the base URL, for example http://127.0.0.1:8000
+     * @throws IllegalArgumentException if the service is not configured
+     * @throws IllegalStateException    if the service has no baseUrl
+     */
+    public String apiUrl(String name) {
+        String baseUrl = service(name).baseUrl();
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalStateException("services." + name + ".baseUrl is not set in config/env/"
+                    + EnvConfig.envName() + ".yaml");
+        }
+        return baseUrl;
+    }
+
+    /**
+     * Java keystore credentials, {@code jks:} in the environment file.
+     *
+     * @return the jks section
+     * @throws IllegalStateException if the active environment has no jks section
+     */
+    @Override
+    public Jks jks() {
+        if (jks == null) {
+            throw new IllegalStateException("No 'jks:' section in config/env/" + EnvConfig.envName() + ".yaml");
+        }
+        return jks;
+    }
+
+    /** @return true if the active environment has a jks section */
+    public boolean hasJks() {
+        return jks != null;
     }
 
     /**
@@ -167,9 +210,22 @@ public record Settings(Ui ui, Map<String, Service> services, Execution execution
     /**
      * One HTTP service (microservice).
      *
-     * @param baseUrl service URL, read by API classes with {@code Config.getApiUrl(name)}
+     * @param baseUrl service URL, read by API classes with {@code EnvConfig.get().apiUrl(name)}
      */
     public record Service(String baseUrl) {}
+
+    /**
+     * Java keystore credentials.
+     *
+     * @param username keystore user
+     * @param password keystore password; masked in {@link #toString()}, so it never appears in logs
+     */
+    public record Jks(String username, String password) {
+        @Override
+        public String toString() {
+            return "Jks[username=" + username + ", password=" + (password == null ? null : "****") + "]";
+        }
+    }
 
     /**
      * How scenarios run.

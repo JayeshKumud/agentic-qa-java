@@ -385,7 +385,7 @@ public Response searchCustomers(String name) {
 
 1. Add its `baseUrl` under `services:` in each environment file.
 2. Add `XxxApi implements Api` in `src/test/java/com/agenticqa/apis/` with a no-argument constructor that reads
-   `Config.getApiUrl("<service>")`.
+   `EnvConfig.get().apiUrl("<service>")`.
 3. Add its request and response models in `apis/model/`.
 4. Call it from steps with `ApiFactory.getApi(XxxApi.class)`.
 
@@ -425,6 +425,6 @@ List<Unit.UnitKL> units = TestSession.current().list(UNIT_KL);           // empt
 ## API classes in the existing framework's style (`Api`, `ApiFactory`)
 
 The API part keeps the existing framework's shape: API classes with a no-argument constructor, base URL from
-`Config.getApiUrl(name)`, REST Assured calls, created once for the whole run by `ApiFactory.getApi(...)`. Only the
+`EnvConfig.get().apiUrl(name)`, REST Assured calls, created once for the whole run by `ApiFactory.getApi(...)`. Only the
 GUI part uses the session setup above. API and GUI steps share data through the `TestSession` store. See
 [api.md](api.md).

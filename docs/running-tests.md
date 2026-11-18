@@ -21,7 +21,7 @@ Settings come from two files in [`src/main/resources/config`](../src/main/resour
 | File | Holds |
 |---|---|
 | [`common.yaml`](../src/main/resources/config/common.yaml) | what every environment shares: browser, headless, viewport, **wait times**, execution mode, cleanup, healing, retry defaults |
-| `env/<name>.yaml` | only what differs per environment: the **UI URL**, the **base URL of every service** (read by the API classes with `Config.getApiUrl`), and the odd override (headless off in dev, longer waits in UAT, retry count) |
+| `env/<name>.yaml` | only what differs per environment: the **UI URL**, the **base URL of every service** (read by the API classes with `EnvConfig.get().apiUrl`), and the odd override (headless off in dev, longer waits in UAT, retry count) |
 
 The environment file is merged on top of `common.yaml`: a key it sets wins, sections are merged key by key
 (setting `ui.waits.actionMs` keeps `ui.waits.navigationMs` from `common.yaml`), and lists are replaced.
@@ -64,12 +64,27 @@ services:
     baseUrl: ${UAT_WEBSERVICE_ADAPTER_URL:-https://uat-webservice-adapter.example.com}
 ```
 
-An API class reads it in its constructor with `Config.getApiUrl("customers")`; see [api.md](api.md).
+An API class reads it in its constructor with `EnvConfig.get().apiUrl("customers")`; see [api.md](api.md).
 
 - `${NAME}` is filled from the system property `NAME` (`-DNAME=...`), or else the environment variable `NAME`.
 - `${NAME:-fallback}` uses the fallback when neither is set.
 - A placeholder without fallback and without value fails at startup with a message naming the variable.
 - Placeholders are filled after the YAML is parsed, so commented-out lines are never checked.
+
+### Keystore credentials (`jks`)
+
+An environment that needs Java keystore credentials has a `jks` section (dev has one):
+
+```yaml
+jks:
+  username: system
+  password: system1
+```
+
+Read them with `EnvConfig.get().jks().username()` and `.password()`. In an environment without the section,
+`jks()` fails with a message naming the file; `hasJks()` tells whether it is there. The password is masked as
+`****` when the settings are printed (`ConfigCheck`, logs). Override per run with `-Djks.password=...`, or use a
+placeholder such as `password: ${UAT_JKS_PASSWORD}` so the real value stays out of the file.
 
 ### One-off overrides
 

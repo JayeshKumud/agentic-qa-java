@@ -49,7 +49,7 @@ flowchart TB
             SL["SmartLocator"]
             HE["Healer · HealingScorer<br/>FingerprintStore"]
         end
-        CFG["EnvConfig → Settings<br/>Config.getApiUrl"]
+        CFG["EnvConfig → Settings<br/>apiUrl(name), jks()"]
     end
 
     subgraph Ext["Outside the JVM"]
@@ -89,7 +89,7 @@ flowchart TB
 | API | `api.ApiFactory`, `apis.*` | `ApiFactory` creates each API class once; API classes call their service with REST Assured |
 | UI | `ui.*` | Page objects built from `SmartLocator`s |
 | Healing | `ui.healing.*` | Fingerprint capture, similarity scoring and replacement of broken selectors |
-| Config | `config.*` | Loads `config/env/<env>.yaml` once per JVM into a typed `Settings` record; `Config.getApiUrl` for API classes |
+| Config | `config.*` | Loads `config/env/<env>.yaml` once per JVM into a typed `Settings` record; `EnvConfig.get().apiUrl(name)` and `.jks()` for API classes |
 | Reporting | `reporting.RunSummaryPlugin` | Cucumber event listener that writes `run-summary.html` and `.json` |
 
 ## Key components
@@ -119,8 +119,9 @@ classDiagram
         +putCustomer(id, body) Response
         +deleteCustomer(id) Response
     }
-    class Config {
-        +getApiUrl(name)$ String
+    class Settings {
+        +apiUrl(name) String
+        +jks() Jks
     }
     class CustomersPage
     class PageElements {
@@ -132,7 +133,7 @@ classDiagram
     }
     class Healer
     ApiFactory --> CustomerApi : creates once
-    CustomerApi --> Config : base URL
+    CustomerApi --> Settings : base URL
     CustomersPage --> PageElements
     PageElements --> SmartLocator : heal true
     SmartLocator --> Healer : resolve()
@@ -155,7 +156,7 @@ classDiagram
 API classes are written as in the existing framework (see [api.md](api.md)):
 
 1. An API class (`apis/CustomerApi`) implements `Api` and has a no-argument constructor that reads its base URL
-   with `Config.getApiUrl("customers")`, which `-Dservices.customers.baseUrl` can override.
+   with `EnvConfig.get().apiUrl("customers")`, which `-Dservices.customers.baseUrl` can override.
 2. Each method calls the service with REST Assured, fails with `Assert.fail` on an unexpected status and returns
    the `Response`. Bodies are model classes (`apis/model/Customer`), serialized by Jackson.
 3. Steps get the class with `ApiFactory.getApi(CustomerApi.class)`, which creates it once and returns the same
