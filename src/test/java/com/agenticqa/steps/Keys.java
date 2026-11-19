@@ -20,10 +20,10 @@ public final class Keys {
     /** A unique text shared by a batch of customers, so a search finds exactly that batch. */
     public static final DataKey<String> NAME_TAG = DataKey.of("nameTag", String.class);
 
-    /** Classpath path of the base data: testdata/ + the BaseData value of the test data table. */
+    /** Path of the base data: src/test/resources/testdata/ + the BaseData value of the test data table. */
     public static final DataKey<String> BASE_DATA_PATH = DataKey.of("baseDataPath", String.class);
 
-    /** Classpath path of the scenario data: testdata/ + the Scenario value of the test data table. */
+    /** Path of the scenario data: src/test/resources/testdata/ + the Scenario value of the test data table. */
     public static final DataKey<String> SCENARIO_PATH = DataKey.of("scenarioPath", String.class);
 
     /** The zone id set by {@code Given a unique zone id is set}, read by later steps of the same scenario. */

@@ -162,6 +162,14 @@ public final class Settings {
         return TagExpressionParser.parse(tags).evaluate(List.copyOf(scenarioTags));
     }
 
+    // ------------------------------------------------------------------ test data
+
+    /** testdata.dir, always ending with /, for example src/test/resources/testdata/ */
+    public static String getTestDataDir() {
+        String dir = get("testdata.dir", "src/test/resources/testdata/").replace('\\', '/');
+        return dir.endsWith("/") ? dir : dir + "/";
+    }
+
     // ------------------------------------------------------------------ credentials
 
     public static String getJksUsername() { return get("jks.username"); }

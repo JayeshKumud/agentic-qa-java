@@ -25,13 +25,13 @@ public class TestDataSetupTest {
     }
 
     @Test
-    public void putsBothPathsUnderTestdata() {
+    public void putsBothPathsUnderSrcTestResourcesTestdata() {
         TestSession session = new TestSession();
         new TestDataSetup(session).putTestDataPaths(table(List.of(
                 List.of("BaseData", "xyz"),
                 List.of("Scenario", "scenaro001"))));
-        assertEquals(session.get(Keys.BASE_DATA_PATH), "testdata/xyz");
-        assertEquals(session.get(Keys.SCENARIO_PATH), "testdata/scenaro001");
+        assertEquals(session.get(Keys.BASE_DATA_PATH), "src/test/resources/testdata/xyz");
+        assertEquals(session.get(Keys.SCENARIO_PATH), "src/test/resources/testdata/scenaro001");
     }
 
     @Test
@@ -40,15 +40,27 @@ public class TestDataSetupTest {
         new TestDataSetup(session).putTestDataPaths(table(List.of(
                 List.of("Scenario", "scenaro001"))));
         assertFalse(session.has(Keys.BASE_DATA_PATH), "no BaseData row");
-        assertEquals(session.get(Keys.SCENARIO_PATH), "testdata/scenaro001");
+        assertEquals(session.get(Keys.SCENARIO_PATH), "src/test/resources/testdata/scenaro001");
     }
 
     @Test
-    public void resourceFindsAFileOnTheClasspath() {
-        Path file = TestDataSetup.resource("simplelogger.properties"); // src/test/resources/simplelogger.properties
+    public void folderComesFromTestdataDirAndCanBeOverridden() {
+        System.setProperty("testdata.dir", "other/data");
+        try {
+            TestSession session = new TestSession();
+            new TestDataSetup(session).putTestDataPaths(table(List.of(List.of("BaseData", "xyz"))));
+            assertEquals(session.get(Keys.BASE_DATA_PATH), "other/data/xyz", "a / is added when missing");
+        } finally {
+            System.clearProperty("testdata.dir");
+        }
+    }
+
+    @Test
+    public void resourceFindsAFileFromTheProjectRoot() {
+        Path file = TestDataSetup.resource("src/test/resources/simplelogger.properties");
         assertTrue(Files.isRegularFile(file), file.toString());
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class,
-                () -> TestDataSetup.resource("testdata/no-such-file"));
-        assertTrue(e.getMessage().contains("src/test/resources/testdata/no-such-file"), e.getMessage());
+                () -> TestDataSetup.resource("src/test/resources/testdata/no-such-file"));
+        assertTrue(e.getMessage().contains("no-such-file"), e.getMessage());
     }
 }

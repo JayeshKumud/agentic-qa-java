@@ -1,11 +1,11 @@
 package com.agenticqa.hooks;
 
+import com.agenticqa.config.Settings;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.steps.Keys;
 import io.cucumber.datatable.DataTable;
 
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -22,9 +22,6 @@ import java.util.Map;
  */
 public class TestDataSetup {
 
-    /** Classpath folder of the test data: src/test/resources/testdata. */
-    public static final String TEST_DATA = "testdata/";
-
     private final TestSession session;
 
     /**
@@ -35,44 +32,42 @@ public class TestDataSetup {
     }
 
     /**
-     * Puts the test data paths of a table in the session, each only if its key is in the table:
+     * Puts the test data paths of a table in the session, each only if its key is in the table. The folder is
+     * testdata.dir in common.properties (src/test/resources/testdata/):
      * <pre>
-     * | BaseData | xyz        |   -> Keys.BASE_DATA_PATH = testdata/xyz
-     * | Scenario | scenaro001 |   -> Keys.SCENARIO_PATH  = testdata/scenaro001
+     * | BaseData | xyz        |   -> Keys.BASE_DATA_PATH = src/test/resources/testdata/xyz
+     * | Scenario | scenaro001 |   -> Keys.SCENARIO_PATH  = src/test/resources/testdata/scenaro001
      * </pre>
-     * The paths are classpath resources; {@link #resource(String)} turns one into a file path.
+     * {@link #resource(String)} turns one into a file path.
      *
      * @param table the Cucumber data table, first column = key, second column = value
      */
     public void putTestDataPaths(DataTable table) {
         Map<String, String> data = table.asMap(String.class, String.class);
+        String testDataDir = Settings.getTestDataDir();
 
         if (data.containsKey("BaseData")) {
-            session.put(Keys.BASE_DATA_PATH, TEST_DATA + data.get("BaseData"));
+            session.put(Keys.BASE_DATA_PATH, testDataDir + data.get("BaseData"));
         }
         if (data.containsKey("Scenario")) {
-            session.put(Keys.SCENARIO_PATH, TEST_DATA + data.get("Scenario"));
+            session.put(Keys.SCENARIO_PATH, testDataDir + data.get("Scenario"));
         }
     }
 
     /**
-     * File path of a classpath resource, for example {@code resource(session.get(Keys.BASE_DATA_PATH))}.
+     * File path of test data, for example {@code resource(session.get(Keys.BASE_DATA_PATH))}. The path is
+     * relative to the project root, so the run must start there (as mvn test does).
      *
-     * @param path the resource, for example testdata/xyz (src/test/resources/testdata/xyz)
-     * @return the file, under target/test-classes
-     * @throws IllegalArgumentException if the resource does not exist
+     * @param path for example src/test/resources/testdata/xyz
+     * @return the file
+     * @throws IllegalArgumentException if the file does not exist
      */
     public static Path resource(String path) {
-        URL url = TestDataSetup.class.getClassLoader().getResource(path);
-        if (url == null) {
-            throw new IllegalArgumentException("Test data not found on the classpath: " + path
-                    + " (expected src/test/resources/" + path + ")");
+        Path file = Paths.get(path);
+        if (!Files.exists(file)) {
+            throw new IllegalArgumentException("Test data not found: " + file.toAbsolutePath());
         }
-        try {
-            return Paths.get(url.toURI());
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Bad resource path: " + url, e);
-        }
+        return file;
     }
 
     /** Placeholder for the tie-break setup, commented out in the hook as in the original. */
