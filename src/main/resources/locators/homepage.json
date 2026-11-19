@@ -59,6 +59,14 @@
     "selector": "button.button-small.button-kkk.role_login_MYNAME",
     "description": "Select button in the row whose Name column is MYNAME"
   },
+  "addMasterButton": {
+    "selector": "button:has(span.dropdown-menu-text:text-is('Add Master'))",
+    "description": "Add Master button"
+  },
+  "dropdownOption": {
+    "selector": "text='OPTION'",
+    "description": "dropdown option OPTION"
+  },
   "logInField": {
     "selector": "#kc-form-login",
     "description": "login form"

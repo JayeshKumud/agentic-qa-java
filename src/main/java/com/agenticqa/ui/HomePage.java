@@ -63,6 +63,18 @@ public class HomePage implements PageComponent {
     }
 
     /**
+     * Clicks Add Master, then the TestWINDOW option, which opens a new window, and waits until it has loaded.
+     *
+     * @return the new window; find its elements with {@code newWindow.locator(...)}
+     */
+    public Page openTestWindow() {
+        el.get("addMasterButton").click();
+        Page newWindow = page.waitForPopup(() -> el.get("dropdownOption", "OPTION", "TestWINDOW").click());
+        newWindow.waitForLoadState();
+        return newWindow;
+    }
+
+    /**
      * Clicks an element that loads a new page and waits until that page has loaded, as in CustomersPage.
      * The click waits for the navigation it starts; waitForLoadState then waits for the new document's load event.
      *

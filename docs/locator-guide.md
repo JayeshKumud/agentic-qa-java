@@ -99,7 +99,9 @@ From most to least stable. Take the first one the element has:
 | id shortcut | `id=kc-login` | same as `#kc-login` |
 | text, contains | `text=Sign in` | an element containing "Sign in", any case |
 | text, exact | `text="Sign in"` | an element whose whole text is exactly "Sign in" |
-| role | `role=button[name="Sign in"]` | a button whose visible name contains "Sign in" |
+| role, exact name | `role=button[name="Sign in"]` | a button whose **whole** accessible name is "Sign in" (case-sensitive) |
+| role, any case | `role=button[name="Sign in" i]` | a button whose whole name is "Sign in", any case |
+| role, part of name | `role=button[name=/Sign in/]` | a button whose name **contains** "Sign in" (add `i` after the last `/` for any case) |
 | role, no name | `role=dialog` | any dialog |
 | XPath | `xpath=//button[@name='login']` | a button with `name="login"` |
 | XPath, two attributes | `xpath=//*[@type='submit' and @name='login']` | an element with both attributes |
@@ -117,7 +119,8 @@ document it as public syntax. At the end, `i` means "contains, any case" and `s`
 | Playwright method | Equivalent selector string |
 |---|---|
 | `getByTestId("login-btn")` | `data-testid=login-btn` |
-| `getByRole(BUTTON, name "Sign in")` | `role=button[name="Sign in"]` |
+| `getByRole(BUTTON, name "Sign in")` | `role=button[name=/Sign in/i]` (part of the name, any case) |
+| `getByRole(BUTTON, name "Sign in", exact)` | `role=button[name="Sign in"]` |
 | `getByText("Sign in")` | `text=Sign in` |
 | `getByText("Sign in", exact)` | `text="Sign in"` |
 | `getByLabel("Password")` | `internal:label="Password"i` |
@@ -307,7 +310,7 @@ The element, then a good entry for it:
 <button type="submit" name="login" class="btn btn-primary">Sign in</button>
 ```
 ```json
-"loginButton": { "selector": "role=button[name=\"Sign in\"]", "description": "sign in button" }
+"loginButton": { "selector": "role=button[name='Sign in']", "description": "sign in button" }
 ```
 or, if the text may be translated: `"selector": "[type=submit][name=login]"`
 
@@ -353,6 +356,7 @@ el.get("deleteButtonOfRow", "NAME", "Ada Lovelace").click();
 | `"[name="login"]"` in JSON | the inner `"` ends the JSON string: invalid file | `"[name=\"login\"]"` or `"[name='login']"` |
 | `//button` in a CSS selector | not CSS | `xpath=//button`, or the CSS `button` |
 | a selector matching 2+ elements | the action fails with "strict mode violation" | make it more specific, or use `within(...)` |
+| `role=button[name="Add Master"]` on a button with an icon or `::after` | finds nothing: the quoted name must be the **whole** accessible name, and the icon or `::after` text is part of it | `role=button[name=/Add Master/]`, or `button:has(span.dropdown-menu-text:text-is('Add Master'))` |
 | a generated id (`#mat-input-7`) | breaks on the next build | use the label, role, name or test id |
 
 ## 8. Checking a locator
