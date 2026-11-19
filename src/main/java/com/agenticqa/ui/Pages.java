@@ -9,6 +9,7 @@ import com.agenticqa.core.TestSession;
  *
  * pages.customers().open().search(name);
  * pages.home().selectRole(role);
+ * pages.klm().open();
  * </pre>
  * PicoContainer creates one {@code Pages} per scenario, with that scenario's {@link TestSession}, and gives the
  * same instance to every step class. The page objects themselves are kept in the session
@@ -39,6 +40,16 @@ public class Pages {
     /** @return the customers page of this scenario */
     public CustomersPage customers() {
         return get(CustomersPage.class);
+    }
+
+    /** @return the KLM GUI of this scenario */
+    public KlmPage klm() {
+        return get(KlmPage.class);
+    }
+
+    /** @return the GSN GUI of this scenario */
+    public GsnPage gsn() {
+        return get(GsnPage.class);
     }
 
     /**

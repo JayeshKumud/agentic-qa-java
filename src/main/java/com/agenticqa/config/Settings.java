@@ -78,6 +78,8 @@ public final class Settings {
     // ------------------------------------------------------------------ browser
 
     public static String getBaseUrl()           { return get("ui.baseUrl"); }
+    public static String getKlmUrl()            { return require("gui.klm.url"); }
+    public static String getGsnUrl()            { return require("gui.gsn.url"); }
     public static String getBrowser()           { return get("ui.browser", "chromium"); }
     public static boolean isHeadless()          { return getBoolean("ui.headless", true); }
     public static int getSlowMoMs()             { return getInt("ui.slowMoMs", 0); }

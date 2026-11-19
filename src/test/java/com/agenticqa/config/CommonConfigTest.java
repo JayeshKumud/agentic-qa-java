@@ -41,6 +41,12 @@ public class CommonConfigTest {
     }
 
     @Test
+    public void guiUrlsComeFromTheEnvironmentFile() {
+        assertEquals(Settings.getKlmUrl(), "https://klm.dev.example.com");
+        assertEquals(Settings.getGsnUrl(), "https://gsn.dev.example.com");
+    }
+
+    @Test
     public void apiUrlIsBuiltFromBaseUrlAndEnvironmentChunk() {
         assertEquals(Settings.getApiUrl("customers"), "https://customers-kt-5.test");
     }

@@ -11,6 +11,8 @@ public CustomerUiSteps(TestSession session, ServiceCleanup cleanup, Pages pages)
 
 pages.customers().open().search(name);
 pages.home().selectRole(role);
+pages.klm().open();                       // KLM GUI, its own URL: gui.klm.url
+pages.gsn().open();                       // GSN GUI, its own URL: gui.gsn.url
 pages.get(OrdersPage.class);              // a page that has no named method yet
 ```
 
@@ -129,6 +131,9 @@ anyway; the `clear()` just makes sure a closed session cannot hand out dead page
 | parallel scenarios on a shared cache can get each other's pages | each scenario has its own session and its own map |
 
 ## Adding a page object
+
+A page on another URL (like `KlmPage` and `GsnPage`) opens with the full URL from the properties files,
+`page.navigate(Settings.getKlmUrl())`, instead of a path relative to `ui.baseUrl`.
 
 Nothing to register. A class that implements `PageComponent` and has a public `(Page page, Healer healer)`
 constructor can be used at once, in the same style as `HomePage`:
