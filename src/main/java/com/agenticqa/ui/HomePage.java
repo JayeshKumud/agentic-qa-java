@@ -51,6 +51,18 @@ public class HomePage implements PageComponent {
     }
 
     /**
+     * Clicks the button in the Select column of the row whose Name column (first column) is {@code name}.
+     * The button carries the class {@code role_login_<name>}, so the name picks its button directly.
+     *
+     * @param name the value in the Name column, for example "COE"
+     * @return this page
+     */
+    public HomePage selectByName(String name) {
+        clickAndWait(el.get("selectButtonByName", "MYNAME", name));
+        return this;
+    }
+
+    /**
      * Clicks an element that loads a new page and waits until that page has loaded, as in CustomersPage.
      * The click waits for the navigation it starts; waitForLoadState then waits for the new document's load event.
      *

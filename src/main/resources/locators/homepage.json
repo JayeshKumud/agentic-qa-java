@@ -52,8 +52,12 @@
     "heal": false
   },
   "roleLogin": {
-    "selector": "[data-testid='modal-box'] button.role_login_ROLE",
+    "selector": "button.button.button-large.button-ghost.role_login_ROLE",
     "description": "Select button of the ROLE role"
+  },
+  "selectButtonByName": {
+    "selector": "button.button-small.button-kkk.role_login_MYNAME",
+    "description": "Select button in the row whose Name column is MYNAME"
   },
   "logInField": {
     "selector": "#kc-form-login",
