@@ -94,7 +94,7 @@ hooks highest order first:
 |---|---|---|
 | `bindSession` | `@Before` 1 | starts the scenario clock, binds the `TestSession` to the thread |
 | `checkTags` | `@Before` 2 | logs the tags; a tag containing `@MUTED` skips the scenario (`SkipException`); otherwise the first tag starting with `@PRGBATR-` must be `@PRGBATR-` plus 4 to 6 digits, or the scenario fails |
-| `setUpBaseData` | `@Before` 3 | creates `TestBaseDataSetup` (placeholder) |
+| `setUpBaseData` | `@Before` 3 | creates `TestDataSetup` (placeholder) |
 | `afterStep` | `@AfterStep` | a screenshot after every step of a scenario that opened a page, named after the scenario |
 | `attachHealsAndFailureScreenshot` | `@After` 7 | the attachments below, while the page is still open |
 | `collectDebugInformation` | `@After` 6 | on failure, `DebugInformationCollector`: page URL and title, last API response, attached to Allure as `debug-info` |
@@ -112,7 +112,7 @@ and prints the summary. `TestRunner`'s static block also registers `ExtentReport
 attachments.
 
 **Placeholders.** `FeatureAwareManager` (runs every scenario), `ArtifactoryPublisher`, `AllurePublisher`,
-`UnitManagerApi`, `EnergyProfileCalculatorApi` and `TestBaseDataSetup` keep the names of the company classes but do
+`UnitManagerApi`, `EnergyProfileCalculatorApi` and `TestDataSetup` keep the names of the company classes but do
 nothing except log a warning. Paste the real code into them.
 
 Attachments of `attachHealsAndFailureScreenshot` and `closeBrowser`, made with `scenario.attach(data, mediaType, name)`:

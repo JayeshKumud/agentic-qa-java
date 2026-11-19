@@ -129,11 +129,11 @@ public class TestInitializeHooks {
         }
     }
 
-    /** Prepares the base test data ({@link TestBaseDataSetup}, placeholder). */
+    /** Prepares the base test data ({@link TestDataSetup}, placeholder). */
     @Before(order = 3)
     public void setUpBaseData() {
-        TestBaseDataSetup testDataBaseSetup = new TestBaseDataSetup();
-        // testDataBaseSetup.tieBreak();
+        TestDataSetup testDataSetup = new TestDataSetup(session);
+        // testDataSetup.tieBreak();
     }
 
     @AfterStep
