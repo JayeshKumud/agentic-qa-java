@@ -80,6 +80,8 @@ public final class Settings {
     public static String getBaseUrl()           { return get("ui.baseUrl"); }
     public static String getKlmUrl()            { return require("gui.klm.url"); }
     public static String getGsnUrl()            { return require("gui.gsn.url"); }
+    public static int getGuiOpenTimeoutMs()     { return getInt("gui.openTimeoutMs", 30000); }
+    public static int getLoginInputTimeoutMs()  { return getInt("gui.loginInputTimeoutMs", 15000); }
     public static String getBrowser()           { return get("ui.browser", "chromium"); }
     public static boolean isHeadless()          { return getBoolean("ui.headless", true); }
     public static int getSlowMoMs()             { return getInt("ui.slowMoMs", 0); }

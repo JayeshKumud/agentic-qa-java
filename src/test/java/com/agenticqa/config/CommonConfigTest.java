@@ -44,6 +44,8 @@ public class CommonConfigTest {
     public void guiUrlsComeFromTheEnvironmentFile() {
         assertEquals(Settings.getKlmUrl(), "https://klm.dev.example.com");
         assertEquals(Settings.getGsnUrl(), "https://gsn.dev.example.com");
+        assertEquals(Settings.getGuiOpenTimeoutMs(), 30000);
+        assertEquals(Settings.getLoginInputTimeoutMs(), 15000);
     }
 
     @Test

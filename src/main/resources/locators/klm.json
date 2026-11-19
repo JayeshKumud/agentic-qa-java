@@ -1,3 +1,15 @@
 {
-  "_comment": "Locators of the KLM GUI (KlmPage). Name -> selector, or an object with selector, description and heal (default true; false for elements that may legitimately be absent). Keys starting with _ are ignored."
+  "_comment": "Locators of the KLM GUI (KlmPage). Name -> selector, or an object with selector, description and heal (default true; false for elements that may legitimately be absent). Keys starting with _ are ignored. The login selectors are Keycloak's defaults: check them against the real page.",
+  "loginInput": {
+    "selector": "#username",
+    "description": "user name input of the login form"
+  },
+  "passwordInput": {
+    "selector": "#password",
+    "description": "password input of the login form"
+  },
+  "loginButton": {
+    "selector": "#kc-login",
+    "description": "sign in button of the login form"
+  }
 }
