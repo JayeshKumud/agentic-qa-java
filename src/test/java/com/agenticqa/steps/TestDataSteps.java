@@ -27,6 +27,6 @@ public class TestDataSteps {
 
     @Given("the test data is")
     public void theTestDataIs(DataTable table) {
-        testData.putTestDataPaths(table.asMap(String.class, String.class));
+        testData.putTestDataPaths(table);
     }
 }

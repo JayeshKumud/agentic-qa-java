@@ -162,11 +162,6 @@ public final class Settings {
         return TagExpressionParser.parse(tags).evaluate(List.copyOf(scenarioTags));
     }
 
-    // ------------------------------------------------------------------ test data
-
-    public static String getBaseDataPrefix() { return get("testdata.baseDataPrefix", "src/test/resources/testdata/"); }
-    public static String getScenarioPrefix() { return get("testdata.scenarioPrefix", "src/test/resources/testdata/"); }
-
     // ------------------------------------------------------------------ credentials
 
     public static String getJksUsername() { return get("jks.username"); }

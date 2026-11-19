@@ -1,9 +1,13 @@
 package com.agenticqa.hooks;
 
-import com.agenticqa.config.Settings;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.steps.Keys;
+import io.cucumber.datatable.DataTable;
 
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /**
@@ -18,10 +22,8 @@ import java.util.Map;
  */
 public class TestDataSetup {
 
-    /** Row name of the base data in the test data table. */
-    public static final String BASE_DATA = "BaseData";
-    /** Row name of the scenario data in the test data table. */
-    public static final String SCENARIO = "Scenario";
+    /** Classpath folder of the test data: src/test/resources/testdata. */
+    public static final String TEST_DATA = "testdata/";
 
     private final TestSession session;
 
@@ -33,41 +35,48 @@ public class TestDataSetup {
     }
 
     /**
-     * Stores the test data paths of a table such as
+     * Puts the test data paths of a table in the session, each only if its key is in the table:
      * <pre>
-     * | BaseData | xyz        |
-     * | Scenario | scenaro001 |
+     * | BaseData | xyz        |   -> Keys.BASE_DATA_PATH = testdata/xyz
+     * | Scenario | scenaro001 |   -> Keys.SCENARIO_PATH  = testdata/scenaro001
      * </pre>
-     * BaseData becomes {@link Keys#BASE_DATA_PATH} = testdata.baseDataPrefix + value, Scenario becomes
-     * {@link Keys#SCENARIO_PATH} = testdata.scenarioPrefix + value. A row is stored only if its key is in the
-     * table and has a value.
+     * The paths are classpath resources; {@link #resource(String)} turns one into a file path.
      *
-     * @param table the rows of the data table, first column to second column
+     * @param table the Cucumber data table, first column = key, second column = value
      */
-    public void putTestDataPaths(Map<String, String> table) {
-        String baseData = value(table, BASE_DATA);
-        if (baseData != null) session.put(Keys.BASE_DATA_PATH, join(Settings.getBaseDataPrefix(), baseData));
-        String scenario = value(table, SCENARIO);
-        if (scenario != null) session.put(Keys.SCENARIO_PATH, join(Settings.getScenarioPrefix(), scenario));
+    public void putTestDataPaths(DataTable table) {
+        Map<String, String> data = table.asMap(String.class, String.class);
+
+        if (data.containsKey("BaseData")) {
+            session.put(Keys.BASE_DATA_PATH, TEST_DATA + data.get("BaseData"));
+        }
+        if (data.containsKey("Scenario")) {
+            session.put(Keys.SCENARIO_PATH, TEST_DATA + data.get("Scenario"));
+        }
+    }
+
+    /**
+     * File path of a classpath resource, for example {@code resource(session.get(Keys.BASE_DATA_PATH))}.
+     *
+     * @param path the resource, for example testdata/xyz (src/test/resources/testdata/xyz)
+     * @return the file, under target/test-classes
+     * @throws IllegalArgumentException if the resource does not exist
+     */
+    public static Path resource(String path) {
+        URL url = TestDataSetup.class.getClassLoader().getResource(path);
+        if (url == null) {
+            throw new IllegalArgumentException("Test data not found on the classpath: " + path
+                    + " (expected src/test/resources/" + path + ")");
+        }
+        try {
+            return Paths.get(url.toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Bad resource path: " + url, e);
+        }
     }
 
     /** Placeholder for the tie-break setup, commented out in the hook as in the original. */
     public void tieBreak() {
         // nothing to prepare
-    }
-
-    /** The trimmed value of a row, or null if the table has no such row or the value is blank. */
-    private static String value(Map<String, String> table, String key) {
-        if (table == null || !table.containsKey(key)) return null;
-        String value = table.get(key);
-        return value == null || value.isBlank() ? null : value.trim();
-    }
-
-    /** prefix + value with exactly one / between them. */
-    static String join(String prefix, String value) {
-        String p = prefix.replace('\\', '/');
-        String v = value.replace('\\', '/');
-        if (p.isEmpty()) return v;
-        return (p.endsWith("/") ? p : p + "/") + (v.startsWith("/") ? v.substring(1) : v);
     }
 }
