@@ -95,7 +95,7 @@
       <groupId>org.testng</groupId>
       <artifactId>testng</artifactId>
       <version>${testng.version}</version>
-      <scope>test</scope>
+      <!-- no test scope: page objects in src/main use org.testng.Assert -->
     </dependency>
   </dependencies>
 

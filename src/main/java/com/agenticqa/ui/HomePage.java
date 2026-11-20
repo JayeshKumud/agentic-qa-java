@@ -5,6 +5,7 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.options.WaitForSelectorState;
+import org.testng.Assert;
 
 /**
  * Page object of the home page. Steps talk to this class and never use selectors themselves.
@@ -18,6 +19,7 @@ public class HomePage implements PageComponent {
     public static final String LOCATORS = "homepage";
 
     private final Page page;
+    private final Healer healer;
     private final PageElements el;
 
     /**
@@ -28,6 +30,7 @@ public class HomePage implements PageComponent {
      */
     public HomePage(Page page, Healer healer) {
         this.page = page;
+        this.healer = healer;
         this.el = new PageElements(page, healer, LOCATORS);
     }
 
@@ -85,17 +88,34 @@ public class HomePage implements PageComponent {
      */
     public HomePage selectAddMasterOption(String option) {
         try {
-            openAddMasterMenu();
+            showAddMasterOptions();
             el.get("addMasterOption", "MYTEST", option).click(new Locator.ClickOptions().setTimeout(5000));
         } catch (PlaywrightException closedTooSoon) {
-            openAddMasterMenu();
+            showAddMasterOptions();
             el.get("addMasterOption", "MYTEST", option).click();
         }
         return this;
     }
 
+    /**
+     * Opens the Price window from the Add Master dropdown: clicks the option, waits for the new window to load,
+     * checks that its title is the option, then maximizes the window and makes the page fill it.
+     *
+     * @param option the Add Master option, which is also the title of the window it opens, for example "Price"
+     * @return the Price window
+     * @throws AssertionError if the window's title is not {@code option}
+     */
+    public PricePage openAddMasterMenu(String option) {
+        Page window = page.waitForPopup(() -> selectAddMasterOption(option));
+        window.waitForLoadState();
+        PricePage pricePage = new PricePage(window, healer);
+        Assert.assertEquals(pricePage.getTitle(), option, "title of the window the Add Master option opened");
+        pricePage.maximize().resize();
+        return pricePage;
+    }
+
     /** Clicks Add Master unless its option list is already open, then waits until the list is visible. */
-    private void openAddMasterMenu() {
+    private void showAddMasterOptions() {
         Locator menu = el.get("addMasterMenu");
         if (!menu.isVisible()) el.get("addMasterButton").click();
         menu.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
