@@ -63,14 +63,9 @@
     "selector": "button:has(span.dropdown-menu-text:text-is('Add Master'))",
     "description": "Add Master button"
   },
-  "addMasterMenu": {
-    "selector": "ul[aria-label='Dropdown Menu']",
-    "description": "option list of the Add Master dropdown (only there while the dropdown is open)",
-    "heal": false
-  },
   "addMasterOption": {
-    "selector": "ul[aria-label='Dropdown Menu'] li:has(span:text-is('MYTEST'))",
-    "description": "option MYTEST of the Add Master dropdown: the li whose span shows MYTEST"
+    "selector": "text=MYTEST",
+    "description": "option MYTEST of the Add Master dropdown (text contains MYTEST, any case, like getByText)"
   },
   "logInField": {
     "selector": "#kc-form-login",
