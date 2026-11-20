@@ -1,5 +1,6 @@
 package com.agenticqa.ui;
 
+import com.agenticqa.config.Settings;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
@@ -98,8 +99,8 @@ public class HomePage implements PageComponent {
     }
 
     /**
-     * Opens the Price window from the Add Master dropdown: clicks the option, waits for the new window to load,
-     * checks that its title is the option, then maximizes the window and makes the page fill it.
+     * Opens the Price window from the Add Master dropdown: clicks the option, waits for the new window to load
+     * and for its title to become the option, checks the title, then maximizes the window and makes the page fill it.
      *
      * @param option the Add Master option, which is also the title of the window it opens, for example "Price"
      * @return the Price window
@@ -109,9 +110,28 @@ public class HomePage implements PageComponent {
         Page window = page.waitForPopup(() -> selectAddMasterOption(option));
         window.waitForLoadState();
         PricePage pricePage = new PricePage(window, healer);
+        waitForTitle(window, option);
         Assert.assertEquals(pricePage.getTitle(), option, "title of the window the Add Master option opened");
         pricePage.maximize().resize();
         return pricePage;
+    }
+
+    /**
+     * Waits until the window's title is {@code title}. The new window first loads the app's start page, which has
+     * the home page's title; the app's script sets the real title a moment after the load event, so reading the
+     * title right after waitForLoadState still gives the old one. Gives up after ui.waits.assertionMs and leaves
+     * the failure message to the Assert that follows.
+     *
+     * @param window the new window
+     * @param title  the title to wait for
+     */
+    private static void waitForTitle(Page window, String title) {
+        try {
+            window.waitForFunction("t => document.title === t", title,
+                    new Page.WaitForFunctionOptions().setTimeout(Settings.getAssertionMs()));
+        } catch (PlaywrightException stillOtherTitle) {
+            // the Assert reports the title it found
+        }
     }
 
     /** Clicks Add Master unless its option list is already open, then waits until the list is visible. */
