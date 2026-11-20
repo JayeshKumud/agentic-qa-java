@@ -2,7 +2,6 @@ package com.agenticqa.ui;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.PlaywrightException;
-import com.microsoft.playwright.options.WaitForSelectorState;
 
 /**
  * A page object that {@link PageComponentFactory} can create. Implementations need a public constructor
@@ -25,34 +24,23 @@ public interface PageComponent {
     PageElements elements();
 
     /**
-     * Opens a dropdown by the text of its button and clicks one of its options: the {@code li} in the option list
-     * whose span shows {@code option}. The button text differs per page, for example "Add Master" on the home
-     * page, "Price" in the Price window, "Customer" on the customers page. The dropdown can close again right
-     * after it opens, so it waits for the option list and opens the dropdown once more if the first click on the
-     * option fails. Locators: dropdownButton, dropdownMenu, dropdownOption in locators/common.json.
+     * Opens a dropdown and picks one of its options: clicks the dropdown's button, then the option (the {@code li}
+     * in the option list whose span shows {@code option}). The click on the option waits for the list to appear.
+     * The button text differs per page, for example "Add Master" on the home page, "Price" in the Price window,
+     * "Customer" on the customers page. If the list closes again before the option is clicked, the button is
+     * clicked once more and the option again. Locators: dropdownButton, dropdownOption in locators/common.json.
      *
      * @param dropdown the text of the dropdown's button, exactly as shown, for example "Add Master"
      * @param option   the text of the option, exactly as shown, for example "Price"
      */
     default void selectDropdownOption(String dropdown, String option) {
         try {
-            showDropdownOptions(dropdown);
+            elements().get("dropdownButton", "NAME", dropdown).click();
             elements().get("dropdownOption", "OPTION", option).click(new Locator.ClickOptions().setTimeout(5000));
-        } catch (PlaywrightException closedTooSoon) {
-            showDropdownOptions(dropdown);
+        } catch (PlaywrightException listClosedTooSoon) {
+            elements().get("dropdownButton", "NAME", dropdown).click();
             elements().get("dropdownOption", "OPTION", option).click();
         }
-    }
-
-    /**
-     * Clicks the dropdown's button unless an option list is already open, then waits until the list is visible.
-     *
-     * @param dropdown the text of the dropdown's button
-     */
-    private void showDropdownOptions(String dropdown) {
-        Locator menu = elements().get("dropdownMenu");
-        if (!menu.isVisible()) elements().get("dropdownButton", "NAME", dropdown).click();
-        menu.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
     }
 
     /**

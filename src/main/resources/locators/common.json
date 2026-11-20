@@ -12,11 +12,6 @@
     "selector": "button:has(span.dropdown-menu-text:text-is('NAME'))",
     "description": "NAME dropdown button: Add Master on the home page, Price in the Price window, Customer on the customers page"
   },
-  "dropdownMenu": {
-    "selector": "ul[aria-label='Dropdown Menu']",
-    "description": "option list of the open dropdown (only there while a dropdown is open)",
-    "heal": false
-  },
   "dropdownOption": {
     "selector": "ul[aria-label='Dropdown Menu'] li:has(span:text-is('OPTION'))",
     "description": "option OPTION of the open dropdown: the li whose span shows OPTION"
