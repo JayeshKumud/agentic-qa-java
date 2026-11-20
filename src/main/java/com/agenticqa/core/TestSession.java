@@ -7,10 +7,14 @@ import com.agenticqa.ui.healing.HealEvent;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
+import com.microsoft.playwright.CDPSession;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Tracing;
 import com.microsoft.playwright.Video;
 import com.microsoft.playwright.assertions.PlaywrightAssertions;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,6 +70,10 @@ public class TestSession {
     private final Map<Class<? extends PageComponent>, PageComponent> pageComponents = new HashMap<>();
 
     private BrowserContext context;
+    /** The ui.permissions name of Chrome's "Manage windows on all your displays" permission. */
+    static final String WINDOW_MANAGEMENT = "window-management";
+    /** Browser CDP session that granted window-management; open while the context lives (see close). */
+    private CDPSession permissionSession;
     private Page page;
     private Healer healer;
     /** This scenario's raw recording under videos/recording, remembered by {@link #close} for {@link #deleteVideoRecording}. */
@@ -87,7 +95,10 @@ public class TestSession {
      * @return this scenario's page
      */
     public synchronized Page page() {
-        if (page == null) page = context().newPage();
+        if (page == null) {
+            page = context().newPage();
+            if (Settings.getPermissions().contains(WINDOW_MANAGEMENT)) grantWindowManagement(page);
+        }
         return page;
     }
 
@@ -305,6 +316,39 @@ public class TestSession {
     }
 
     /**
+     * Grants Chrome's "Manage windows on all your displays" permission to this scenario's browser context, so
+     * opening a window (for example TestWINDOW) shows no Allow prompt. Playwright 1.48 cannot grant it, so this
+     * uses the Chrome DevTools Protocol: the page's session gives the context id, the browser session grants
+     * {@code windowManagement} for that context, and every page and popup of the context inherits it. Chrome
+     * withdraws the grant when that browser session detaches, so it stays open until {@link #close}.
+     * Chromium only; other browsers log a note and continue.
+     *
+     * @param page the scenario's first page
+     */
+    private void grantWindowManagement(Page page) {
+        if (!"chromium".equalsIgnoreCase(Settings.getBrowser())) {
+            System.out.println("[BROWSER] window-management can only be granted in chromium; skipped");
+            return;
+        }
+        try {
+            CDPSession pageSession = context.newCDPSession(page);
+            String contextId = pageSession.send("Target.getTargetInfo")
+                    .getAsJsonObject("targetInfo").get("browserContextId").getAsString();
+            pageSession.detach();
+
+            JsonObject grant = new JsonObject();
+            JsonArray names = new JsonArray();
+            names.add("windowManagement");
+            grant.add("permissions", names);
+            grant.addProperty("browserContextId", contextId);
+            permissionSession = context.browser().newBrowserCDPSession();
+            permissionSession.send("Browser.grantPermissions", grant); // stays open: detaching resets the grant
+        } catch (RuntimeException e) {
+            System.out.println("[BROWSER] could not grant window-management: " + e.getMessage());
+        }
+    }
+
+    /**
      * The browser context, started on first use.
      *
      * @return the scenario's browser context
@@ -327,8 +371,10 @@ public class TestSession {
         Browser.NewContextOptions options = new Browser.NewContextOptions()
                 .setBaseURL(Settings.getBaseUrl())
                 .setIgnoreHTTPSErrors(Settings.isIgnoreHttpsErrors());
-        if (!Settings.getPermissions().isEmpty()) {
-            options.setPermissions(Settings.getPermissions()); // no Allow/Block prompt, also in new windows
+        List<String> permissions = new ArrayList<>(Settings.getPermissions());
+        permissions.remove(WINDOW_MANAGEMENT); // Playwright does not know it; see grantWindowManagement
+        if (!permissions.isEmpty()) {
+            options.setPermissions(permissions); // no Allow/Block prompt, also in new windows
         }
         if (maximized) {
             options.setViewportSize(null); // the page uses the real, maximized window size
@@ -382,6 +428,8 @@ public class TestSession {
             // best effort
         }
         quietly(() -> { if (context != null) context.close(); }); // closing finishes writing the video
+        quietly(() -> { if (permissionSession != null) permissionSession.detach(); });
+        permissionSession = null;
         Path keptVideo = video == null ? null : keepOrDelete(video, failed);
         context = null;
         page = null;
