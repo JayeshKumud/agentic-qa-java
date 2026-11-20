@@ -317,6 +317,9 @@ public class TestSession {
         Browser.NewContextOptions options = new Browser.NewContextOptions()
                 .setBaseURL(Settings.getBaseUrl())
                 .setIgnoreHTTPSErrors(Settings.isIgnoreHttpsErrors());
+        if (!Settings.getPermissions().isEmpty()) {
+            options.setPermissions(Settings.getPermissions()); // no Allow/Block prompt, also in new windows
+        }
         if (maximized) {
             options.setViewportSize(null); // the page uses the real, maximized window size
         } else {

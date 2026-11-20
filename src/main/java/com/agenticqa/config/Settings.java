@@ -88,6 +88,8 @@ public final class Settings {
     public static int getViewportWidth()        { return getInt("ui.viewport.width", 1366); }
     public static int getViewportHeight()       { return getInt("ui.viewport.height", 768); }
     public static boolean isMaximize()          { return getBoolean("ui.maximize", false); }
+    /** Browser permissions granted up front (ui.permissions), so the page never shows an Allow/Block prompt. */
+    public static List<String> getPermissions() { return getList("ui.permissions"); }
     public static boolean isIgnoreHttpsErrors() { return getBoolean("ui.ignoreHttpsErrors", false); }
     public static String getVideo()             { return get("ui.video", "failed"); }
     public static int getActionMs()             { return getInt("ui.waits.actionMs", 15000); }
