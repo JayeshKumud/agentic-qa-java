@@ -37,6 +37,12 @@ public class PricePage implements PageComponent {
         return page.title();
     }
 
+    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as openHelp */
+    @Override
+    public PageElements elements() {
+        return el;
+    }
+
     /** @return the Playwright page of the Price window, for anything this page object does not offer yet */
     public Page page() {
         return page;

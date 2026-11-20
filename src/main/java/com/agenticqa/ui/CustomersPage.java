@@ -47,6 +47,12 @@ public class CustomersPage implements PageComponent {
         return page.title();
     }
 
+    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as openHelp */
+    @Override
+    public PageElements elements() {
+        return el;
+    }
+
     /**
      * Opens the page.
      *

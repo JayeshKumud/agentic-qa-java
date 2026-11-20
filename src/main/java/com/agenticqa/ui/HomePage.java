@@ -41,6 +41,12 @@ public class HomePage implements PageComponent {
         return page.title();
     }
 
+    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as openHelp */
+    @Override
+    public PageElements elements() {
+        return el;
+    }
+
     /**
      * Clicks the Select button of a role in the change-role dialog. Each button carries the class
      * {@code role_login_<ROLE>}, so the role picks its own button directly, without reading table rows.

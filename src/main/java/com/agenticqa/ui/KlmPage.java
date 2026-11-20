@@ -30,6 +30,12 @@ public class KlmPage implements PageComponent {
         return page.title();
     }
 
+    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as openHelp */
+    @Override
+    public PageElements elements() {
+        return el;
+    }
+
     /**
      * Opens the KLM GUI: waits for DOMContentLoaded (gui.openTimeoutMs), then until the login input is
      * visible (gui.loginInputTimeoutMs).
