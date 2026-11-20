@@ -1,16 +1,25 @@
 {
-  "_comment": "Locators that are the same on every page (help button, header, ...). Every page object finds them with el.get(name), as if they were in its own file (PageComponent.openHelp), and CommonActions uses them for any window; a page's own file wins if it has the same name. Same format as the page files. Keys starting with _ are ignored.",
+  "_comment": "Locators that are the same on every page (help button, header, ...). Every page object finds them with el.get(name), as if they were in its own file (PageComponent.selectDropdownOption), and CommonActions uses them for any window (help, keyboard shortcuts); a page's own file wins if it has the same name. Same format as the page files. Keys starting with _ are ignored.",
   "helpButton": {
     "selector": "button[aria-label='Help']",
-    "description": "help button (on every page)"
+    "description": "help button (on every page, CommonActions.openHelp)"
   },
   "keyboardShortcutsButton": {
     "selector": "button[aria-label='Keyboard shortcuts']",
-    "description": "keyboard shortcuts button (on every page)"
+    "description": "keyboard shortcuts button (on every page, CommonActions.openKeyboardShortcuts)"
   },
-  "load": {
-    "selector": "button[type='button']:has(span:text-is('NAME'))",
-    "description": "load button whose span shows NAME, for example Price (CommonActions.load)"
+  "dropdownButton": {
+    "selector": "button:has(span.dropdown-menu-text:text-is('NAME'))",
+    "description": "NAME dropdown button: Add Master on the home page, Price in the Price window, Customer on the customers page"
+  },
+  "dropdownMenu": {
+    "selector": "ul[aria-label='Dropdown Menu']",
+    "description": "option list of the open dropdown (only there while a dropdown is open)",
+    "heal": false
+  },
+  "dropdownOption": {
+    "selector": "ul[aria-label='Dropdown Menu'] li:has(span:text-is('OPTION'))",
+    "description": "option OPTION of the open dropdown: the li whose span shows OPTION"
   },
   "filterDropdownInput": {
     "selector": ".main-heading_filter_item .dropdownV2-container:has(p.dropdownV2-label:text-is('LABEL')) input[data-testid='dropdown-v2-input']",

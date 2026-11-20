@@ -4,27 +4,40 @@ import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Page;
 
 /**
- * Actions that are the same on every page, called with the page (window) they should run on, so page objects
- * need no code for them:
+ * Buttons that are the same on every page, clicked in the window passed in, so page objects need no code for
+ * them:
  * <pre>
- * CommonActions.load(pricePage.page(), session.healer(), "Price");
+ * CommonActions.openHelp(session.page(), session.healer());               // home window
+ * CommonActions.openKeyboardShortcuts(pricePage.page(), session.healer()); // Price window
  * </pre>
- * Their locators live once in {@code locators/common.json}. Pass the window the element is in: the home window
- * ({@code session.page()}) or a window the app opened (for example {@code pricePage.page()}).
+ * Their locators live once in {@code locators/common.json}. Lookups go through the scenario's healer like every
+ * other element, so a button that is not found is listed in the failure report with its selector.
  */
 public final class CommonActions {
 
     private CommonActions() {}
 
     /**
-     * Clicks the load button: the {@code button type="button"} whose span shows {@code name} (load in
-     * locators/common.json). The name differs per window, for example "Price" in the Price window.
+     * Clicks the help button (helpButton in locators/common.json).
      *
      * @param page   the window to click it in
      * @param healer this scenario's healer ({@code session.healer()})
-     * @param name   the text of the button's span, exactly as shown, for example "Price"
      */
-    public static void load(Page page, Healer healer, String name) {
-        new PageElements(page, healer, LocatorRepository.COMMON).get("load", "NAME", name).click();
+    public static void openHelp(Page page, Healer healer) {
+        common(page, healer).get("helpButton").click();
+    }
+
+    /**
+     * Clicks the keyboard shortcuts button (keyboardShortcutsButton in locators/common.json).
+     *
+     * @param page   the window to click it in
+     * @param healer this scenario's healer ({@code session.healer()})
+     */
+    public static void openKeyboardShortcuts(Page page, Healer healer) {
+        common(page, healer).get("keyboardShortcutsButton").click();
+    }
+
+    private static PageElements common(Page page, Healer healer) {
+        return new PageElements(page, healer, LocatorRepository.COMMON);
     }
 }

@@ -5,7 +5,6 @@ import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.PlaywrightException;
-import com.microsoft.playwright.options.WaitForSelectorState;
 import org.testng.Assert;
 
 /**
@@ -18,6 +17,9 @@ public class HomePage implements PageComponent {
 
     /** Name of the locator file, locators/homepage.json. */
     public static final String LOCATORS = "homepage";
+
+    /** Text of the home page's dropdown button (dropdownButton in locators/common.json). */
+    public static final String ADD_MASTER = "Add Master";
 
     private final Page page;
     private final Healer healer;
@@ -41,7 +43,7 @@ public class HomePage implements PageComponent {
         return page.title();
     }
 
-    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as openHelp */
+    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as selectDropdownOption */
     @Override
     public PageElements elements() {
         return el;
@@ -86,21 +88,13 @@ public class HomePage implements PageComponent {
     }
 
     /**
-     * Opens the Add Master dropdown and clicks one of its options: the {@code li role=option} whose span shows
-     * {@code option}. The dropdown can close again right after it opens, so it waits for the option list to be
-     * visible and opens the dropdown once more if the first click on the option fails.
+     * Opens the Add Master dropdown and clicks one of its options ({@link #selectDropdownOption}).
      *
      * @param option the text of the option, for example "TestWINDOW"
      * @return this page
      */
     public HomePage selectAddMasterOption(String option) {
-        try {
-            showAddMasterOptions();
-            el.get("addMasterOption", "MYTEST", option).click(new Locator.ClickOptions().setTimeout(5000));
-        } catch (PlaywrightException closedTooSoon) {
-            showAddMasterOptions();
-            el.get("addMasterOption", "MYTEST", option).click();
-        }
+        selectDropdownOption(ADD_MASTER, option);
         return this;
     }
 
@@ -138,13 +132,6 @@ public class HomePage implements PageComponent {
         } catch (PlaywrightException stillOtherTitle) {
             // the Assert reports the title it found
         }
-    }
-
-    /** Clicks Add Master unless its option list is already open, then waits until the list is visible. */
-    private void showAddMasterOptions() {
-        Locator menu = el.get("addMasterMenu");
-        if (!menu.isVisible()) el.get("addMasterButton").click();
-        menu.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
     }
 
     /**

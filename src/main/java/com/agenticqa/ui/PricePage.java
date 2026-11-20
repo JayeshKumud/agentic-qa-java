@@ -37,7 +37,7 @@ public class PricePage implements PageComponent {
         return page.title();
     }
 
-    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as openHelp */
+    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as selectDropdownOption */
     @Override
     public PageElements elements() {
         return el;
