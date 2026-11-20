@@ -42,6 +42,33 @@ public class Pages {
         return get(CustomersPage.class);
     }
 
+    /**
+     * Opens the window an Add Master option of the home page opens and keeps its page object, so later steps get
+     * the same window from {@link #get} or the named method ({@code pages.price()}, {@code pages.klm()}):
+     * <pre>
+     * pages.openWindow("Price", PricePage.class).openFilter();
+     * pages.price().openFilter();   // a later step, same window
+     * </pre>
+     *
+     * @param option the Add Master option, which is also the window's title, for example "Price" or "Klm"
+     * @param type   the page object of that window, for example PricePage.class
+     * @param <T>    the page type
+     * @return the page object, bound to the new window
+     */
+    public <T extends PageComponent> T openWindow(String option, Class<T> type) {
+        return session.putPageComponent(type, home().openAddMasterMenu(option, type));
+    }
+
+    /**
+     * The Price window. Open it first with {@code openWindow("Price", PricePage.class)}; before that this
+     * returns a PricePage on the scenario's first window, where its elements are not found.
+     *
+     * @return the Price window
+     */
+    public PricePage price() {
+        return get(PricePage.class);
+    }
+
     /** @return the KLM GUI of this scenario */
     public KlmPage klm() {
         return get(KlmPage.class);

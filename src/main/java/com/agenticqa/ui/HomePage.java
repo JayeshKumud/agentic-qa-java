@@ -1,11 +1,8 @@
 package com.agenticqa.ui;
 
-import com.agenticqa.config.Settings;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.PlaywrightException;
-import org.testng.Assert;
 
 /**
  * Page object of the home page. Steps talk to this class and never use selectors themselves.
@@ -22,7 +19,6 @@ public class HomePage implements PageComponent {
     public static final String ADD_MASTER = "Add Master";
 
     private final Page page;
-    private final Healer healer;
     private final PageElements el;
 
     /**
@@ -33,7 +29,6 @@ public class HomePage implements PageComponent {
      */
     public HomePage(Page page, Healer healer) {
         this.page = page;
-        this.healer = healer;
         this.el = new PageElements(page, healer, LOCATORS);
     }
 
@@ -99,39 +94,17 @@ public class HomePage implements PageComponent {
     }
 
     /**
-     * Opens the Price window from the Add Master dropdown: clicks the option, waits for the new window to load
-     * and for its title to become the option, checks the title, then maximizes the window and makes the page fill it.
+     * Opens the window an Add Master option opens and returns its page object
+     * ({@link CommonActions#openWindow}): {@code openAddMasterMenu("Price", PricePage.class)}.
      *
      * @param option the Add Master option, which is also the title of the window it opens, for example "Price"
-     * @return the Price window
+     * @param type   the page object of that window, for example PricePage.class or KlmPage.class
+     * @param <T>    the page type
+     * @return the page object, bound to the new window
      * @throws AssertionError if the window's title is not {@code option}
      */
-    public PricePage openAddMasterMenu(String option) {
-        Page window = page.waitForPopup(() -> selectAddMasterOption(option));
-        window.waitForLoadState();
-        PricePage pricePage = new PricePage(window, healer);
-        waitForTitle(window, option);
-        Assert.assertEquals(pricePage.getTitle(), option, "title of the window the Add Master option opened");
-        pricePage.maximize().resize();
-        return pricePage;
-    }
-
-    /**
-     * Waits until the window's title is {@code title}. The new window first loads the app's start page, which has
-     * the home page's title; the app's script sets the real title a moment after the load event, so reading the
-     * title right after waitForLoadState still gives the old one. Gives up after ui.waits.assertionMs and leaves
-     * the failure message to the Assert that follows.
-     *
-     * @param window the new window
-     * @param title  the title to wait for
-     */
-    private static void waitForTitle(Page window, String title) {
-        try {
-            window.waitForFunction("t => document.title === t", title,
-                    new Page.WaitForFunctionOptions().setTimeout(Settings.getAssertionMs()));
-        } catch (PlaywrightException stillOtherTitle) {
-            // the Assert reports the title it found
-        }
+    public <T extends PageComponent> T openAddMasterMenu(String option, Class<T> type) {
+        return CommonActions.openWindow(this, ADD_MASTER, option, type);
     }
 
     /**

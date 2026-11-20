@@ -7,7 +7,7 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 
 /**
  * Page object of the Price window, the new window an Add Master option opens
- * ({@link HomePage#openAddMasterMenu(String)}). Steps talk to this class and never use selectors themselves.
+ * ({@link CommonActions#openWindow}). Steps talk to this class and never use selectors themselves.
  * <p>
  * The selectors live in {@code src/main/resources/locators/pricepage.json}, not in this class, and elements are
  * looked up by name when they are used ({@code el.get("name")}).
@@ -49,13 +49,12 @@ public class PricePage implements PageComponent {
     }
 
     /**
-     * Types a text into the filter input of the Price window.
+     * Clicks the filter button of the Price window.
      *
-     * @param text what to filter on
      * @return this page
      */
-    public PricePage filter(String text) {
-        el.get("filterInput").fill(text);
+    public PricePage openFilter() {
+        el.get("filterButton").click();
         return this;
     }
 

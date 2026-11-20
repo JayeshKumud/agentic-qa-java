@@ -316,6 +316,20 @@ public class TestSession {
     }
 
     /**
+     * Stores a page object that was created elsewhere, for example the page of a window the app opened, so
+     * {@code pages.get(type)} returns it from now on (replacing an earlier one of that type).
+     *
+     * @param type the page class, for example PricePage.class
+     * @param page the page object
+     * @param <T>  the page type
+     * @return the page object
+     */
+    public synchronized <T extends PageComponent> T putPageComponent(Class<T> type, T page) {
+        pageComponents.put(type, page);
+        return page;
+    }
+
+    /**
      * Grants Chrome's "Manage windows on all your displays" permission to this scenario's browser context, so
      * opening a window (for example TestWINDOW) shows no Allow prompt. Playwright 1.48 cannot grant it, so this
      * uses the Chrome DevTools Protocol: the page's session gives the context id, the browser session grants

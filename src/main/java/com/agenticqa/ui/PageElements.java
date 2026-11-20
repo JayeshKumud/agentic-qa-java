@@ -36,6 +36,16 @@ public final class PageElements {
         LocatorRepository.page(pageName);
     }
 
+    /** @return the window these elements are looked up in */
+    public Page page() {
+        return page;
+    }
+
+    /** @return the scenario's healer these elements use */
+    public Healer healer() {
+        return healer;
+    }
+
     /**
      * Finds an element now.
      *
