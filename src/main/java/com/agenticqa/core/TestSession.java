@@ -2,6 +2,7 @@ package com.agenticqa.core;
 
 import com.agenticqa.config.Settings;
 import com.agenticqa.ui.PageComponent;
+import com.agenticqa.ui.healing.ElementLookup;
 import com.agenticqa.ui.healing.HealEvent;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Browser;
@@ -116,6 +117,15 @@ public class TestSession {
      */
     public synchronized List<HealEvent> healEvents() {
         return healer == null ? List.of() : healer.events();
+    }
+
+    /**
+     * The last element lookups of this scenario, oldest first (see {@link Healer#lookups()}).
+     *
+     * @return an unmodifiable list, empty if no page object looked up an element
+     */
+    public synchronized List<ElementLookup> elementLookups() {
+        return healer == null ? List.of() : healer.lookups();
     }
 
     /**

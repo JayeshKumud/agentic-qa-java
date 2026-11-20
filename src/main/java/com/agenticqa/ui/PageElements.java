@@ -45,7 +45,7 @@ public final class PageElements {
      */
     public Locator get(String name) {
         Definition definition = LocatorRepository.get(pageName, name);
-        if (!definition.heal()) return page.locator(definition.selector());
+        if (!definition.heal()) return plain(definition.key(), definition.description(), definition.selector());
         return new SmartLocator(page, healer, definition.key(), definition.description(), definition.selector())
                 .locator();
     }
@@ -70,7 +70,9 @@ public final class PageElements {
                     + ".json has no placeholder '" + placeholder + "': " + definition.selector());
         }
         String selector = definition.selector().replace(placeholder, value);
-        if (!definition.heal()) return page.locator(selector);
+        if (!definition.heal()) {
+            return plain(definition.key() + "." + value, definition.description().replace(placeholder, value), selector);
+        }
         return new SmartLocator(page, healer, definition.key() + "." + value,
                 definition.description().replace(placeholder, value), selector).locator();
     }
@@ -83,6 +85,15 @@ public final class PageElements {
      * @return the inner locator (never healed: inner selectors are relative)
      */
     public Locator within(Locator parent, String name) {
-        return parent.locator(LocatorRepository.get(pageName, name).selector());
+        Definition definition = LocatorRepository.get(pageName, name);
+        healer.record(null, definition.key(), definition.description(), definition.selector(),
+                "inner element, searched inside its parent element, not healed");
+        return parent.locator(definition.selector());
+    }
+
+    /** A locator of an element not marked heal; the lookup is recorded so a failed step can show it. */
+    private Locator plain(String key, String description, String selector) {
+        healer.record(page, key, description, selector, "plain locator, not healed and not checked at lookup (heal is off in the locator file)");
+        return page.locator(selector);
     }
 }

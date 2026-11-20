@@ -6,8 +6,10 @@ import com.agenticqa.apis.UnitManagerApi;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.reporting.TestExecutionResult;
 import com.agenticqa.steps.Keys;
+import com.agenticqa.ui.healing.ElementLookup;
 import com.agenticqa.ui.healing.HealEvent;
 import com.microsoft.playwright.Page;
+import com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter;
 import io.cucumber.java.After;
 import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
@@ -67,6 +69,10 @@ public class TestInitializeHooks {
 
     private final TestSession session;
     private long featureStartTime;
+    /** How many element lookups a failed step logs, newest first. */
+    private static final int LOOKUPS_LOGGED = 5;
+    /** True once the failed step's element lookups were logged; later steps are skipped, not failed. */
+    private boolean lookupsLogged;
 
     /**
      * Receives this scenario's session from PicoContainer.
@@ -138,6 +144,7 @@ public class TestInitializeHooks {
 
     @AfterStep
     public void afterStep(Scenario scenario) {
+        logElementLookupsOfFailedStep(scenario);
         if (session.hasPage()) {
             try {
                 String screenshotName = scenario.getName().replaceAll(" ", "");
@@ -150,6 +157,31 @@ public class TestInitializeHooks {
         }
     }
 
+
+    /**
+     * When a step fails, logs the elements it looked up last (newest first) to the Extent, Allure and Cucumber
+     * reports and the console: element name, selector, what the lookup found or why healing failed, and how many
+     * elements the selector matches now. A bare Playwright timeout then shows which element it waited for.
+     *
+     * @param scenario the running scenario
+     */
+    private void logElementLookupsOfFailedStep(Scenario scenario) {
+        if (lookupsLogged || !scenario.isFailed()) return;
+        lookupsLogged = true;
+        List<ElementLookup> lookups = new ArrayList<>(session.elementLookups());
+        if (lookups.isEmpty()) return;
+        Collections.reverse(lookups);
+        String text = "Elements looked up last before the failure (newest first; the failed element is usually the first):"
+                + System.lineSeparator()
+                + lookups.stream().limit(LOOKUPS_LOGGED).map(ElementLookup::describe)
+                        .collect(Collectors.joining(System.lineSeparator()));
+        logger.error(text);
+        scenario.attach(text, "text/plain", "element lookups"); // cucumber.html and Allure
+        if (ExtentCucumberAdapter.getCurrentStep() != null) {
+            ExtentCucumberAdapter.addTestStepLog("<pre>" + text.replace("&", "&amp;").replace("<", "&lt;")
+                    .replace(">", "&gt;") + "</pre>");
+        }
+    }
 
     /**
      * Attaches the healed locators, and a full-page screenshot if the scenario failed, while the page is still
