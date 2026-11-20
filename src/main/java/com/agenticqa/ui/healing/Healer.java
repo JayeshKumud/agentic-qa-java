@@ -199,7 +199,25 @@ public class Healer {
                     + "' found nothing and there is no baseline fingerprint yet");
         }
 
-        List<Candidate> ranked = candidates(page, expected);
+        List<Candidate> ranked;
+        try {
+            ranked = candidates(page, expected);
+        } catch (PlaywrightException navigated) {
+            // "Execution context was destroyed": the page navigated during the scan, for example a login
+            // redirect. Wait for the new page; the element may be there now, otherwise scan the new page once.
+            if (!waitForNewPage(page)) {
+                return cannotHeal(page, element, original, "the page kept navigating: " + firstLine(navigated));
+            }
+            if (appears(original)) {
+                record(page, element, element.selector(), "found after the page finished navigating");
+                return original;
+            }
+            try {
+                ranked = candidates(page, expected);
+            } catch (PlaywrightException again) {
+                return cannotHeal(page, element, original, "the page kept navigating: " + firstLine(again));
+            }
+        }
         if (ranked.isEmpty()) {
             return cannotHeal(page, element, original, "the page has no elements");
         }
@@ -262,6 +280,25 @@ public class Healer {
                 log("could not write %s: %s", file, e.getMessage());
             }
         }
+    }
+
+    /**
+     * Waits until the page that replaced the scanned one has loaded.
+     *
+     * @param page the page
+     * @return false if the page is closed or did not finish loading within the navigation timeout
+     */
+    private static boolean waitForNewPage(Page page) {
+        try {
+            page.waitForLoadState();
+            return !page.isClosed();
+        } catch (PlaywrightException e) {
+            return false;
+        }
+    }
+
+    private static String firstLine(PlaywrightException e) {
+        return e.getMessage() == null ? "" : e.getMessage().lines().findFirst().orElse("");
     }
 
     private static double round(double value) {
