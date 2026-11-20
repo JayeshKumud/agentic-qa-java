@@ -8,7 +8,7 @@ import com.microsoft.playwright.PlaywrightException;
  * what the lookup found or why healing could not help. When a step fails, the last lookups are logged to the
  * report (see {@link Healer#lookups()}), so a timeout shows which element it was waiting for.
  *
- * @param key         the element, for example "homepage.dropdownOption.TestWINDOW"
+ * @param key         the element, for example "homepage.addMasterOption.TestWINDOW"
  * @param description the readable name from the locator file
  * @param selector    the selector that was used (the healed one if the element was healed)
  * @param outcome     what happened, for example "found 1 element" or "cannot heal: ... no baseline fingerprint"

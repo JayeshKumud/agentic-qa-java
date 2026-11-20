@@ -3,6 +3,8 @@ package com.agenticqa.ui;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.PlaywrightException;
+import com.microsoft.playwright.options.WaitForSelectorState;
 
 /**
  * Page object of the home page. Steps talk to this class and never use selectors themselves.
@@ -68,10 +70,35 @@ public class HomePage implements PageComponent {
      * @return the new window; find its elements with {@code newWindow.locator(...)}
      */
     public Page openTestWindow() {
-        el.get("addMasterButton").click();
-        Page newWindow = page.waitForPopup(() -> el.get("dropdownOption", "OPTION", "TestWINDOW").click());
+        Page newWindow = page.waitForPopup(() -> selectAddMasterOption("TestWINDOW"));
         newWindow.waitForLoadState();
         return newWindow;
+    }
+
+    /**
+     * Opens the Add Master dropdown and clicks one of its options: the {@code li role=option} whose span shows
+     * {@code option}. The dropdown can close again right after it opens, so it waits for the option list to be
+     * visible and opens the dropdown once more if the first click on the option fails.
+     *
+     * @param option the text of the option, for example "TestWINDOW"
+     * @return this page
+     */
+    public HomePage selectAddMasterOption(String option) {
+        try {
+            openAddMasterMenu();
+            el.get("addMasterOption", "MYTEST", option).click(new Locator.ClickOptions().setTimeout(5000));
+        } catch (PlaywrightException closedTooSoon) {
+            openAddMasterMenu();
+            el.get("addMasterOption", "MYTEST", option).click();
+        }
+        return this;
+    }
+
+    /** Clicks Add Master unless its option list is already open, then waits until the list is visible. */
+    private void openAddMasterMenu() {
+        Locator menu = el.get("addMasterMenu");
+        if (!menu.isVisible()) el.get("addMasterButton").click();
+        menu.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
     }
 
     /**
