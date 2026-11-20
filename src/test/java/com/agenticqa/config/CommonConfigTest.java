@@ -23,7 +23,7 @@ public class CommonConfigTest {
         assertTrue(Settings.getCleanupFolders().contains("target/reports"));
         assertEquals(Settings.getVideo(), "failed");
         assertFalse(Settings.isIgnoreHttpsErrors());
-        assertFalse(Settings.isMaximize());
+        assertTrue(Settings.isMaximize(), "dev.properties overrides common.properties");
     }
 
     @Test
