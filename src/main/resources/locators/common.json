@@ -7,5 +7,9 @@
   "load": {
     "selector": "[data-testid='load']",
     "description": "load button (on every page, CommonActions.load) - REPLACE the selector with the real one"
+  },
+  "filterDropdownInput": {
+    "selector": ".main-heading_filter_item .dropdownV2-container:has(p.dropdownV2-label:text-is('LABEL')) input[data-testid='dropdown-v2-input']",
+    "description": "input of the filter dropdown labelled LABEL"
   }
 }
