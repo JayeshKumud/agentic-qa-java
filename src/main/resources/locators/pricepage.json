@@ -1,3 +1,12 @@
 {
-  "_comment": "Locators of the Price window (PricePage), opened from the Add Master dropdown of the home page. Name -> selector, or an object with selector, description and heal (default true; false for elements that may legitimately be absent). Keys starting with _ are ignored."
+  "_comment": "Locators of the Price window (PricePage), opened from the Add Master dropdown of the home page. Name -> selector, or an object with selector, description and heal (default true; false for elements that may legitimately be absent). Keys starting with _ are ignored.",
+  "filterInput": {
+    "selector": "[data-testid='filter']",
+    "description": "filter input"
+  },
+  "rows": {
+    "selector": "div[role='row']",
+    "description": "grid rows (a header row has role=row too)",
+    "heal": false
+  }
 }
