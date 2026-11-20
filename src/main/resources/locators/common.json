@@ -1,8 +1,12 @@
 {
   "_comment": "Locators that are the same on every page (help button, header, ...). Every page object finds them with el.get(name), as if they were in its own file (PageComponent.openHelp), and CommonActions uses them for any window; a page's own file wins if it has the same name. Same format as the page files. Keys starting with _ are ignored.",
   "helpButton": {
-    "selector": "[data-testid='help-button']",
-    "description": "help button (on every page) - REPLACE the selector with the real one"
+    "selector": "button[aria-label='Help']",
+    "description": "help button (on every page)"
+  },
+  "keyboardShortcutsButton": {
+    "selector": "button[aria-label='Keyboard shortcuts']",
+    "description": "keyboard shortcuts button (on every page)"
   },
   "load": {
     "selector": "[data-testid='load']",

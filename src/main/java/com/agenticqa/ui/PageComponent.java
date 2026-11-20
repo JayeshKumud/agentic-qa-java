@@ -25,6 +25,11 @@ public interface PageComponent {
         elements().get("helpButton").click();
     }
 
+    /** Clicks the keyboard shortcuts button, which every page has (keyboardShortcutsButton in locators/common.json). */
+    default void openKeyboardShortcuts() {
+        elements().get("keyboardShortcutsButton").click();
+    }
+
     /**
      * Clicks the input of a filter dropdown, found by the label above it ({@code <p class="dropdownV2-label">}),
      * which opens its options (filterDropdownInput in locators/common.json):
