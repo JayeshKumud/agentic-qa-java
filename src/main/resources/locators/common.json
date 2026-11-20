@@ -9,8 +9,8 @@
     "description": "keyboard shortcuts button (on every page)"
   },
   "load": {
-    "selector": "[data-testid='load']",
-    "description": "load button (on every page, CommonActions.load) - REPLACE the selector with the real one"
+    "selector": "button[type='button']:has(span:text-is('NAME'))",
+    "description": "load button whose span shows NAME, for example Price (CommonActions.load)"
   },
   "filterDropdownInput": {
     "selector": ".main-heading_filter_item .dropdownV2-container:has(p.dropdownV2-label:text-is('LABEL')) input[data-testid='dropdown-v2-input']",
