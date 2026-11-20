@@ -24,11 +24,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code heal} (default true) makes the element a self-healing locator; {@code description} (default: the name)
  * is used in logs and heal reports. Keys starting with {@code _} are ignored, so a file can hold a
  * {@code "_comment"}. A file is read once per JVM and the result is shared by all threads (read-only).
+ * <p>
+ * Locators that are the same on every page, such as a help button, live once in {@code locators/common.json};
+ * every page finds them by name as if they were in its own file.
  */
 public final class LocatorRepository {
 
     /** Classpath folder of the locator files. */
     public static final String FOLDER = "locators/";
+
+    /**
+     * Name of the file with the locators every page shares, locators/common.json (for example a help button).
+     * {@link #get} looks there when a page's own file has no locator with the name.
+     */
+    public static final String COMMON = "common";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Map<String, Map<String, Definition>> PAGES = new ConcurrentHashMap<>();
@@ -59,18 +68,21 @@ public final class LocatorRepository {
     }
 
     /**
-     * One locator of a page.
+     * One locator of a page: from the page's own file, or else from {@value #COMMON}.json, the locators every
+     * page shares. A shared locator keeps the key common.NAME, so all pages use one healing fingerprint for it.
      *
      * @param page the page name
      * @param name the locator name
      * @return the definition
-     * @throws IllegalArgumentException if the page has no locator with that name (the message lists the names)
+     * @throws IllegalArgumentException if neither file has a locator with that name (the message lists the names)
      */
     public static Definition get(String page, String name) {
         Definition definition = page(page).get(name);
+        if (definition == null && !COMMON.equals(page)) definition = page(COMMON).get(name);
         if (definition == null) {
-            throw new IllegalArgumentException("No locator '" + name + "' in " + FOLDER + page + ".json. Locators: "
-                    + page(page).keySet());
+            throw new IllegalArgumentException("No locator '" + name + "' in " + FOLDER + page + ".json or "
+                    + FOLDER + COMMON + ".json. Locators: " + page(page).keySet() + ", common: "
+                    + page(COMMON).keySet());
         }
         return definition;
     }

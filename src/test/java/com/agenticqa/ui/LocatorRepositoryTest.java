@@ -35,6 +35,22 @@ public class LocatorRepositoryTest {
     }
 
     @Test
+    public void everyPageFindsTheCommonLocators() {
+        for (String page : new String[] {"customers", "homepage", "pricepage"}) {
+            Definition help = LocatorRepository.get(page, "helpButton");
+            assertEquals(help.key(), "common.helpButton", "one fingerprint for every page");
+        }
+    }
+
+    @Test
+    public void aPageLocatorWinsOverACommonOne() {
+        assertEquals(LocatorRepository.get("customers", "searchInput").key(), "customers.searchInput");
+        IllegalArgumentException e = expectThrows(IllegalArgumentException.class,
+                () -> LocatorRepository.get("customers", "noSuchLocator"));
+        assertTrue(e.getMessage().contains("common.json"), e.getMessage());
+    }
+
+    @Test
     public void reportsAMissingFile() {
         expectThrows(IllegalArgumentException.class, () -> LocatorRepository.page("no-such-page"));
     }
