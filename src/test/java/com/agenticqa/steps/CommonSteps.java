@@ -1,13 +1,15 @@
 package com.agenticqa.steps;
 
 import com.agenticqa.ui.CommonActions;
+import com.agenticqa.ui.HomePage;
 import com.agenticqa.ui.PageElements;
 import com.agenticqa.ui.WindowNavigator;
 import io.cucumber.java.en.When;
 
 /**
- * Steps for the buttons every page has ({@link CommonActions}). They act on the window the scenario is on: the
- * home page, or the window the last {@code I switch from ... to the ... window} step opened.
+ * Steps for the shared buttons ({@link CommonActions}). Help and keyboard shortcuts act on the window the scenario
+ * is on: the home page, or the window the last {@code I switch from ... to the ... window} step opened. Log out is
+ * only on the home page, so that step switches to the home window first.
  */
 public class CommonSteps {
 
@@ -33,13 +35,13 @@ public class CommonSteps {
     }
 
     /**
-     * Logs out in the current window and checks that the login page is shown there (its title and sign in
-     * button): {@code When I log out}.
+     * Switches to the home window, the only one with the log out button, logs out and checks that the login page
+     * is shown there (its titles and sign in button): {@code When I log out}.
      */
     @When("I log out")
     public void logout() {
-        PageElements current = windows.current().elements();
-        CommonActions.logout(current.page(), current.healer());
+        HomePage home = windows.switchToWindow(WindowNavigator.HOME);
+        CommonActions.logout(home);
     }
 
     /** Clicks the keyboard shortcuts button of the current window: {@code When I open the keyboard shortcuts}. */

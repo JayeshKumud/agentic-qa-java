@@ -50,18 +50,19 @@ public final class CommonActions {
     }
 
     /**
-     * Logs out: clicks the log out button (textButton in locators/common.json with TEXT {@value #LOG_OUT}: the
-     * {@code button type="button" data-testid="button"} whose {@code div} shows it), then checks that the login
-     * page is shown in that window ({@link LoginPage#verifyDisplayed()}).
+     * Logs out from the home page, the only page with the log out button: clicks it (textButton in
+     * locators/common.json with TEXT {@value #LOG_OUT}: the {@code button type="button" data-testid="button"}
+     * whose {@code div} shows it), then checks that the login page is shown in the home window
+     * ({@link LoginPage#verifyDisplayed()}): {@code CommonActions.logout(pages.home())}.
      *
-     * @param page   the window to click it in
-     * @param healer this scenario's healer ({@code session.healer()})
+     * @param home the home page
      * @return the login page, already checked
      * @throws AssertionError if the login page is not shown after log out
      */
-    public static LoginPage logout(Page page, Healer healer) {
-        common(page, healer).get("textButton", "TEXT", LOG_OUT).click();
-        return new LoginPage(page, healer).verifyDisplayed();
+    public static LoginPage logout(HomePage home) {
+        PageElements el = home.elements();
+        el.get("textButton", "TEXT", LOG_OUT).click();
+        return new LoginPage(el.page(), el.healer()).verifyDisplayed();
     }
 
     /**
