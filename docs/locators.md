@@ -65,10 +65,10 @@ A plain string (`"addButton": "#add-customer-button"`) is short for `{ "selector
 
 1. Create `src/main/resources/locators/<page>.json` with the elements.
 2. Create the page object with a `PageElements` for that file, and actions that use `el.get("...")`.
-3. Let the page object implement `PageComponent` (a public `(Page, Healer)` constructor and `getTitle()`).
+3. Let the page object implement `PageComponents` (a public `(Page, Healer)` constructor and `getTitle()`).
 4. Add a method for it to `Pages` (`public XxxPage xxx() { return get(XxxPage.class); }`) and call
    `pages.xxx()` in the steps, with `Pages` injected in the step class's constructor (see `HomeSteps`). Outside
-   injected code, `PageComponentFactory.get(XxxPage.class)` finds the scenario with `TestSession.current()`. The
+   injected code, `PageComponentsFactory.get(XxxPage.class)` finds the scenario with `TestSession.current()`. The
    page is created on first use, so API-only scenarios never open a browser, and every later call in the same
    scenario returns the same instance.
 

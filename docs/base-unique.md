@@ -40,14 +40,14 @@ public static final DataKey<Map<String, Unique>> BASE_UNIQUE =
         DataKey.mapOf("baseUnique", String.class, Unique.class);
 
 // store, from any step or helper (UniqueSteps)
-TestSession.current().put(Keys.BASE_UNIQUE, "U1", unique);
+TestSession.current().data().put(Keys.BASE_UNIQUE, "U1", unique);
 
 // read, from any step or helper (BackUniqueTransit)
-Map<String, Unique> baseUniques = TestSession.current().map(Keys.BASE_UNIQUE);
+Map<String, Unique> baseUniques = TestSession.current().data().map(Keys.BASE_UNIQUE);
 ```
 
 Nothing else: no field, no setter, no getter and no `clear()` in `TestSession`. A step class that has the session
-injected writes `session.put(BASE_UNIQUE, name, unique)`, without `current()`.
+injected writes `session.data().put(BASE_UNIQUE, name, unique)`, without `current()`.
 
 ## How they compare
 
@@ -142,7 +142,7 @@ for (String unique : uniqueIds.split(",")) {
 In this framework:
 
 ```java
-Map<String, Unique> baseUniques = TestSession.current().map(Keys.BASE_UNIQUE);   // read once
+Map<String, Unique> baseUniques = TestSession.current().data().map(Keys.BASE_UNIQUE);   // read once
 for (String unique : uniqueIds.split(",")) {
     String name = unique.trim();                                                  // trim first
     Unique stored = baseUniques.get(name);
@@ -170,9 +170,9 @@ And `features/api/back_unique_transit.feature` runs the same flow as two paralle
 
 ## What it costs
 
-- **A slightly longer call:** `TestSession.current().put(Keys.BASE_UNIQUE, name, unique)` instead of
+- **A slightly longer call:** `TestSession.current().data().put(Keys.BASE_UNIQUE, name, unique)` instead of
   `TestSession.setBaseUniqueMap(name, unique)`. In a step class with the injected session it is
-  `session.put(BASE_UNIQUE, name, unique)`.
+  `session.data().put(BASE_UNIQUE, name, unique)`.
 - **Only inside a running scenario, on its thread.** That is the point of the change: the old version also
   "worked" elsewhere, but returned the wrong map.
 - **A different exception for a null unique:** `IllegalArgumentException` instead of `AssertionError`. Both fail the
@@ -182,9 +182,9 @@ And `features/api/back_unique_transit.feature` runs the same flow as two paralle
 
 | Existing framework | This framework |
 |---|---|
-| `TestSession.setBaseUniqueMap(name, unique)` | `TestSession.current().put(Keys.BASE_UNIQUE, name, unique)` |
-| `TestSession.getBaseUniqueMap()` | `TestSession.current().map(Keys.BASE_UNIQUE)` |
-| `TestSession.getBaseUniqueMap().get(name)` | `TestSession.current().map(Keys.BASE_UNIQUE).get(name)` |
+| `TestSession.setBaseUniqueMap(name, unique)` | `TestSession.current().data().put(Keys.BASE_UNIQUE, name, unique)` |
+| `TestSession.getBaseUniqueMap()` | `TestSession.current().data().map(Keys.BASE_UNIQUE)` |
+| `TestSession.getBaseUniqueMap().get(name)` | `TestSession.current().data().map(Keys.BASE_UNIQUE).get(name)` |
 | `TestSession.clear()` | delete the call |
 | `HashMap<String, Unique>` variables | `Map<String, Unique>` |
 | the `baseUnique` ThreadLocal, setter, getter in `TestSession` | delete them |

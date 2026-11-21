@@ -37,9 +37,9 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>{@link #bindSession} (order 1) binds the session first, so {@code TestSession.current()} works in every
  *       later hook and step.</li>
- *   <li>BrowserFactory / PageComponentFactory calls are TestSession calls; {@code session.close} stops the trace
+ *   <li>BrowserFactory / PageComponentsFactory calls are TestSession calls; {@code session.close} stops the trace
  *       and saves the video, so stopTraces is part of {@link #closeBrowser}.</li>
- *   <li>{@link #cleanVideoFolder} deletes only this scenario's own leftover recording, not the whole traces or
+ *   <li>{@code session.close} also deletes this scenario's own raw video recording, never the whole traces or
  *       videos folder (that would delete the files of scenarios running in parallel): {@code RunCleaner} empties
  *       target/artifacts once, before the run.</li>
  *   <li>No ScenarioContext.clear(): the session and its data end with the scenario.</li>
@@ -54,8 +54,7 @@ import java.util.stream.Collectors;
  * &#64;After   7   attachHealsAndFailureScreenshot   evidence first, while the page is open
  * &#64;After   6   collectDebugInformation           reads the page and the last API response
  * &#64;After   5   saveVideo              failed only: closes the context so the video is complete
- * &#64;After   4   closeBrowser           trace, video, close the context
- * &#64;After   3   cleanVideoFolder       delete this scenario's leftover raw recording
+ * &#64;After   4   closeBrowser           trace, video (raw recording deleted), close the context
  * &#64;After   2   ServiceCleanup.cleanUp delete the data the steps registered, newest first
  * &#64;After   1   teardownData           delete the zone, then record the result (last, so it has the full duration)
  * </pre>
@@ -134,6 +133,7 @@ public class TestInitializeHooks {
             );
         }
     }
+
 
     /** Prepares the base test data ({@link TestDataSetup}, placeholder). */
     @Before(order = 3)
@@ -244,18 +244,6 @@ public class TestInitializeHooks {
         }
     }
 
-    /**
-     * Deletes this scenario's raw recording under target/artifacts/videos/recording if {@link #closeBrowser} left
-     * it behind. Only this scenario's file: parallel scenarios record into the same folder. A kept video
-     * (target/artifacts/videos, failed scenarios) is not touched.
-     */
-    @After(order = 3)
-    public void cleanVideoFolder() {
-        if (session.deleteVideoRecording()) {
-            logger.info("Deleted the leftover video recording of this scenario");
-        }
-    }
-
     @After(order = 1)
     public void teardownData(Scenario scenario) {
         logger.info("Clearing after scenario data");
@@ -264,9 +252,9 @@ public class TestInitializeHooks {
 
         boolean isTelephoneInstructionsScenario =
                 scenario.getSourceTagNames().contains("@TelephoneInstructions");
-        if (session.has(Keys.ZONE_ID) && !isTelephoneInstructionsScenario) {
+        if (session.data().has(Keys.ZONE_ID) && !isTelephoneInstructionsScenario) {
             try {
-                long zoneId = session.get(Keys.ZONE_ID);
+                long zoneId = session.data().get(Keys.ZONE_ID);
                 unitManagerApi.deleteZone(zoneId, true);
                 logger.info("{} zone deleted successfully", zoneId);
                 try {

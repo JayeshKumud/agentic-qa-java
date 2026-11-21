@@ -4,14 +4,14 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.PlaywrightException;
 
 /**
- * A page object that {@link PageComponentFactory} can create. Implementations need a public constructor
+ * A page object that {@link PageComponentsFactory} can create. Implementations need a public constructor
  * {@code (Page page, Healer healer)}, which the factory calls.
  * <p>
  * Actions that are the same on every page, such as {@link #selectDropdownOption}, are written once here as
  * default methods (the help and keyboard shortcuts buttons are in {@link CommonActions}). They use {@link #elements()}, so each runs on the page object's own window, and their locators live
  * once in {@code locators/common.json}.
  */
-public interface PageComponent {
+public interface PageComponents {
 
     /** @return the title of the browser page */
     String getTitle();

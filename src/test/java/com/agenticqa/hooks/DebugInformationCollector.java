@@ -27,8 +27,8 @@ public class DebugInformationCollector {
                 info.append("Page URL: ").append(page.url()).append('\n')
                         .append("Page title: ").append(page.title()).append('\n');
             }
-            if (session.has(Keys.RESPONSE)) {
-                Response response = session.get(Keys.RESPONSE);
+            if (session.data().has(Keys.RESPONSE)) {
+                Response response = session.data().get(Keys.RESPONSE);
                 String body = response.asString();
                 if (body.length() > MAX_BODY) body = body.substring(0, MAX_BODY) + "... (cut)";
                 info.append("Last API response: ").append(response.getStatusLine()).append('\n').append(body);

@@ -196,7 +196,7 @@ What keeps parallel scenarios apart:
 |---|---|
 | Browser | [`BrowserPool`](../src/main/java/com/agenticqa/core/BrowserPool.java): one Playwright and one browser **per worker thread**, used only by that thread (Playwright objects are not thread-safe). Every scenario gets a **new browser context**, so it has its own cookies, storage, page and trace. With 4 threads at most 4 browsers run, whatever the number of scenarios. A crashed browser is replaced, and all browsers are closed when the JVM exits. |
 | Scenario state | PicoContainer creates new `TestSession`, `Variables`, step and cleanup objects for each scenario; page objects live in the session. API classes from `ApiFactory` are shared by the whole run and hold no per-scenario state. |
-| Test data | `{unique}` and `TestData.uniqueName` add a random token per scenario, so parallel scenarios never find each other's records. Each scenario deletes what it created. |
+| Test data | `{unique}` and `UniqueData.uniqueName` add a random token per scenario, so parallel scenarios never find each other's records. Each scenario deletes what it created. |
 | Shared files | The fingerprint store and `heals.jsonl` are synchronized. Locator files and the settings are read once and are read-only. Trace file names include the thread name. |
 | Reports | All report plugins (Cucumber, run summary, Allure, Extent) are made for parallel events. Console lines carry the thread name: `[API] [TestNG-PoolService-2] GET ...`. |
 

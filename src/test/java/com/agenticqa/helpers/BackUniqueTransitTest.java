@@ -31,8 +31,8 @@ public class BackUniqueTransitTest {
     public void replacesStoredBaseNamesTrimmedAndKeepsOtherValues() {
         session = new TestSession();
         session.bindToCurrentThread();
-        session.put(Keys.BASE_UNIQUE, "U1", new Unique("REG-1001"));
-        session.put(Keys.BASE_UNIQUE, "U2", new Unique("REG-1002"));
+        session.data().put(Keys.BASE_UNIQUE, "U1", new Unique("REG-1001"));
+        session.data().put(Keys.BASE_UNIQUE, "U2", new Unique("REG-1002"));
 
         BackUniqueTransit transit = new BackUniqueTransit("10:00", "U1, U2 ,REG-77,");
         assertEquals(transit.getUniqueRegIds(), List.of("REG-1001", "REG-1002", "REG-77"));
@@ -50,14 +50,14 @@ public class BackUniqueTransitTest {
     @Test
     public void mapHelpersKeepOrderReplaceRejectNullAndReturnACopy() {
         session = new TestSession();
-        assertTrue(session.map(Keys.BASE_UNIQUE).isEmpty());
-        expectThrows(IllegalArgumentException.class, () -> session.put(Keys.BASE_UNIQUE, "U1", null));
-        expectThrows(IllegalArgumentException.class, () -> session.put(Keys.BASE_UNIQUE, null, new Unique("R")));
+        assertTrue(session.data().map(Keys.BASE_UNIQUE).isEmpty());
+        expectThrows(IllegalArgumentException.class, () -> session.data().put(Keys.BASE_UNIQUE, "U1", null));
+        expectThrows(IllegalArgumentException.class, () -> session.data().put(Keys.BASE_UNIQUE, null, new Unique("R")));
 
-        session.put(Keys.BASE_UNIQUE, "B", new Unique("REG-B"));
-        session.put(Keys.BASE_UNIQUE, "A", new Unique("REG-A"));
-        session.put(Keys.BASE_UNIQUE, "B", new Unique("REG-B2"));    // replaces, keeps its position
-        Map<String, Unique> map = session.map(Keys.BASE_UNIQUE);
+        session.data().put(Keys.BASE_UNIQUE, "B", new Unique("REG-B"));
+        session.data().put(Keys.BASE_UNIQUE, "A", new Unique("REG-A"));
+        session.data().put(Keys.BASE_UNIQUE, "B", new Unique("REG-B2"));    // replaces, keeps its position
+        Map<String, Unique> map = session.data().map(Keys.BASE_UNIQUE);
         assertEquals(List.copyOf(map.keySet()), List.of("B", "A"));
         assertEquals(map.get("B").getUniqRegId(), "REG-B2");
         expectThrows(UnsupportedOperationException.class, () -> map.put("C", new Unique("REG-C")));
@@ -75,7 +75,7 @@ public class BackUniqueTransitTest {
                     TestSession own = new TestSession();             // what PicoContainer does per scenario
                     own.bindToCurrentThread();                       // what TestInitializeHooks.bindSession does
                     try {
-                        own.put(Keys.BASE_UNIQUE, "U1", new Unique("REG-" + n));   // same name, own value
+                        own.data().put(Keys.BASE_UNIQUE, "U1", new Unique("REG-" + n));   // same name, own value
                         Thread.sleep(5);                             // let the scenarios overlap
                         return new BackUniqueTransit("10:00", "U1").getUniqueRegIds();
                     } finally {
@@ -98,7 +98,7 @@ public class BackUniqueTransitTest {
             oneThread.submit(() -> {
                 TestSession first = new TestSession();
                 first.bindToCurrentThread();
-                first.put(Keys.BASE_UNIQUE, "U1", new Unique("REG-FIRST"));
+                first.data().put(Keys.BASE_UNIQUE, "U1", new Unique("REG-FIRST"));
                 first.close(false);
                 return null;
             }).get();

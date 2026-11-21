@@ -16,9 +16,9 @@ pages.gsn().open();                       // GSN GUI, its own URL: gui.gsn.url
 pages.get(OrdersPage.class);              // a page that has no named method yet
 ```
 
-`Pages` holds only the scenario's session and calls `PageComponentFactory.get(type, session)`, so it needs no
+`Pages` holds only the scenario's session and calls `PageComponentsFactory.get(type, session)`, so it needs no
 `TestSession.current()` lookup. Code that is not injected (a helper, a listener) can still call
-`PageComponentFactory.get(HomePage.class)`, which finds the session through `TestSession.current()`. Both go
+`PageComponentsFactory.get(HomePage.class)`, which finds the session through `TestSession.current()`. Both go
 through the same session cache, so they return the same object.
 
 Every call in one scenario returns the **same** `HomePage`. A new scenario gets a new one. The page objects are
@@ -26,10 +26,10 @@ kept by this method in
 [`TestSession`](../src/main/java/com/agenticqa/core/TestSession.java):
 
 ```java
-private final Map<Class<? extends PageComponent>, PageComponent> pageComponents = new HashMap<>();
+private final Map<Class<? extends PageComponents>, PageComponents> pageComponents = new HashMap<>();
 
-public synchronized <T extends PageComponent> T pageComponent(Class<T> type, Supplier<T> create) {
-    PageComponent existing = pageComponents.get(type);
+public synchronized <T extends PageComponents> T pageComponent(Class<T> type, Supplier<T> create) {
+    PageComponents existing = pageComponents.get(type);
     if (existing == null) {
         existing = create.get();
         pageComponents.put(type, existing);
@@ -41,7 +41,7 @@ public synchronized <T extends PageComponent> T pageComponent(Class<T> type, Sup
 ## How a call goes
 
 ```java
-// PageComponentFactory.get
+// PageComponentsFactory.get
 TestSession session = TestSession.current();                          // 1. the scenario on this thread
 return session.pageComponent(HomePage.class,
         () -> create(HomePage.class, session));                       // 2. how to make one, if needed
@@ -56,18 +56,18 @@ return session.pageComponent(HomePage.class,
 
 ## The method line by line
 
-### `<T extends PageComponent> T ... (Class<T> type, ...)`
+### `<T extends PageComponents> T ... (Class<T> type, ...)`
 
 The generic `T` ties the argument to the result: `pageComponent(HomePage.class, ...)` returns a `HomePage`, so the
-step needs no cast. `extends PageComponent` means only page objects can be stored, not any class.
+step needs no cast. `extends PageComponents` means only page objects can be stored, not any class.
 
-### `Map<Class<...>, PageComponent> pageComponents`
+### `Map<Class<...>, PageComponents> pageComponents`
 
 The key is the **class** itself. There is at most one page object of each type per scenario, and a class cannot be
 mistyped the way a string name like `"homePage"` can.
 
-The map's values are declared as plain `PageComponent`, because one map holds many different page types. That is
-why the method reads into `PageComponent existing` and not into a `T`.
+The map's values are declared as plain `PageComponents`, because one map holds many different page types. That is
+why the method reads into `PageComponents existing` and not into a `T`.
 
 ### `Supplier<T> create`
 
@@ -75,7 +75,7 @@ The caller passes **how** to make the page, not the page itself. The supplier ru
 exist yet. That matters because creating a page calls `session.page()`, which opens the browser context:
 
 - a page is created once, not on every `get`;
-- nothing in the session knows about constructors or reflection; that stays in `PageComponentFactory`;
+- nothing in the session knows about constructors or reflection; that stays in `PageComponentsFactory`;
 - an API-only scenario that never asks for a page never starts a browser.
 
 Passing an already-made page (`pageComponent(HomePage.class, new HomePage(...))`) would build a new page object,
@@ -87,13 +87,13 @@ Classic "create on first use": look up, create if missing, store, return.
 
 Why not the shorter `pageComponents.computeIfAbsent(type, t -> create.get())`? A page constructor may itself ask
 for another page, for example a `HomePage` that builds its `HeaderComponent` with
-`PageComponentFactory.get(HeaderComponent.class)`. That would change the map while `computeIfAbsent` is still
+`PageComponentsFactory.get(HeaderComponent.class)`. That would change the map while `computeIfAbsent` is still
 computing, and `HashMap.computeIfAbsent` throws `ConcurrentModificationException` in that case. With a plain
 `get` and `put`, the supplier runs before the map is touched, so nested pages work.
 
 ### `return type.cast(existing);`
 
-`existing` is a `PageComponent`; the method promises a `T`. `type.cast` converts it, checked at run time. It cannot
+`existing` is a `PageComponents`; the method promises a `T`. `type.cast` converts it, checked at run time. It cannot
 fail here, because the only thing ever stored under `HomePage.class` is the `HomePage` the supplier made, but
 unlike a raw `(T) existing` it gives no "unchecked cast" warning and would fail at once, with the class names, if
 something wrong ever got in.
@@ -125,7 +125,7 @@ anyway; the `clear()` just makes sure a closed session cannot hand out dead page
 
 | Without the session map | With `TestSession.pageComponent` |
 |---|---|
-| `new HomePage(page, healer)` in every step class, or a field in each one | one `PageComponentFactory.get(HomePage.class)` from anywhere |
+| `new HomePage(page, healer)` in every step class, or a field in each one | one `PageComponentsFactory.get(HomePage.class)` from anywhere |
 | two step classes have two different `HomePage` objects for one scenario | both get the same object |
 | a static cache or `ThreadLocal` of pages must be cleared after each scenario, or the next scenario gets a page of a closed browser | pages live in the session and end with it, see [keys.md](keys.md#why-there-is-no-clear-or-remove) |
 | parallel scenarios on a shared cache can get each other's pages | each scenario has its own session and its own map |
@@ -135,11 +135,11 @@ anyway; the `clear()` just makes sure a closed session cannot hand out dead page
 A page on another URL (like `KlmPage` and `GsnPage`) opens with the full URL from the properties files,
 `page.navigate(Settings.getKlmUrl())`, instead of a path relative to `ui.baseUrl`.
 
-Nothing to register. A class that implements `PageComponent` and has a public `(Page page, Healer healer)`
+Nothing to register. A class that implements `PageComponents` and has a public `(Page page, Healer healer)`
 constructor can be used at once, in the same style as `HomePage`:
 
 ```java
-public class OrdersPage implements PageComponent {
+public class OrdersPage implements PageComponents {
 
     public static final String LOCATORS = "orderspage";   // locators/orderspage.json
 
@@ -165,5 +165,5 @@ public OrdersPage orders() {
 
 Until the named method is added, `pages.get(OrdersPage.class)` works too.
 
-If the constructor is missing, `PageComponentFactory` fails with
+If the constructor is missing, `PageComponentsFactory` fails with
 `OrdersPage needs a public constructor (Page page, Healer healer)`.

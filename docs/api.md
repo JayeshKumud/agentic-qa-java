@@ -109,5 +109,5 @@ hide the real result of the scenario.
 1. Add an API class in `apis/` like `CustomerApi`: `implements Api`, a no-argument constructor with
    `Settings.getBaseUrl()`, one method per call that returns the `Response`.
 2. Add model classes in `apis/model/` for its bodies.
-3. Call it from steps with `ApiFactory.getApi(XxxApi.class)`, store results with `session.put(key, value)`, and
+3. Call it from steps with `ApiFactory.getApi(XxxApi.class)`, store results with `session.data().put(key, value)`, and
    register what it creates with `cleanup.add(...)`.

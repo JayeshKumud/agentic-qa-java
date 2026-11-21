@@ -3,7 +3,7 @@ package com.agenticqa.steps;
 import com.agenticqa.api.ApiFactory;
 import com.agenticqa.apis.CustomerApi;
 import com.agenticqa.apis.model.Customer;
-import com.agenticqa.core.TestData;
+import com.agenticqa.core.UniqueData;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.CustomersPage.CustomerRow;
 import com.agenticqa.ui.Pages;
@@ -54,14 +54,14 @@ public class CustomerUiSteps {
      */
     @Given("{int} customers share a unique name tag")
     public void customersWithTag(int count) {
-        String tag = "Batch " + TestData.token();
+        String tag = "Batch " + UniqueData.token();
         for (int i = 1; i <= count; i++) {
             String name = tag + " #" + i;
             Customer created = ApiFactory.getApi(CustomerApi.class)
-                    .postCustomer(new Customer(name, TestData.emailFor(name))).as(Customer.class);
+                    .postCustomer(new Customer(name, UniqueData.emailFor(name))).as(Customer.class);
             CustomerApiSteps.deleteAfterScenario(cleanup, created.getId());
         }
-        session.put(NAME_TAG, tag);
+        session.data().put(NAME_TAG, tag);
     }
 
     /**
@@ -71,33 +71,33 @@ public class CustomerUiSteps {
      */
     @When("I add a customer named {string} through the form")
     public void addThroughForm(String name) {
-        String unique = TestData.uniqueName(name);
-        String email = TestData.emailFor(unique);
+        String unique = UniqueData.uniqueName(name);
+        String email = UniqueData.emailFor(unique);
         pages.customers().open().addCustomer(unique, email);
 
         List<CustomerRow> found = pages.customers().search(unique).visibleRows();
         assertEquals(found.size(), 1, "Expected exactly one row for " + unique);
         CustomerRow row = found.get(0);
         CustomerApiSteps.deleteAfterScenario(cleanup, row.id());
-        session.put(CUSTOMER, new Customer(row.id(), row.name(), row.email(), row.status()));
+        session.data().put(CUSTOMER, new Customer(row.id(), row.name(), row.email(), row.status()));
     }
 
     /** Searches the page for the customer's name. */
     @When("I search the customers page for that customer")
     public void searchForCustomer() {
-        pages.customers().open().search(session.get(CUSTOMER).getName());
+        pages.customers().open().search(session.data().get(CUSTOMER).getName());
     }
 
     /** Searches the page for the shared name tag. */
     @When("I search the customers page for that tag")
     public void searchForTag() {
-        pages.customers().open().search(session.get(NAME_TAG));
+        pages.customers().open().search(session.data().get(NAME_TAG));
     }
 
     /** Searches for a name no customer has. */
     @When("I search the customers page for a name that matches nobody")
     public void searchForNobody() {
-        pages.customers().open().search("nobody-" + TestData.token());
+        pages.customers().open().search("nobody-" + UniqueData.token());
     }
 
     /** Goes to the next page of results. */
@@ -119,7 +119,7 @@ public class CustomerUiSteps {
      */
     @Then("the results show only that customer with status {string}")
     public void onlyThatCustomer(String status) {
-        Customer expected = session.get(CUSTOMER);
+        Customer expected = session.data().get(CUSTOMER);
         assertThat(pages.customers().rows()).hasCount(1);
         CustomerRow row = pages.customers().visibleRows().get(0);
         assertEquals(row.id(), expected.getId().longValue());

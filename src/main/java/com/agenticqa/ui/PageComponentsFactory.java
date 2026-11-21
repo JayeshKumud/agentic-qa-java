@@ -10,7 +10,7 @@ import java.lang.reflect.InvocationTargetException;
  * Creates page objects for the running scenario and hands out the same instance on every call, from anywhere:
  * <pre>
  * private HomePage homePage() {
- *     return PageComponentFactory.get(HomePage.class);
+ *     return PageComponentsFactory.get(HomePage.class);
  * }
  * </pre>
  * A page is created on first use, through its {@code (Page, Healer)} constructor, with the scenario's browser
@@ -20,9 +20,9 @@ import java.lang.reflect.InvocationTargetException;
  * in that session, so they are dropped when the session closes. Parallel scenarios never share pages, and the
  * next scenario on the same thread never gets a page of a closed browser.
  */
-public final class PageComponentFactory {
+public final class PageComponentsFactory {
 
-    private PageComponentFactory() {}
+    private PageComponentsFactory() {}
 
     /**
      * The page object of a type, created on first use in this scenario.
@@ -32,7 +32,7 @@ public final class PageComponentFactory {
      * @return the scenario's instance of that page
      * @throws IllegalStateException if no scenario is running on this thread, or the page cannot be created
      */
-    public static <T extends PageComponent> T get(Class<T> pageToCreate) {
+    public static <T extends PageComponents> T get(Class<T> pageToCreate) {
         return get(pageToCreate, TestSession.current());
     }
 
@@ -46,7 +46,7 @@ public final class PageComponentFactory {
      * @return the scenario's instance of that page
      * @throws IllegalStateException if the page cannot be created
      */
-    public static <T extends PageComponent> T get(Class<T> pageToCreate, TestSession session) {
+    public static <T extends PageComponents> T get(Class<T> pageToCreate, TestSession session) {
         return session.pageComponent(pageToCreate, () -> create(pageToCreate, session));
     }
 
@@ -58,7 +58,7 @@ public final class PageComponentFactory {
      * @param <T>          the page type
      * @return the new page
      */
-    private static <T extends PageComponent> T create(Class<T> pageToCreate, TestSession session) {
+    private static <T extends PageComponents> T create(Class<T> pageToCreate, TestSession session) {
         try {
             return pageToCreate.getConstructor(Page.class, Healer.class).newInstance(session.page(), session.healer());
         } catch (NoSuchMethodException e) {

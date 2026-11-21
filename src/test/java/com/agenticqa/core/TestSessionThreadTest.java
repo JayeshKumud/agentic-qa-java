@@ -51,13 +51,13 @@ public class TestSessionThreadTest {
     @Test
     public void listHelpersAddInOrderCopyAndFailClearly() {
         session = new TestSession();
-        assertTrue(session.list(ITEMS).isEmpty());
-        expectThrows(IllegalStateException.class, () -> session.requireList(ITEMS));
-        expectThrows(IllegalArgumentException.class, () -> session.add(ITEMS, null));
+        assertTrue(session.data().list(ITEMS).isEmpty());
+        expectThrows(IllegalStateException.class, () -> session.data().requireList(ITEMS));
+        expectThrows(IllegalArgumentException.class, () -> session.data().add(ITEMS, null));
 
-        session.add(ITEMS, "a");
-        session.add(ITEMS, "b");
-        List<String> items = session.requireList(ITEMS);
+        session.data().add(ITEMS, "a");
+        session.data().add(ITEMS, "b");
+        List<String> items = session.data().requireList(ITEMS);
         assertEquals(items, List.of("a", "b"));
         expectThrows(UnsupportedOperationException.class, () -> items.add("c")); // a copy, not the stored list
     }

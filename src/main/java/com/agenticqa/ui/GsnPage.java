@@ -12,7 +12,7 @@ import com.microsoft.playwright.options.WaitUntilState;
  * Page object of the GSN GUI, a separate URL ({@code gui.gsn.url} in the properties files).
  * Selectors live in {@code src/main/resources/locators/gsn.json}.
  */
-public class GsnPage implements PageComponent {
+public class GsnPage implements PageComponents {
 
     /** Name of the locator file, locators/gsn.json. */
     public static final String LOCATORS = "gsn";
@@ -30,7 +30,7 @@ public class GsnPage implements PageComponent {
         return page.title();
     }
 
-    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as selectDropdownOption */
+    /** @return this page's elements, used by the shared actions of {@link PageComponents} such as selectDropdownOption */
     @Override
     public PageElements elements() {
         return el;

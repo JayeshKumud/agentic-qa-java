@@ -30,8 +30,8 @@ public class TestDataSetupTest {
         new TestDataSetup(session).putTestDataPaths(table(List.of(
                 List.of("BaseData", "xyz"),
                 List.of("Scenario", "scenaro001"))));
-        assertEquals(session.get(Keys.BASE_DATA_PATH), "src/test/resources/testdata/xyz");
-        assertEquals(session.get(Keys.SCENARIO_PATH), "src/test/resources/testdata/scenaro001");
+        assertEquals(session.data().get(Keys.BASE_DATA_PATH), "src/test/resources/testdata/xyz");
+        assertEquals(session.data().get(Keys.SCENARIO_PATH), "src/test/resources/testdata/scenaro001");
     }
 
     @Test
@@ -39,8 +39,8 @@ public class TestDataSetupTest {
         TestSession session = new TestSession();
         new TestDataSetup(session).putTestDataPaths(table(List.of(
                 List.of("Scenario", "scenaro001"))));
-        assertFalse(session.has(Keys.BASE_DATA_PATH), "no BaseData row");
-        assertEquals(session.get(Keys.SCENARIO_PATH), "src/test/resources/testdata/scenaro001");
+        assertFalse(session.data().has(Keys.BASE_DATA_PATH), "no BaseData row");
+        assertEquals(session.data().get(Keys.SCENARIO_PATH), "src/test/resources/testdata/scenaro001");
     }
 
     @Test
@@ -49,7 +49,7 @@ public class TestDataSetupTest {
         try {
             TestSession session = new TestSession();
             new TestDataSetup(session).putTestDataPaths(table(List.of(List.of("BaseData", "xyz"))));
-            assertEquals(session.get(Keys.BASE_DATA_PATH), "other/data/xyz", "a / is added when missing");
+            assertEquals(session.data().get(Keys.BASE_DATA_PATH), "other/data/xyz", "a / is added when missing");
         } finally {
             System.clearProperty("testdata.dir");
         }

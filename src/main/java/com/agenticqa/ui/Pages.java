@@ -13,8 +13,11 @@ import com.agenticqa.core.TestSession;
  * </pre>
  * PicoContainer creates one {@code Pages} per scenario, with that scenario's {@link TestSession}, and gives the
  * same instance to every step class. The page objects themselves are kept in the session
- * ({@link TestSession#pageComponent}), so {@code pages.home()} and {@code PageComponentFactory.get(HomePage.class)}
+ * ({@link TestSession#pageComponent}), so {@code pages.home()} and {@code PageComponentsFactory.get(HomePage.class)}
  * return the same object. A page is created on first use, so API-only scenarios never start a browser.
+ * <p>
+ * Moving between windows is {@link WindowNavigator}'s job; after it opened a window, the method here for that
+ * window ({@code price()}, {@code customers()}) returns the page object of that window.
  * <p>
  * Adding a page: give it a method here that calls {@link #get}, for example
  * {@code public OrdersPage orders() { return get(OrdersPage.class); }}.
@@ -37,31 +40,15 @@ public class Pages {
         return get(HomePage.class);
     }
 
-    /** @return the customers page of this scenario */
+    /** @return the customers page of this scenario (the Customer window once WindowNavigator opened it) */
     public CustomersPage customers() {
         return get(CustomersPage.class);
     }
 
     /**
-     * Opens the window an Add Master option of the home page opens and keeps its page object, so later steps get
-     * the same window from {@link #get} or the named method ({@code pages.price()}, {@code pages.klm()}):
-     * <pre>
-     * pages.openWindow("Price", PricePage.class).openFilter();
-     * pages.price().openFilter();   // a later step, same window
-     * </pre>
-     *
-     * @param option the Add Master option, which is also the window's title, for example "Price" or "Klm"
-     * @param type   the page object of that window, for example PricePage.class
-     * @param <T>    the page type
-     * @return the page object, bound to the new window
-     */
-    public <T extends PageComponent> T openWindow(String option, Class<T> type) {
-        return session.putPageComponent(type, home().openAddMasterMenu(option, type));
-    }
-
-    /**
-     * The Price window. Open it first with {@code openWindow("Price", PricePage.class)}; before that this
-     * returns a PricePage on the scenario's first window, where its elements are not found.
+     * The Price window. Open it first with {@code windows.switchToWindow(button, "Price Window")}
+     * ({@link WindowNavigator}); before that this returns a PricePage on the scenario's first window, where its
+     * elements are not found.
      *
      * @return the Price window
      */
@@ -86,7 +73,7 @@ public class Pages {
      * @param <T>  the page type
      * @return the scenario's instance of that page, created on first use
      */
-    public <T extends PageComponent> T get(Class<T> type) {
-        return PageComponentFactory.get(type, session);
+    public <T extends PageComponents> T get(Class<T> type) {
+        return PageComponentsFactory.get(type, session);
     }
 }

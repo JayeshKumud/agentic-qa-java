@@ -99,8 +99,7 @@ hooks highest order first:
 | `attachHealsAndFailureScreenshot` | `@After` 7 | the attachments below, while the page is still open |
 | `collectDebugInformation` | `@After` 6 | on failure, `DebugInformationCollector`: page URL and title, last API response, attached to Allure as `debug-info` |
 | `saveVideo` | `@After` 5 | on failure with a page, closes the browser context first, so the video is complete |
-| `closeBrowser` | `@After` 4 | `session.close(failed)`; a kept trace zip and video are attached as paths, and as files to Allure |
-| `cleanVideoFolder` | `@After` 3 | deletes this scenario's leftover raw recording in `target/artifacts/videos/recording`, if `close` could not; never the whole folder (parallel scenarios share it) and never a kept video |
+| `closeBrowser` | `@After` 4 | `session.close(failed)`; a kept trace zip and video are attached as paths, and as files to Allure. `close` also deletes this scenario's raw recording in `target/artifacts/videos/recording` (never the whole folder: parallel scenarios share it) |
 | `ServiceCleanup.cleanUp` | `@After` 2 | deletes the test data registered by the steps, newest first |
 | `teardownData` | `@After` 1 | deletes the zone in `Keys.ZONE_ID` (not for `@TelephoneInstructions`) with `UnitManagerApi` / `EnergyProfileCalculatorApi` (placeholders), then records the result in `testExecutionMap` |
 

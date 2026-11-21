@@ -19,7 +19,7 @@ import java.util.List;
  * Every action that reloads the page (search, add, paging) waits for the new page to finish loading, so the
  * next read never sees the old document.
  */
-public class CustomersPage implements PageComponent {
+public class CustomersPage implements PageComponents {
 
     /** Rows shown per page by the sample app. */
     public static final int PAGE_SIZE = 5;
@@ -47,7 +47,7 @@ public class CustomersPage implements PageComponent {
         return page.title();
     }
 
-    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as selectDropdownOption */
+    /** @return this page's elements, used by the shared actions of {@link PageComponents} such as selectDropdownOption */
     @Override
     public PageElements elements() {
         return el;

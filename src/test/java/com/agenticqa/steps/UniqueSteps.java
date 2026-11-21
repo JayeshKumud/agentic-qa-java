@@ -41,7 +41,7 @@ public class UniqueSteps {
      */
     @Given("the unique {string} has registration id {string}")
     public void storeUnique(String baseUnique, String uniqRegId) {
-        session.put(BASE_UNIQUE, baseUnique, new Unique(uniqRegId));
+        session.data().put(BASE_UNIQUE, baseUnique, new Unique(uniqRegId));
         logger.info("Stored unique {} with registration id {}", baseUnique, uniqRegId);
     }
 

@@ -69,7 +69,7 @@ public class Variables {
      * @return 8 hex characters, the same for the whole scenario
      */
     public synchronized String token() {
-        if (token == null) token = TestData.token();
+        if (token == null) token = UniqueData.token();
         return token;
     }
 

@@ -12,7 +12,7 @@ import io.cucumber.java.en.Given;
  *   | Scenario | scenaro001 |
  * </pre>
  * and stores the paths with {@link TestDataSetup#putTestDataPaths}, so later steps read them with
- * {@code session.get(Keys.BASE_DATA_PATH)} and {@code session.get(Keys.SCENARIO_PATH)}.
+ * {@code session.data().get(Keys.BASE_DATA_PATH)} and {@code session.data().get(Keys.SCENARIO_PATH)}.
  */
 public class TestDataSteps {
 

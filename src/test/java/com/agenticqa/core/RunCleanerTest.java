@@ -46,7 +46,7 @@ public class RunCleanerTest {
     @Test
     public void uniqueNumbersNeverRepeatAcrossThreads() {
         Set<Long> seen = ConcurrentHashMap.newKeySet();
-        IntStream.range(0, 20_000).parallel().forEach(i -> seen.add(TestData.uniqueNumber()));
+        IntStream.range(0, 20_000).parallel().forEach(i -> seen.add(UniqueData.uniqueNumber()));
         assertEquals(seen.size(), 20_000);
     }
 }

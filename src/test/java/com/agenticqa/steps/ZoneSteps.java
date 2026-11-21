@@ -1,6 +1,6 @@
 package com.agenticqa.steps;
 
-import com.agenticqa.core.TestData;
+import com.agenticqa.core.UniqueData;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.core.Variables;
 import io.cucumber.java.en.Given;
@@ -18,7 +18,7 @@ import static org.testng.Assert.assertTrue;
  * The id is kept in two places, so every kind of step can read it:
  * <ul>
  *   <li>the {@link TestSession} under {@link Keys#ZONE_ID}, as a {@code long}, for Java step code in any step
- *       class: {@code long zoneId = session.get(Keys.ZONE_ID);}</li>
+ *       class: {@code long zoneId = session.data().get(Keys.ZONE_ID);}</li>
  *   <li>the scenario variable {@code zoneId}, for feature files: {@code ${zoneId}} in request fields, paths,
  *       headers and expectations.</li>
  * </ul>
@@ -48,8 +48,8 @@ public class ZoneSteps {
     /** Sets a new unique zone id for this scenario: {@code Given a unique zone id is set}. */
     @Given("a unique zone id is set")
     public void setZoneId() {
-        long zoneId = TestData.uniqueNumber();
-        session.put(ZONE_ID, zoneId);
+        long zoneId = UniqueData.uniqueNumber();
+        session.data().put(ZONE_ID, zoneId);
         vars.put(VARIABLE, String.valueOf(zoneId));
         System.out.printf("[ZONE] [%s] zone id set: %d%n", Thread.currentThread().getName(), zoneId);
     }
@@ -63,14 +63,14 @@ public class ZoneSteps {
     @Given("the zone id is {string}")
     public void setZoneId(String value) {
         long zoneId = Long.parseLong(vars.resolve(value).trim());
-        session.put(ZONE_ID, zoneId);
+        session.data().put(ZONE_ID, zoneId);
         vars.put(VARIABLE, String.valueOf(zoneId));
     }
 
     /** Reads the zone id an earlier step set: {@code When I read the zone id}. */
     @When("I read the zone id")
     public void readZoneId() {
-        readZoneId = session.get(ZONE_ID); // fails with a clear message if no earlier step set one
+        readZoneId = session.data().get(ZONE_ID); // fails with a clear message if no earlier step set one
         System.out.printf("[ZONE] [%s] zone id read: %d%n", Thread.currentThread().getName(), readZoneId);
     }
 
@@ -78,7 +78,7 @@ public class ZoneSteps {
     @Then("the zone id read is the one that was set")
     public void sameZoneId() {
         assertTrue(readZoneId != null, "No zone id was read. Add the step: When I read the zone id");
-        assertEquals(readZoneId, session.get(ZONE_ID), "zone id in the session");
+        assertEquals(readZoneId, session.data().get(ZONE_ID), "zone id in the session");
         assertEquals(String.valueOf(readZoneId), vars.get(VARIABLE), "zone id in ${" + VARIABLE + "}");
     }
 
@@ -89,7 +89,7 @@ public class ZoneSteps {
      */
     @Then("the zone id should be {string}")
     public void zoneIdIs(String expected) {
-        assertEquals(session.get(ZONE_ID).longValue(), Long.parseLong(vars.resolve(expected).trim()), "zone id");
+        assertEquals(session.data().get(ZONE_ID).longValue(), Long.parseLong(vars.resolve(expected).trim()), "zone id");
     }
 
     /**
@@ -99,7 +99,7 @@ public class ZoneSteps {
      */
     @Given("I save the zone id as {string}")
     public void saveZoneId(String variable) {
-        vars.put(variable, String.valueOf(session.get(ZONE_ID)));
+        vars.put(variable, String.valueOf(session.data().get(ZONE_ID)));
     }
 
     /**
@@ -109,7 +109,7 @@ public class ZoneSteps {
      */
     @Then("the zone id is not {string}")
     public void zoneIdIsNot(String other) {
-        assertNotEquals(session.get(ZONE_ID).longValue(), Long.parseLong(vars.resolve(other).trim()), "zone id");
+        assertNotEquals(session.data().get(ZONE_ID).longValue(), Long.parseLong(vars.resolve(other).trim()), "zone id");
     }
 
     /**
@@ -120,6 +120,6 @@ public class ZoneSteps {
      */
     @Given("a unique number is saved as {string}")
     public void uniqueNumber(String variable) {
-        vars.put(variable, String.valueOf(TestData.uniqueNumber()));
+        vars.put(variable, String.valueOf(UniqueData.uniqueNumber()));
     }
 }

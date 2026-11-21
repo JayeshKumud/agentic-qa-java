@@ -31,13 +31,13 @@ public final class Keys {
 
     /**
      * The views of the scenario, shared between steps. Store a copy so later changes to the caller's list
-     * cannot change it: {@code session.put(VIEWS, List.copyOf(views))}, read with {@code session.get(VIEWS)}.
+     * cannot change it: {@code session.data().put(VIEWS, List.copyOf(views))}, read with {@code session.data().get(VIEWS)}.
      */
     public static final DataKey<List<String>> VIEWS = DataKey.listOf("views", String.class);
 
     /**
-     * Uniques created in the scenario, by base name. Add with {@code TestSession.current().put(BASE_UNIQUE, name,
-     * unique)} and read with {@code TestSession.current().map(BASE_UNIQUE)}; see {@code BackUniqueTransit}.
+     * Uniques created in the scenario, by base name. Add with {@code TestSession.current().data().put(BASE_UNIQUE, name,
+     * unique)} and read with {@code TestSession.current().data().map(BASE_UNIQUE)}; see {@code BackUniqueTransit}.
      * The constant is only the key: the map itself lives in each scenario's session and ends with it.
      */
     public static final DataKey<Map<String, Unique>> BASE_UNIQUE =

@@ -7,10 +7,10 @@ stored under a **key** declared once in
 
 ```java
 // CustomerApiSteps: an API step stores the customer it created
-session.put(Keys.CUSTOMER, customer);
+session.data().put(Keys.CUSTOMER, customer);
 
 // CustomerUiSteps: a GUI step of the same scenario reads it
-page().open().search(session.get(Keys.CUSTOMER).getName());
+page().open().search(session.data().get(Keys.CUSTOMER).getName());
 ```
 
 ## Why keys
@@ -19,8 +19,8 @@ A key is a `DataKey<T>`: a name plus the type of the value stored under it.
 
 | Without keys (`Map<String, Object>`) | With `DataKey<T>` |
 |---|---|
-| `(Customer) store.get("customer")`: a cast at every read | `session.get(Keys.CUSTOMER)` returns a `Customer`, no cast |
-| `store.put("customer", "oops")` compiles and fails later | `session.put(Keys.CUSTOMER, "oops")` does not compile |
+| `(Customer) store.get("customer")`: a cast at every read | `session.data().get(Keys.CUSTOMER)` returns a `Customer`, no cast |
+| `store.put("customer", "oops")` compiles and fails later | `session.data().put(Keys.CUSTOMER, "oops")` does not compile |
 | `"customer"` in one class, `"Customer"` in another: silently two values | every class uses the same constant |
 | a missing value is `null`, and the `NullPointerException` shows up far away | `get` fails at once: `Nothing stored under key 'customer' in this scenario. Did an earlier step run?` |
 | data in `static` fields or `ThreadLocal`s needs a `clear()` after every scenario | data lives in the scenario's session and ends with it |
@@ -57,8 +57,8 @@ public static final DataKey<Map<String, Unique>> BASE_UNIQUE =
         DataKey.mapOf("baseUnique", String.class, Unique.class);
 
 // any step or helper: the data goes into the running scenario's session
-TestSession.current().put(Keys.BASE_UNIQUE, "U1", unique);
-Map<String, Unique> uniques = TestSession.current().map(Keys.BASE_UNIQUE);
+TestSession.current().data().put(Keys.BASE_UNIQUE, "U1", unique);
+Map<String, Unique> uniques = TestSession.current().data().map(Keys.BASE_UNIQUE);
 ```
 
 The map is stored **inside the scenario's `TestSession`**, so it lives exactly as long as the scenario:
@@ -109,7 +109,7 @@ A `static` field is shared by the whole run: every scenario and every thread see
 
 Think of the key as a **label on a drawer**. Every scenario's `TestSession` has its own set of drawers; the
 label `CUSTOMER` is the same everywhere, but what is inside the drawer belongs to one scenario only. Two parallel
-scenarios that both write `session.put(Keys.CUSTOMER, ...)` write into two different sessions.
+scenarios that both write `session.data().put(Keys.CUSTOMER, ...)` write into two different sessions.
 
 Declaring every key once in `Keys.java` also means:
 
@@ -143,9 +143,9 @@ public static final DataKey<Response> RESPONSE = DataKey.of("lastResponse", Resp
 ```
 
 ```java
-session.put(Keys.NAME_TAG, tag);                 // stores, or replaces the earlier value
-String tag = session.get(Keys.NAME_TAG);         // fails clearly if nothing was stored
-if (session.has(Keys.ZONE_ID)) { ... }           // for a value that is optional
+session.data().put(Keys.NAME_TAG, tag);                 // stores, or replaces the earlier value
+String tag = session.data().get(Keys.NAME_TAG);         // fails clearly if nothing was stored
+if (session.data().has(Keys.ZONE_ID)) { ... }           // for a value that is optional
 ```
 
 Use the wrapper types (`Long`, `Integer`, `Boolean`) in the key: `DataKey.of("zoneId", long.class)` does not
@@ -163,17 +163,17 @@ public static final DataKey<List<String>> VIEWS = DataKey.listOf("views", String
 A list can be built up item by item, the usual case when several steps each add one:
 
 ```java
-session.add(Keys.VIEWS, "summary");              // creates the list on first use; fails on null
-session.add(Keys.VIEWS, "details");
-List<String> views = session.list(Keys.VIEWS);          // a read-only copy, empty if nothing was added
-List<String> views = session.requireList(Keys.VIEWS);   // the same, but fails clearly if it is empty
+session.data().add(Keys.VIEWS, "summary");              // creates the list on first use; fails on null
+session.data().add(Keys.VIEWS, "details");
+List<String> views = session.data().list(Keys.VIEWS);          // a read-only copy, empty if nothing was added
+List<String> views = session.data().requireList(Keys.VIEWS);   // the same, but fails clearly if it is empty
 ```
 
 or stored whole, when one step has the complete list:
 
 ```java
-session.put(Keys.VIEWS, List.copyOf(fileNames)); // store a copy: later changes to fileNames cannot affect it
-List<String> views = session.get(Keys.VIEWS);
+session.data().put(Keys.VIEWS, List.copyOf(fileNames)); // store a copy: later changes to fileNames cannot affect it
+List<String> views = session.data().get(Keys.VIEWS);
 ```
 
 Use **one style per key**. `List.copyOf` makes a list that cannot be changed, so a later `add` on the same key
@@ -190,10 +190,10 @@ public static final DataKey<Map<String, Unique>> BASE_UNIQUE =
 ```
 
 ```java
-session.put(Keys.BASE_UNIQUE, "U1", new Unique("REG-1001"));   // creates the map on first use;
+session.data().put(Keys.BASE_UNIQUE, "U1", new Unique("REG-1001"));   // creates the map on first use;
                                                                // replaces an entry with the same name;
                                                                // fails on a null name or value
-Map<String, Unique> uniques = session.map(Keys.BASE_UNIQUE);   // a read-only copy, in the order added;
+Map<String, Unique> uniques = session.data().map(Keys.BASE_UNIQUE);   // a read-only copy, in the order added;
                                                                // empty if nothing was put
 Unique u1 = uniques.get("U1");                                 // null if U1 was not stored
 ```
@@ -227,12 +227,12 @@ public class OrderSteps {
     @When("I place an order")
     public void placeOrder() {
         Order order = ApiFactory.getApi(OrderApi.class).postOrder(new Order(...)).as(Order.class);
-        session.put(Keys.ORDER, order);               // later steps, API or GUI, read it
+        session.data().put(Keys.ORDER, order);               // later steps, API or GUI, read it
     }
 
     @Then("the order page shows the order")
     public void orderPageShowsIt() {
-        Order order = session.get(Keys.ORDER);
+        Order order = session.data().get(Keys.ORDER);
         ...
     }
 }
@@ -243,7 +243,7 @@ Static imports keep the steps short, as in `CustomerApiSteps`:
 ```java
 import static com.agenticqa.steps.Keys.CUSTOMER;
 
-session.put(CUSTOMER, customer);
+session.data().put(CUSTOMER, customer);
 ```
 
 ## Using keys in other classes
@@ -253,7 +253,7 @@ A helper, page object or any class that PicoContainer does not create gets the s
 
 ```java
 public BackUniqueTransit(String time, String uniqueIds) {
-    Map<String, Unique> baseUniques = TestSession.current().map(Keys.BASE_UNIQUE);
+    Map<String, Unique> baseUniques = TestSession.current().data().map(Keys.BASE_UNIQUE);
     ...
 }
 ```

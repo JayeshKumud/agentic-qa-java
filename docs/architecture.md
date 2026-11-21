@@ -41,7 +41,7 @@ flowchart TB
     subgraph Core["Framework (src/main/java)"]
         S["TestSession<br/>per-scenario state"]
         BP["BrowserPool<br/>one browser per thread"]
-        V["Variables · TestData"]
+        V["Variables · UniqueData"]
         AF["ApiFactory · Api"]
         subgraph UI["ui"]
             PO["CustomersPage"]
@@ -85,7 +85,7 @@ flowchart TB
 | Steps | `steps.*` | Turn Gherkin into calls on page objects and API classes. No selectors and no raw URLs |
 | Cleanup | `ServiceCleanup` | Delete what the scenario created, newest first, in `@After` |
 | Session | `core.TestSession` | Lazily starts Playwright, holds the page, healer and the typed data store shared by API and GUI steps |
-| Data helpers | `core.Variables`, `TestData`, `DataKey` | `${var}` and `{unique}` substitution, unique test data, typed keys |
+| Data helpers | `core.Variables`, `UniqueData`, `DataKey` | `${var}` and `{unique}` substitution, unique test data, typed keys |
 | API | `api.ApiFactory`, `apis.*` | `ApiFactory` creates each API class once; API classes call their service with REST Assured |
 | UI | `ui.*` | Page objects built from `SmartLocator`s |
 | Healing | `ui.healing.*` | Fingerprint capture, similarity scoring and replacement of broken selectors |
@@ -218,8 +218,7 @@ sequenceDiagram
             St->>St: assertions
         end
         C->>H: @After 7-5: attach heals, screenshot and debug info (failed)
-        H->>S: @After 4: close(failed) → save trace and video if failed, close context
-        H->>S: @After 3: delete this scenario's leftover raw recording
+        H->>S: @After 4: close(failed) → save trace and video if failed, close context, delete the raw recording
         C->>St: cleanup @After(order = 2): delete created resources
         C->>H: @After 1: delete the zone, record the result
         C->>Rep: TestCaseFinished (status, attachments)

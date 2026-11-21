@@ -16,8 +16,8 @@ import java.util.Map;
  * <p>
  * Values put in the session here are read by the steps of the same scenario:
  * <pre>
- * session.put(Keys.ZONE_ID, zoneId);       // here
- * long zoneId = session.get(Keys.ZONE_ID); // in a step
+ * session.data().put(Keys.ZONE_ID, zoneId);       // here
+ * long zoneId = session.data().get(Keys.ZONE_ID); // in a step
  * </pre>
  */
 public class TestDataSetup {
@@ -47,15 +47,15 @@ public class TestDataSetup {
         String testDataDir = Settings.getTestDataDir();
 
         if (data.containsKey("BaseData")) {
-            session.put(Keys.BASE_DATA_PATH, testDataDir + data.get("BaseData"));
+            session.data().put(Keys.BASE_DATA_PATH, testDataDir + data.get("BaseData"));
         }
         if (data.containsKey("Scenario")) {
-            session.put(Keys.SCENARIO_PATH, testDataDir + data.get("Scenario"));
+            session.data().put(Keys.SCENARIO_PATH, testDataDir + data.get("Scenario"));
         }
     }
 
     /**
-     * File path of test data, for example {@code resource(session.get(Keys.BASE_DATA_PATH))}. The path is
+     * File path of test data, for example {@code resource(session.data().get(Keys.BASE_DATA_PATH))}. The path is
      * relative to the project root, so the run must start there (as mvn test does).
      *
      * @param path for example src/test/resources/testdata/xyz

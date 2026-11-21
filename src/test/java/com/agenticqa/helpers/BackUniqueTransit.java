@@ -16,7 +16,7 @@ import java.util.Map;
  * earlier (stored by base name under {@link Keys#BASE_UNIQUE}) is replaced by its registration id; any other
  * value is used as written:
  * <pre>
- * // earlier: TestSession.current().put(Keys.BASE_UNIQUE, "U1", new Unique("REG-1001"));
+ * // earlier: TestSession.current().data().put(Keys.BASE_UNIQUE, "U1", new Unique("REG-1001"));
  * new BackUniqueTransit("10:00", "U1, REG-77").getUniqueRegIds();   // [REG-1001, REG-77]
  * </pre>
  * It finds the running scenario with {@link TestSession#current()}, so it can be created anywhere on the
@@ -43,7 +43,7 @@ public class BackUniqueTransit {
         this.uniqueRegIds = new ArrayList<>();
 
         if (uniqueIds != null && !uniqueIds.isBlank()) {
-            Map<String, Unique> baseUniques = TestSession.current().map(Keys.BASE_UNIQUE);
+            Map<String, Unique> baseUniques = TestSession.current().data().map(Keys.BASE_UNIQUE);
             if (baseUniques.isEmpty()) {
                 logger.info("No dynamic unique found");
             }

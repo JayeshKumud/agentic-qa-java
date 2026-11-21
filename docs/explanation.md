@@ -248,8 +248,8 @@ One step stores a value (`CustomerApiSteps`):
 @Given("a customer named {string} exists")
 public void createCustomer(String name) {
     ...
-    session.put(RESPONSE, response);
-    session.put(CUSTOMER, customer);
+    session.data().put(RESPONSE, response);
+    session.data().put(CUSTOMER, customer);
 }
 ```
 
@@ -258,14 +258,14 @@ A later step in another class reads it (`CustomerUiSteps`):
 ```java
 @When("I search the customers page for that customer")
 public void searchForCustomer() {
-    page().open().search(session.get(CUSTOMER).getName());
+    page().open().search(session.data().get(CUSTOMER).getName());
 }
 ```
 
 Why typed keys (`DataKey<T>`) and not plain strings:
 
-- **The compiler checks the type.** `session.get(CUSTOMER)` returns a `Customer`, so no cast is needed, and
-  `session.put(CUSTOMER, "text")` does not compile.
+- **The compiler checks the type.** `session.data().get(CUSTOMER)` returns a `Customer`, so no cast is needed, and
+  `session.data().put(CUSTOMER, "text")` does not compile.
 - **No typos.** Every class uses the same constant, so one class can't write `"customer"` while another reads
   `"Customer"`.
 - **Clear errors.** If nothing was stored, `get` throws
@@ -315,7 +315,7 @@ class needs belongs in one of the shared objects above.
 1. Add a key to `Keys.java`, for example
    `public static final DataKey<String> ORDER_ID = DataKey.of("orderId", String.class);`
 2. Make sure each step class that needs it takes `TestSession` in its constructor.
-3. Store it with `session.put(Keys.ORDER_ID, id)` and read it with `session.get(Keys.ORDER_ID)`.
+3. Store it with `session.data().put(Keys.ORDER_ID, id)` and read it with `session.data().get(Keys.ORDER_ID)`.
 
 ---
 
@@ -345,7 +345,7 @@ can call.
 The name appears in a dozen files:
 
 - **Java (must change or it won't compile):** `TestSession.java` itself (the file name has to match the class),
-  `TestInitializeHooks`, the step classes (`CustomerApiSteps`, `CustomerUiSteps`, `ZoneSteps`), `PageComponentFactory` and the
+  `TestInitializeHooks`, the step classes (`CustomerApiSteps`, `CustomerUiSteps`, `ZoneSteps`), `PageComponentsFactory` and the
   unit tests that use it.
 - **Docs and comments (won't break anything if missed, but would be out of date):** `README.md`, the files in
   `docs/` (including this one), and comments in two feature files.
@@ -397,7 +397,7 @@ hook, `order = 1`) binds that same object to the scenario's thread, so code that
 ```java
 TestSession session = TestSession.current();   // the running scenario's session
 Page page = TestSession.currentPage();          // its browser page, opened on first use
-HomePage home = PageComponentFactory.get(HomePage.class);
+HomePage home = PageComponentsFactory.get(HomePage.class);
 ```
 
 There is exactly **one** ThreadLocal, the pointer to the session. Per-scenario data is not kept in separate
@@ -412,9 +412,9 @@ public static final DataKey<List<InstMan>> CREATED_INST_MAN = DataKey.listOf("cr
 public static final DataKey<List<Unit.UnitKL>> UNIT_KL = DataKey.listOf("unitKL", Unit.UnitKL.class);
 
 // any step or helper
-TestSession.current().add(CREATED_INST_MAN, instMan);                    // fails clearly on null
-List<InstMan> created = TestSession.current().requireList(CREATED_INST_MAN); // fails clearly if empty
-List<Unit.UnitKL> units = TestSession.current().list(UNIT_KL);           // empty list if none
+TestSession.current().data().add(CREATED_INST_MAN, instMan);                    // fails clearly on null
+List<InstMan> created = TestSession.current().data().requireList(CREATED_INST_MAN); // fails clearly if empty
+List<Unit.UnitKL> units = TestSession.current().data().list(UNIT_KL);           // empty list if none
 ```
 
 `current()` fails with a clear message outside a scenario, before `TestInitializeHooks.bindSession`, and on another thread

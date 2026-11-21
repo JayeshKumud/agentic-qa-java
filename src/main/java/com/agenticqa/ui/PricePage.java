@@ -6,13 +6,13 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
 /**
- * Page object of the Price window, the new window an Add Master option opens
- * ({@link CommonActions#openWindow}). Steps talk to this class and never use selectors themselves.
+ * Page object of the Price window, opened with {@code windows.switchToWindow("Add Master", "Price Window")}
+ * ({@link WindowNavigator}). Steps talk to this class and never use selectors themselves.
  * <p>
  * The selectors live in {@code src/main/resources/locators/pricepage.json}, not in this class, and elements are
  * looked up by name when they are used ({@code el.get("name")}).
  */
-public class PricePage implements PageComponent {
+public class PricePage implements PageComponents {
 
     /** Name of the locator file, locators/pricepage.json. */
     public static final String LOCATORS = "pricepage";
@@ -37,7 +37,7 @@ public class PricePage implements PageComponent {
         return page.title();
     }
 
-    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as selectDropdownOption */
+    /** @return this page's elements, used by the shared actions of {@link PageComponents} such as selectDropdownOption */
     @Override
     public PageElements elements() {
         return el;

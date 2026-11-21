@@ -63,7 +63,7 @@ agentic-qa-java/
 └── src/
     ├── main/java/com/agenticqa/
     │   ├── config/                      EnvConfig (loads the properties), Settings (static getters)
-    │   ├── core/                        TestSession, BrowserPool, DataKey, Variables, TestData
+    │   ├── core/                        TestSession, BrowserPool, DataKey, Variables, UniqueData
     │   ├── api/                         Api (marker interface), ApiFactory
     │   └── ui/                          CustomersPage (page object), LocatorRepository, PageElements
     │       └── healing/                 SmartLocator, Healer, HealingScorer, Fingerprint(Store), HealEvent
@@ -253,13 +253,13 @@ public class OrderSteps {
     @When("I place an order")
     public void placeOrder() {
         Order order = ApiFactory.getApi(OrderApi.class).postOrder(new Order(...)).as(Order.class);
-        session.put(Keys.ORDER, order);                                   // later GUI or API steps read it
+        session.data().put(Keys.ORDER, order);                                   // later GUI or API steps read it
         cleanup.add("order " + order.getId(), () -> ApiFactory.getApi(OrderApi.class).deleteOrder(order.getId()));
     }
 }
 ```
 
-To share data between step classes, use `session.put(key, value)` / `session.get(key)` with a typed `DataKey`
+To share data between step classes, use `session.data().put(key, value)` / `session.data().get(key)` with a typed `DataKey`
 (see `steps/Keys.java` and [docs/keys.md](docs/keys.md)). Register anything the scenario creates for cleanup.
 
 ### 5. A new environment

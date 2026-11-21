@@ -12,7 +12,7 @@ import com.microsoft.playwright.options.WaitUntilState;
  * Page object of the KLM GUI, a separate URL ({@code gui.klm.url} in the properties files).
  * Selectors live in {@code src/main/resources/locators/klm.json}.
  */
-public class KlmPage implements PageComponent {
+public class KlmPage implements PageComponents {
 
     /** Name of the locator file, locators/klm.json. */
     public static final String LOCATORS = "klm";
@@ -30,7 +30,7 @@ public class KlmPage implements PageComponent {
         return page.title();
     }
 
-    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as selectDropdownOption */
+    /** @return this page's elements, used by the shared actions of {@link PageComponents} such as selectDropdownOption */
     @Override
     public PageElements elements() {
         return el;

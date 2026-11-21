@@ -3,7 +3,7 @@ package com.agenticqa.steps;
 import com.agenticqa.api.ApiFactory;
 import com.agenticqa.apis.CustomerApi;
 import com.agenticqa.apis.model.Customer;
-import com.agenticqa.core.TestData;
+import com.agenticqa.core.UniqueData;
 import com.agenticqa.core.TestSession;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -51,12 +51,12 @@ public class CustomerApiSteps {
     @Given("a customer named {string} exists")
     @When("I create a customer named {string}")
     public void createCustomer(String name) {
-        String unique = TestData.uniqueName(name);
-        Response response = customerApi().postCustomer(new Customer(unique, TestData.emailFor(unique)));
-        session.put(RESPONSE, response);
+        String unique = UniqueData.uniqueName(name);
+        Response response = customerApi().postCustomer(new Customer(unique, UniqueData.emailFor(unique)));
+        session.data().put(RESPONSE, response);
         Customer customer = response.as(Customer.class);
         deleteAfterScenario(cleanup, customer.getId());
-        session.put(CUSTOMER, customer);
+        session.data().put(CUSTOMER, customer);
         logger.info("Created {}", customer);
     }
 
@@ -67,19 +67,19 @@ public class CustomerApiSteps {
      */
     @When("I change the customer status to {string}")
     public void changeStatus(String status) {
-        Customer current = session.get(CUSTOMER);
+        Customer current = session.data().get(CUSTOMER);
         Customer changed = new Customer(null, current.getName(), current.getEmail(), status);
         Response response = customerApi().putCustomer(current.getId(), changed);
-        session.put(RESPONSE, response);
-        session.put(CUSTOMER, response.as(Customer.class));
+        session.data().put(RESPONSE, response);
+        session.data().put(CUSTOMER, response.as(Customer.class));
         logger.info("Changed customer {} status to {}", current.getId(), status);
     }
 
     /** Deletes the customer. */
     @When("I delete the customer")
     public void deleteCustomer() {
-        Customer current = session.get(CUSTOMER);
-        session.put(RESPONSE, customerApi().deleteCustomer(current.getId()));
+        Customer current = session.data().get(CUSTOMER);
+        session.data().put(RESPONSE, customerApi().deleteCustomer(current.getId()));
         cleanup.cancel(cleanupKey(current.getId()));
     }
 
@@ -90,7 +90,7 @@ public class CustomerApiSteps {
      */
     @Then("the customer can be found by id with status {string}")
     public void findById(String status) {
-        Customer expected = session.get(CUSTOMER);
+        Customer expected = session.data().get(CUSTOMER);
         Customer actual = customerApi().getCustomer(expected.getId()).as(Customer.class);
         assertEquals(actual.getId(), expected.getId());
         assertEquals(actual.getName(), expected.getName());
@@ -101,13 +101,13 @@ public class CustomerApiSteps {
     /** Checks that the customer appears in GET /customers. */
     @Then("the customer appears in the customer list")
     public void appearsInList() {
-        assertTrue(listedIds().contains(session.get(CUSTOMER).getId()), "Customer missing from list");
+        assertTrue(listedIds().contains(session.data().get(CUSTOMER).getId()), "Customer missing from list");
     }
 
     /** Checks that the customer no longer appears in GET /customers. */
     @Then("the customer no longer appears in the customer list")
     public void absentFromList() {
-        assertFalse(listedIds().contains(session.get(CUSTOMER).getId()), "Deleted customer still listed");
+        assertFalse(listedIds().contains(session.data().get(CUSTOMER).getId()), "Deleted customer still listed");
     }
 
     /**
@@ -117,7 +117,7 @@ public class CustomerApiSteps {
      */
     @Then("the API responds with status {int}")
     public void responseStatus(int status) {
-        Response response = session.get(RESPONSE);
+        Response response = session.data().get(RESPONSE);
         assertEquals(response.getStatusCode(), status, response.getBody().asString());
     }
 

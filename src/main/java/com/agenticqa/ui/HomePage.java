@@ -10,13 +10,10 @@ import com.microsoft.playwright.Page;
  * The selectors live in {@code src/main/resources/locators/homepage.json}, not in this class, and elements are
  * looked up by name when they are used ({@code el.get("roleTitle")}).
  */
-public class HomePage implements PageComponent {
+public class HomePage implements PageComponents {
 
     /** Name of the locator file, locators/homepage.json. */
     public static final String LOCATORS = "homepage";
-
-    /** Text of the home page's dropdown button (dropdownButton in locators/common.json). */
-    public static final String ADD_MASTER = "Add Master";
 
     private final Page page;
     private final PageElements el;
@@ -38,7 +35,7 @@ public class HomePage implements PageComponent {
         return page.title();
     }
 
-    /** @return this page's elements, used by the shared actions of {@link PageComponent} such as selectDropdownOption */
+    /** @return this page's elements, used by the shared actions of {@link PageComponents} such as selectDropdownOption */
     @Override
     public PageElements elements() {
         return el;
@@ -69,42 +66,6 @@ public class HomePage implements PageComponent {
     public HomePage selectByName(String name) {
         clickAndWait(el.get("selectButtonByName", "MYNAME", name));
         return this;
-    }
-
-    /**
-     * Clicks Add Master, then the TestWINDOW option, which opens a new window, and waits until it has loaded.
-     *
-     * @return the new window; find its elements with {@code newWindow.locator(...)}
-     */
-    public Page openTestWindow() {
-        Page newWindow = page.waitForPopup(() -> selectAddMasterOption("TestWINDOW"));
-        newWindow.waitForLoadState();
-        return newWindow;
-    }
-
-    /**
-     * Opens the Add Master dropdown and clicks one of its options ({@link #selectDropdownOption}).
-     *
-     * @param option the text of the option, for example "TestWINDOW"
-     * @return this page
-     */
-    public HomePage selectAddMasterOption(String option) {
-        selectDropdownOption(ADD_MASTER, option);
-        return this;
-    }
-
-    /**
-     * Opens the window an Add Master option opens and returns its page object
-     * ({@link CommonActions#openWindow}): {@code openAddMasterMenu("Price", PricePage.class)}.
-     *
-     * @param option the Add Master option, which is also the title of the window it opens, for example "Price"
-     * @param type   the page object of that window, for example PricePage.class or KlmPage.class
-     * @param <T>    the page type
-     * @return the page object, bound to the new window
-     * @throws AssertionError if the window's title is not {@code option}
-     */
-    public <T extends PageComponent> T openAddMasterMenu(String option, Class<T> type) {
-        return CommonActions.openWindow(this, ADD_MASTER, option, type);
     }
 
     /**
