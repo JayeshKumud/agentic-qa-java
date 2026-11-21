@@ -18,6 +18,9 @@ public class HomePage implements PageComponents {
     /** Text of the home page's dropdown button; it is shown only on the home page. */
     public static final String ADD_MASTER = "Add Master";
 
+    /** The browser page title (the tab) of the home page. DUMMY: replace with the real title. */
+    public static final String PAGE_TITLE = "Open Balancing Platform";
+
     private final Page page;
     private final PageElements el;
 
@@ -45,13 +48,15 @@ public class HomePage implements PageComponents {
     }
 
     /**
-     * Checks that the home page is shown: its Add Master dropdown button is visible (dropdownButton in
-     * locators/common.json). Waits up to ui.waits.assertionMs, for example right after sign in.
+     * Checks that the home page is shown: the browser page title is {@value #PAGE_TITLE} and its Add Master
+     * dropdown button is visible (dropdownButton in locators/common.json). Waits up to ui.waits.assertionMs,
+     * for example right after sign in.
      *
      * @return this page
      * @throws AssertionError if the home page is not shown
      */
     public HomePage verifyDisplayed() {
+        CommonActions.assertTitle(page, PAGE_TITLE);
         CommonActions.assertVisible(el.get("dropdownButton", "NAME", ADD_MASTER),
                 "the home page (its '" + ADD_MASTER + "' button)");
         return this;

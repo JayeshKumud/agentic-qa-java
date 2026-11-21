@@ -82,6 +82,25 @@ public final class CommonActions {
         }
     }
 
+    /**
+     * Checks the browser page title (the text in the tab). Waits up to ui.waits.assertionMs for it, because apps
+     * often set the title by script a moment after the page has loaded, then asserts it with TestNG:
+     * {@code CommonActions.assertTitle(page, "Price Window")}.
+     *
+     * @param page     the window whose title to check
+     * @param expected the title, exactly
+     * @throws AssertionError if the title is not {@code expected} in time; the message shows the title found
+     */
+    public static void assertTitle(Page page, String expected) {
+        try {
+            page.waitForFunction("t => document.title === t", expected,
+                    new Page.WaitForFunctionOptions().setTimeout(Settings.getAssertionMs()));
+        } catch (PlaywrightException otherTitle) {
+            // the assert below reports the title found
+        }
+        Assert.assertEquals(page.title(), expected, "browser page title on " + page.url());
+    }
+
     private static PageElements common(Page page, Healer healer) {
         return new PageElements(page, healer, LocatorRepository.COMMON);
     }

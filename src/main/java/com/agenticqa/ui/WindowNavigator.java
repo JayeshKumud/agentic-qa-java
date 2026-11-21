@@ -1,11 +1,8 @@
 package com.agenticqa.ui;
 
-import com.agenticqa.config.Settings;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.PlaywrightException;
-import org.testng.Assert;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -136,26 +133,10 @@ public class WindowNavigator {
                                                           Class<T> type) {
         Page window = from.elements().page().waitForPopup(() -> from.selectDropdownOption(button, option));
         window.waitForLoadState();
-        waitForTitle(window, option);
-        Assert.assertEquals(window.title(), option, "title of the window the " + button + " option opened");
+        CommonActions.assertTitle(window, option);
         BrowserWindow.maximize(window);
         BrowserWindow.resize(window);
         return create(type, window, from.elements().healer());
-    }
-
-    /**
-     * Waits until the window's title is {@code title}. The new window first loads the app's start page, which has
-     * the opener's title; the app's script sets the real title a moment after the load event, so reading the
-     * title right after waitForLoadState still gives the old one. Gives up after ui.waits.assertionMs and leaves
-     * the failure message to the Assert that follows.
-     */
-    private static void waitForTitle(Page window, String title) {
-        try {
-            window.waitForFunction("t => document.title === t", title,
-                    new Page.WaitForFunctionOptions().setTimeout(Settings.getAssertionMs()));
-        } catch (PlaywrightException stillOtherTitle) {
-            // the Assert reports the title it found
-        }
     }
 
     /** Creates a page object on the given window with its (Page, Healer) constructor. */

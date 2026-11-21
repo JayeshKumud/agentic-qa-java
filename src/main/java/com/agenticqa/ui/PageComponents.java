@@ -1,6 +1,7 @@
 package com.agenticqa.ui;
 
 import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.Page;
 import com.microsoft.playwright.PlaywrightException;
 
 /**
@@ -22,6 +23,16 @@ public interface PageComponents {
      * @return the page object's {@link PageElements}
      */
     PageElements elements();
+
+    /**
+     * The browser window (Playwright page) this page object works on, for anything it does not offer:
+     * {@code Page window = pages.price().window();}.
+     *
+     * @return this page object's window
+     */
+    default Page window() {
+        return elements().page();
+    }
 
     /**
      * Opens a dropdown and picks one of its options: clicks the dropdown's button, then the option (the {@code li}

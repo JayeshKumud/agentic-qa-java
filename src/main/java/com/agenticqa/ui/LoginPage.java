@@ -19,6 +19,9 @@ public class LoginPage implements PageComponents {
     /** The title the login page shows (loginTitle in loginpage.json). */
     public static final String TITLE = "Open Balancing Platform";
 
+    /** The browser page title (the tab) of the login page. DUMMY: replace with the real title. */
+    public static final String PAGE_TITLE = "Sign in to Open Balancing Platform";
+
     private final Page page;
     private final Healer healer;
     private final PageElements el;
@@ -48,13 +51,15 @@ public class LoginPage implements PageComponents {
     }
 
     /**
-     * Checks that the login page is shown: its title is {@value #TITLE} and the sign in button is visible.
-     * Waits up to ui.waits.assertionMs for the page to appear, for example right after log out.
+     * Checks that the login page is shown: the browser page title is {@value #PAGE_TITLE}, the title on the page
+     * is {@value #TITLE} and the sign in button is visible. Waits up to ui.waits.assertionMs for the page to
+     * appear, for example right after log out.
      *
      * @return this page
      * @throws AssertionError if the title or the sign in button is not shown
      */
     public LoginPage verifyDisplayed() {
+        CommonActions.assertTitle(page, PAGE_TITLE);
         Locator title = el.get("loginTitle");
         CommonActions.assertVisible(title, "the login page title '" + TITLE + "'");
         Assert.assertEquals(title.innerText().trim(), TITLE, "login page title");

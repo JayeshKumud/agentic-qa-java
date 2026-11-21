@@ -17,6 +17,13 @@ public class PricePage implements PageComponents {
     /** Name of the locator file, locators/pricepage.json. */
     public static final String LOCATORS = "pricepage";
 
+    /**
+     * The browser page title (the tab) of the Price window. It must be the option that opens it, because
+     * {@link WindowNavigator} checks the new window's title against the option text. DUMMY: replace with the real
+     * title (and the option in WindowNavigator.WINDOWS) if it differs.
+     */
+    public static final String PAGE_TITLE = "Price Window";
+
     private final Page page;
     private final PageElements el;
 
@@ -68,6 +75,17 @@ public class PricePage implements PageComponents {
         Locator rows = el.get("rows");
         rows.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
         return rows.count();
+    }
+
+    /**
+     * Checks that the Price window is shown: its browser page title is {@value #PAGE_TITLE}.
+     *
+     * @return this page
+     * @throws AssertionError if the title is not {@value #PAGE_TITLE} within ui.waits.assertionMs
+     */
+    public PricePage verifyDisplayed() {
+        CommonActions.assertTitle(page, PAGE_TITLE);
+        return this;
     }
 
     /**
