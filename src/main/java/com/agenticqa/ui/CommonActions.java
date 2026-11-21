@@ -7,7 +7,7 @@ import com.microsoft.playwright.Page;
  * Buttons that are the same on every page, clicked in the window passed in, so page objects need no code for
  * them (moving between windows is {@link WindowNavigator}'s job):
  * <pre>
- * CommonActions.openHelp(session.page(), session.healer());               // home window
+ * Page help = CommonActions.openHelp(session.page(), session.healer());  // opens help in a new page
  * CommonActions.openKeyboardShortcuts(pricePage.page(), session.healer()); // Price window
  * </pre>
  * Their locators live once in {@code locators/common.json}. Lookups go through the scenario's healer like every
@@ -18,13 +18,17 @@ public final class CommonActions {
     private CommonActions() {}
 
     /**
-     * Clicks the help button (helpButton in locators/common.json).
+     * Clicks the help button (helpButton in locators/common.json), which opens help in a new browser page, and
+     * waits until that page has loaded.
      *
      * @param page   the window to click it in
      * @param healer this scenario's healer ({@code session.healer()})
+     * @return the help page; the window it was opened from stays as it was
      */
-    public static void openHelp(Page page, Healer healer) {
-        common(page, healer).get("helpButton").click();
+    public static Page openHelp(Page page, Healer healer) {
+        Page help = page.waitForPopup(() -> common(page, healer).get("helpButton").click());
+        help.waitForLoadState();
+        return help;
     }
 
     /**

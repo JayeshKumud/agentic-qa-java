@@ -22,7 +22,10 @@ public class CommonSteps {
         this.windows = windows;
     }
 
-    /** Clicks the help button of the current window: {@code When I open help}. */
+    /**
+     * Clicks the help button of the current window and waits until the help page it opens has loaded:
+     * {@code When I open help}. The scenario stays on the current window.
+     */
     @When("I open help")
     public void openHelp() {
         PageElements current = windows.current().elements();
