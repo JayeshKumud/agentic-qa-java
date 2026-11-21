@@ -54,8 +54,7 @@ public class HomePage implements PageComponents {
      */
     public HomePage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);
-        CommonActions.assertVisible(shared().dropdownButton(DropdownButtonText.ADD_TOOL),
-                "the home page (its '" + DropdownButtonText.ADD_TOOL + "' button)");
+        CommonActions.assertVisible(shared().dropdownButton(), "the home page's dropdown button");
         return this;
     }
 

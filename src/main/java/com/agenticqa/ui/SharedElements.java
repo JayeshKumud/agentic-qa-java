@@ -6,11 +6,11 @@ import com.microsoft.playwright.Page;
 
 /**
  * The elements that are not owned by one page (help button, dropdown, buttons by their text, ...), with one method
- * per element, so callers never pass locator names or placeholders. The standard dropdown texts are in
- * {@link DropdownButtonText} and {@link DropdownOptionValue}:
+ * per element, so callers never pass locator names or placeholders. The windows the dropdown options open are the
+ * {@link Window} enum:
  * <pre>
  * pages.home().shared().logoutButton().click();
- * pages.home().shared().dropdownButton(DropdownButtonText.ADD_TOOL).click();
+ * pages.home().shared().dropdownButton().click();
  * pages.home().shared().roleButton(role).click();
  * new SharedElements(page, healer).helpButton().click();
  * </pre>
@@ -72,17 +72,17 @@ public final class SharedElements {
     }
 
     /**
-     * A dropdown's button, by its text (dropdownButton), for example {@link DropdownButtonText#ADD_TOOL}.
+     * The window's dropdown button (dropdownButton). Every window has one, found by its data-testid, whatever its
+     * text (Add tool, Price Stack, ...).
      *
-     * @param name the button's text, exactly as shown
      * @return the button
      */
-    public Locator dropdownButton(String name) {
-        return el.get("dropdownButton", "NAME", name);
+    public Locator dropdownButton() {
+        return el.get("dropdownButton");
     }
 
     /**
-     * An option of the open dropdown, by its text (dropdownOption), for example {@link DropdownOptionValue#PRICE_STACK}.
+     * An option of the open dropdown, by its text (dropdownOption), for example {@code Window.PRICE_STACK.text()}.
      *
      * @param option the option's text, exactly as shown
      * @return the option

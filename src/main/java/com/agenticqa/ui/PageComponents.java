@@ -45,21 +45,20 @@ public interface PageComponents {
     }
 
     /**
-     * Opens a dropdown and picks one of its options: clicks the dropdown's button, then the option (the {@code li}
-     * in the option list whose span shows {@code option}). The click on the option waits for the list to appear.
-     * The button text differs per page, for example "Add tool" on the home page, "Price" in the Price window,
-     * "Customer" on the customers page. If the list closes again before the option is clicked, the button is
-     * clicked once more and the option again. Locators: dropdownButton, dropdownOption in locators/common.json.
+     * Opens this window's dropdown and picks one of its options: clicks the dropdown button (one per window, found
+     * by its data-testid), then the option (the {@code li} in the option list whose span shows {@code option}). The
+     * click on the option waits for the list to appear. If the list closes again before the option is clicked, the
+     * button is clicked once more and the option again. Locators: dropdownButton, dropdownOption in
+     * locators/common.json.
      *
-     * @param dropdown the text of the dropdown's button, exactly as shown, for example "Add tool"
-     * @param option   the text of the option, exactly as shown, for example "Price"
+     * @param option the text of the option, exactly as shown, for example {@code Window.PRICE_STACK.text()}
      */
-    default void selectDropdownOption(String dropdown, String option) {
+    default void selectDropdownOption(String option) {
         try {
-            shared().dropdownButton(dropdown).click();
+            shared().dropdownButton().click();
             shared().dropdownOption(option).click(new Locator.ClickOptions().setTimeout(5000));
         } catch (PlaywrightException listClosedTooSoon) {
-            shared().dropdownButton(dropdown).click();
+            shared().dropdownButton().click();
             shared().dropdownOption(option).click();
         }
     }

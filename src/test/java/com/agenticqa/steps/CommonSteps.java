@@ -3,6 +3,7 @@ package com.agenticqa.steps;
 import com.agenticqa.ui.CommonActions;
 import com.agenticqa.ui.HomePage;
 import com.agenticqa.ui.PageElements;
+import com.agenticqa.ui.Window;
 import com.agenticqa.ui.WindowNavigator;
 import io.cucumber.java.en.When;
 
@@ -40,7 +41,7 @@ public class CommonSteps {
      */
     @When("I log out")
     public void logout() {
-        HomePage home = windows.switchToWindow(WindowNavigator.HOME);
+        HomePage home = windows.switchToWindow(Window.HOME);
         CommonActions.logout(home);
     }
 

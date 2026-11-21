@@ -6,7 +6,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
 /**
- * Page object of the Price window, opened with {@code windows.switchToWindow("Add tool", "Price Stack")}
+ * Page object of the Price window, opened with {@code windows.switchToWindow(Window.PRICE_STACK)}
  * ({@link WindowNavigator}). Steps talk to this class and never use selectors themselves.
  * <p>
  * The selectors live in {@code src/main/resources/locators/pricepage.json}, not in this class, and elements are
@@ -19,9 +19,9 @@ public class PricePage implements PageComponents {
 
     /**
      * The browser page title (the tab) of the Price window: the text of the option that opens it
-     * ({@link DropdownOptionValue#PRICE_STACK}), because {@link WindowNavigator} checks the new window's title against it.
+     * ({@link Window#PRICE_STACK}), because {@link WindowNavigator} checks the new window's title against it.
      */
-    public static final String PAGE_TITLE = DropdownOptionValue.PRICE_STACK;
+    public static final String PAGE_TITLE = Window.PRICE_STACK.text();
 
     private final Page page;
     private final PageElements el;
@@ -77,10 +77,10 @@ public class PricePage implements PageComponents {
     }
 
     /**
-     * Checks that the Price window is shown: its browser page title is {@value #PAGE_TITLE}.
+     * Checks that the Price window is shown: its browser page title is {@link #PAGE_TITLE}.
      *
      * @return this page
-     * @throws AssertionError if the title is not {@value #PAGE_TITLE} within ui.waits.assertionMs
+     * @throws AssertionError if the title is not {@link #PAGE_TITLE} within ui.waits.assertionMs
      */
     public PricePage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);

@@ -5,7 +5,7 @@ import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Page;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 
 /**
@@ -13,38 +13,27 @@ import java.util.Map;
  * <pre>
  * public WindowSteps(WindowNavigator windows, Pages pages) { ... }
  *
- * PricePage price = windows.switchToWindow(DropdownButtonText.ADD_TOOL, DropdownOptionValue.PRICE_STACK);
+ * PricePage price = windows.switchToWindow(Window.PRICE_STACK);    // opens it from the home page
  * price.openFilter();
- * windows.switchToWindow(DropdownButtonText.PRICE_STACK, DropdownOptionValue.CUSTOMER_WINDOW);  // from Price Stack
- * windows.switchToWindow(DropdownOptionValue.PRICE_STACK);                                     // back, already open
- * pages.price().openFilter();                                               // a later step, same window
+ * windows.switchToWindow(Window.CUSTOMER_WINDOW);                   // opens it from Price Stack
+ * windows.switchToWindow(Window.PRICE_STACK);                       // back, already open
+ * windows.switchToWindow(Window.HOME);                              // the first window
+ * pages.price().openFilter();                                                    // a later step, same window
  * </pre>
- * A switch clicks a button and one of its options in the current window, waits for the window that opens, checks
- * its title, maximizes it, and creates the page object for it ({@link #WINDOWS}). The new window becomes the
- * current one, so the next switch starts from it, and its page object is stored in the session, so
- * {@code pages.price()}, {@code pages.customers()} return it in later steps.
+ * Every window has one dropdown button (found by its data-testid), so a window is opened by its option only: the
+ * current window's dropdown button is clicked, then the option. The new window becomes the current one, so the
+ * next switch starts from it, and its page object is stored in the session, so {@code pages.price()},
+ * {@code pages.customers()} return it in later steps.
  * <p>
  * PicoContainer creates one navigator per scenario and gives the same instance to every step class, so the
  * current window is per scenario without a ThreadLocal.
  */
 public class WindowNavigator {
 
-    /** Name for {@link #switchToWindow(String)} of the scenario's first window, the home page. */
-    public static final String HOME = "Home";
-
-    /**
-     * The windows {@link #switchToWindow(String, String)} can open: the option text (also the window's title) and
-     * the page object for that window. Add a line here for each new window; {@link DropdownButtonText#ADD_TOOL} is only a
-     * button, never an option, so it is not here.
-     */
-    static final Map<String, Class<? extends PageComponents>> WINDOWS = Map.of(
-            DropdownOptionValue.PRICE_STACK, PricePage.class,
-            DropdownOptionValue.CUSTOMER_WINDOW, CustomersPage.class);
-
     private final TestSession session;
     private final Pages pages;
-    /** Windows opened in this scenario, by option text. */
-    private final Map<String, PageComponents> opened = new HashMap<>();
+    /** Windows opened in this scenario. */
+    private final Map<Window, PageComponents> opened = new EnumMap<>(Window.class);
     /** The window steps are on; null means the home page. */
     private PageComponents current;
 
@@ -60,51 +49,27 @@ public class WindowNavigator {
     }
 
     /**
-     * Opens a window from a button in the current window and switches to it, so the next steps act on it.
-     * In the current window it clicks the button whose text is {@code button} (dropdownButton in
-     * locators/common.json), then the option whose text is {@code option} (dropdownOption), waits for the new
-     * window, checks that its title is {@code option}, maximizes it and makes the page fill it.
-     * <p>
-     * If that window is open already, it is only brought to the front; nothing is clicked.
+     * Switches to a window, opening it if needed, so the next steps act on it:
+     * {@code windows.switchToWindow(Window.PRICE_STACK)}.
+     * <ul>
+     *   <li>{@link Window#HOME}: the scenario's first window.</li>
+     *   <li>A window opened earlier in this scenario: brought to the front; nothing is clicked.</li>
+     *   <li>Otherwise it is opened from the current window: its dropdown button is clicked, then the option
+     *       {@link Window#text()}; the new window's title must be that text, then it is maximized and its page
+     *       fills it. Its page object is {@link Window#page()}.</li>
+     * </ul>
      *
-     * @param button the button's text in the current window, exactly as shown, for example
-     *               {@link DropdownButtonText#ADD_TOOL}
-     * @param option the option's text, exactly as shown, which is also the new window's title,
-     *               for example {@link DropdownOptionValue#PRICE_STACK}
-     * @param <T>    the page type, taken from the variable it is assigned to
-     * @return the page object of the new window
-     * @throws IllegalArgumentException if {@link #WINDOWS} has no page object for {@code option}
-     * @throws AssertionError           if the new window's title is not {@code option}
-     */
-    public <T extends PageComponents> T switchToWindow(String button, String option) {
-        PageComponents target = opened.get(option);
-        if (target == null || target.elements().page().isClosed()) {
-            Class<? extends PageComponents> type = WINDOWS.get(option);
-            if (type == null) {
-                throw new IllegalArgumentException("No page object for the window '" + option + "'. Add it to "
-                        + "WindowNavigator.WINDOWS, for example \"" + option + "\", SomePage.class. Known: "
-                        + WINDOWS.keySet());
-            }
-            target = keep(type, openWindow(current(), button, option, type));
-            opened.put(option, target);
-        }
-        return makeCurrent(target);
-    }
-
-    /**
-     * Switches back to a window opened earlier in this scenario, or to the first window with {@link #HOME}:
-     * {@code windows.switchToWindow(DropdownOptionValue.PRICE_STACK)}, {@code windows.switchToWindow(WindowNavigator.HOME)}.
-     *
-     * @param window the option text the window was opened with, or {@link #HOME}
+     * @param window the window
      * @param <T>    the page type, taken from the variable it is assigned to
      * @return the page object of that window
-     * @throws IllegalStateException if no window of that name is open in this scenario
+     * @throws AssertionError if a new window's title is not the window's text
      */
-    public <T extends PageComponents> T switchToWindow(String window) {
-        PageComponents target = HOME.equals(window) ? pages.home() : opened.get(window);
+    public <T extends PageComponents> T switchToWindow(Window window) {
+        if (window == Window.HOME) return makeCurrent(pages.home());
+        PageComponents target = opened.get(window);
         if (target == null || target.elements().page().isClosed()) {
-            throw new IllegalStateException("No open window '" + window + "'. Open it first with "
-                    + "switchToWindow(button, \"" + window + "\"). Open: " + opened.keySet() + " and " + HOME);
+            target = keep(window.page(), openWindow(current(), window.text(), window.page()));
+            opened.put(window, target);
         }
         return makeCurrent(target);
     }
@@ -127,13 +92,12 @@ public class WindowNavigator {
     }
 
     /**
-     * Clicks the button and the option on {@code from}, waits for the window that opens and for its title to
-     * become {@code option}, checks the title with TestNG, maximizes the window, makes the page fill it, and
+     * Clicks the dropdown button and the option on {@code from}, waits for the window that opens and for its title
+     * to become {@code option}, checks the title with TestNG, maximizes the window, makes the page fill it, and
      * creates the page object on it.
      */
-    private static <T extends PageComponents> T openWindow(PageComponents from, String button, String option,
-                                                          Class<T> type) {
-        Page window = from.elements().page().waitForPopup(() -> from.selectDropdownOption(button, option));
+    private static <T extends PageComponents> T openWindow(PageComponents from, String option, Class<T> type) {
+        Page window = from.elements().page().waitForPopup(() -> from.selectDropdownOption(option));
         window.waitForLoadState();
         CommonActions.assertTitle(window, option);
         BrowserWindow.maximize(window);
