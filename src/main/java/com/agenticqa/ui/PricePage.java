@@ -21,7 +21,7 @@ public class PricePage implements PageComponents {
      * The browser page title (the tab) of the Price window: the text of the option that opens it
      * ({@link DropdownOptionValue#PRICE_STACK}), because {@link WindowNavigator} checks the new window's title against it.
      */
-    public static final String PAGE_TITLE = DropdownOptionValue.PRICE_STACK.text();
+    public static final String PAGE_TITLE = DropdownOptionValue.PRICE_STACK;
 
     private final Page page;
     private final PageElements el;
@@ -77,10 +77,10 @@ public class PricePage implements PageComponents {
     }
 
     /**
-     * Checks that the Price window is shown: its browser page title is {@link #PAGE_TITLE}.
+     * Checks that the Price window is shown: its browser page title is {@value #PAGE_TITLE}.
      *
      * @return this page
-     * @throws AssertionError if the title is not {@link #PAGE_TITLE} within ui.waits.assertionMs
+     * @throws AssertionError if the title is not {@value #PAGE_TITLE} within ui.waits.assertionMs
      */
     public PricePage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);

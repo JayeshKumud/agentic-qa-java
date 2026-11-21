@@ -6,9 +6,8 @@ import com.microsoft.playwright.Page;
 
 /**
  * The elements that are not owned by one page (help button, dropdown, buttons by their text, ...), with one method
- * per element, so callers never pass locator names or placeholders. The standard dropdown texts are the
- * {@link DropdownButtonText} and {@link DropdownOptionValue} enums; the methods that take a text are for values that
- * vary, such as a role:
+ * per element, so callers never pass locator names or placeholders. The standard dropdown texts are in
+ * {@link DropdownButtonText} and {@link DropdownOptionValue}:
  * <pre>
  * pages.home().shared().logoutButton().click();
  * pages.home().shared().dropdownButton(DropdownButtonText.ADD_TOOL).click();
@@ -62,26 +61,6 @@ public final class SharedElements {
     }
 
     /**
-     * A standard dropdown's button: {@code dropdownButton(DropdownButtonText.ADD_TOOL)}.
-     *
-     * @param button the button's text
-     * @return the button
-     */
-    public Locator dropdownButton(DropdownButtonText button) {
-        return dropdownButton(button.text());
-    }
-
-    /**
-     * A standard option of the open dropdown: {@code dropdownOption(DropdownOptionValue.PRICE_STACK)}.
-     *
-     * @param option the option's value
-     * @return the option
-     */
-    public Locator dropdownOption(DropdownOptionValue option) {
-        return dropdownOption(option.text());
-    }
-
-    /**
      * The {@code button type="button" data-testid="button"} whose {@code div} shows a text (textButton), for
      * example "Log Out" or a role such as "COE".
      *
@@ -93,7 +72,7 @@ public final class SharedElements {
     }
 
     /**
-     * A dropdown's button, by its text (dropdownButton), for example "Add tool" or "Price Stack".
+     * A dropdown's button, by its text (dropdownButton), for example {@link DropdownButtonText#ADD_TOOL}.
      *
      * @param name the button's text, exactly as shown
      * @return the button
@@ -103,7 +82,7 @@ public final class SharedElements {
     }
 
     /**
-     * An option of the open dropdown, by its text (dropdownOption), for example "Price Stack".
+     * An option of the open dropdown, by its text (dropdownOption), for example {@link DropdownOptionValue#PRICE_STACK}.
      *
      * @param option the option's text, exactly as shown
      * @return the option
