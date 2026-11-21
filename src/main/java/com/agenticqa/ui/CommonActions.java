@@ -34,7 +34,7 @@ public final class CommonActions {
      * @return the help page; the window it was opened from stays as it was
      */
     public static Page openHelp(Page page, Healer healer) {
-        Page help = page.waitForPopup(() -> common(page, healer).get("helpButton").click());
+        Page help = page.waitForPopup(() -> new SharedElements(page, healer).helpButton().click());
         help.waitForLoadState();
         return help;
     }
@@ -46,7 +46,7 @@ public final class CommonActions {
      * @param healer this scenario's healer ({@code session.healer()})
      */
     public static void openKeyboardShortcuts(Page page, Healer healer) {
-        common(page, healer).get("keyboardShortcutsButton").click();
+        new SharedElements(page, healer).keyboardShortcutsButton().click();
     }
 
     /**
@@ -60,9 +60,8 @@ public final class CommonActions {
      * @throws AssertionError if the login page is not shown after log out
      */
     public static LoginPage logout(HomePage home) {
-        PageElements el = home.elements();
-        el.get("textButton", "TEXT", LOG_OUT).click();
-        return new LoginPage(el.page(), el.healer()).verifyDisplayed();
+        home.shared().textButton(LOG_OUT).click();
+        return new LoginPage(home.window(), home.elements().healer()).verifyDisplayed();
     }
 
     /**
@@ -100,9 +99,5 @@ public final class CommonActions {
             // the assert below reports the title found
         }
         Assert.assertEquals(page.title(), expected, "browser page title on " + page.url());
-    }
-
-    private static PageElements common(Page page, Healer healer) {
-        return new PageElements(page, healer, LocatorRepository.COMMON);
     }
 }

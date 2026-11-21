@@ -57,7 +57,7 @@ public class HomePage implements PageComponents {
      */
     public HomePage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);
-        CommonActions.assertVisible(el.get("dropdownButton", "NAME", ADD_MASTER),
+        CommonActions.assertVisible(shared().dropdownButton(ADD_MASTER),
                 "the home page (its '" + ADD_MASTER + "' button)");
         return this;
     }
@@ -76,7 +76,7 @@ public class HomePage implements PageComponents {
      */
     public HomePage selectRole(String role) {
         clickAndWait(el.get("roleLogin", "ROLE", role));
-        CommonActions.assertVisible(el.get("textButton", "TEXT", role), "the '" + role + "' role button");
+        CommonActions.assertVisible(shared().textButton(role), "the '" + role + "' role button");
         return this;
     }
 

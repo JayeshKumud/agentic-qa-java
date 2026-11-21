@@ -35,6 +35,16 @@ public interface PageComponents {
     }
 
     /**
+     * The shared elements (locators/common.json) in this page object's window:
+     * {@code pages.home().shared().textButton("Log Out")}.
+     *
+     * @return the shared elements of this page's window
+     */
+    default SharedElements shared() {
+        return new SharedElements(window(), elements().healer());
+    }
+
+    /**
      * Opens a dropdown and picks one of its options: clicks the dropdown's button, then the option (the {@code li}
      * in the option list whose span shows {@code option}). The click on the option waits for the list to appear.
      * The button text differs per page, for example "Add Master" on the home page, "Price" in the Price window,
@@ -46,11 +56,11 @@ public interface PageComponents {
      */
     default void selectDropdownOption(String dropdown, String option) {
         try {
-            elements().get("dropdownButton", "NAME", dropdown).click();
-            elements().get("dropdownOption", "OPTION", option).click(new Locator.ClickOptions().setTimeout(5000));
+            shared().dropdownButton(dropdown).click();
+            shared().dropdownOption(option).click(new Locator.ClickOptions().setTimeout(5000));
         } catch (PlaywrightException listClosedTooSoon) {
-            elements().get("dropdownButton", "NAME", dropdown).click();
-            elements().get("dropdownOption", "OPTION", option).click();
+            shared().dropdownButton(dropdown).click();
+            shared().dropdownOption(option).click();
         }
     }
 
@@ -62,7 +72,7 @@ public interface PageComponents {
      * @param label the dropdown's label exactly as shown, for example "TEST1" or "TEST2"
      */
     default void clickFilterDropdown(String label) {
-        elements().get("filterDropdownInput", "LABEL", label).click();
+        shared().filterDropdownInput(label).click();
     }
 
     /**
@@ -73,6 +83,6 @@ public interface PageComponents {
      * @return the input's value
      */
     default String filterDropdownValue(String label) {
-        return elements().get("filterDropdownInput", "LABEL", label).inputValue();
+        return shared().filterDropdownInput(label).inputValue();
     }
 }
