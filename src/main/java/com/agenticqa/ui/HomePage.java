@@ -45,7 +45,7 @@ public class HomePage implements PageComponents {
     }
 
     /**
-     * Checks that the home page is shown: the browser page title is {@value #PAGE_TITLE} and its Add Master
+     * Checks that the home page is shown: the browser page title is {@value #PAGE_TITLE} and its Add tool
      * dropdown button is visible (dropdownButton in locators/common.json). Waits up to ui.waits.assertionMs,
      * for example right after sign in.
      *
@@ -54,8 +54,8 @@ public class HomePage implements PageComponents {
      */
     public HomePage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);
-        CommonActions.assertVisible(shared().addMasterButton(),
-                "the home page (its '" + SharedElements.ADD_TOOL + "' button)");
+        CommonActions.assertVisible(shared().dropdownButton(DropdownButtonText.ADD_TOOL),
+                "the home page (its '" + DropdownButtonText.ADD_TOOL + "' button)");
         return this;
     }
 

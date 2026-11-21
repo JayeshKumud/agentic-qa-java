@@ -6,13 +6,13 @@ import com.microsoft.playwright.Page;
 
 /**
  * The elements that are not owned by one page (help button, dropdown, buttons by their text, ...), with one method
- * per element, so callers never pass locator names or placeholders. The app's fixed texts are defined here once
- * ({@link #LOG_OUT}, {@link #ADD_TOOL}, ...), each with its own method; the methods that take a text are for
- * values that vary, such as a role:
+ * per element, so callers never pass locator names or placeholders. The standard dropdown texts are the
+ * {@link DropdownButtonText} and {@link DropdownOptionValue} enums; the methods that take a text are for values that
+ * vary, such as a role:
  * <pre>
  * pages.home().shared().logoutButton().click();
- * pages.home().shared().addMasterButton().click();
- * pages.home().shared().textButton(role).click();
+ * pages.home().shared().dropdownButton(DropdownButtonText.ADD_TOOL).click();
+ * pages.home().shared().roleButton(role).click();
  * new SharedElements(page, healer).helpButton().click();
  * </pre>
  * The selectors live once in {@code src/main/resources/locators/common.json}; this class is their only user, as
@@ -23,12 +23,6 @@ public final class SharedElements {
 
     /** Text of the log out button (home page). */
     public static final String LOG_OUT = "Log Out";
-    /** Text of the home page's dropdown button that opens the other windows. */
-    public static final String ADD_TOOL = "Add tool";
-    /** The Price window: an option of the Add Master dropdown, the window's title, and its own dropdown button. */
-    public static final String PRICE_STACK = "Price Stack";
-    /** The Customer window: an option of the Price window's dropdown, and the window's title. */
-    public static final String CUSTOMER_WINDOW = "Customer Window";
 
     private final PageElements el;
 
@@ -57,29 +51,34 @@ public final class SharedElements {
         return textButton(LOG_OUT);
     }
 
-    /** @return the role button of the home page: {@code textButton(LOG_OUT)} */
+    /**
+     * The role button of the home page, shown after a role is selected: {@code textButton(role)}.
+     *
+     * @param role the role, for example "COE"
+     * @return the button
+     */
     public Locator roleButton(String role) {
         return textButton(role);
     }
 
-    /** @return the home page's Add Master dropdown button: {@code dropdownButton(ADD_MASTER)} */
-    public Locator addMasterButton() {
-        return dropdownButton(ADD_TOOL);
+    /**
+     * A standard dropdown's button: {@code dropdownButton(DropdownButtonText.ADD_TOOL)}.
+     *
+     * @param button the button's text
+     * @return the button
+     */
+    public Locator dropdownButton(DropdownButtonText button) {
+        return dropdownButton(button.text());
     }
 
-    /** @return the Price window's own dropdown button: {@code dropdownButton(PRICE_WINDOW)} */
-    public Locator priceWindowButton() {
-        return dropdownButton(PRICE_STACK);
-    }
-
-    /** @return the Price Window option of the open dropdown: {@code dropdownOption(PRICE_WINDOW)} */
-    public Locator priceWindowOption() {
-        return dropdownOption(PRICE_STACK);
-    }
-
-    /** @return the Customer Window option of the open dropdown: {@code dropdownOption(CUSTOMER_WINDOW)} */
-    public Locator customerWindowOption() {
-        return dropdownOption(CUSTOMER_WINDOW);
+    /**
+     * A standard option of the open dropdown: {@code dropdownOption(DropdownOptionValue.PRICE_STACK)}.
+     *
+     * @param option the option's value
+     * @return the option
+     */
+    public Locator dropdownOption(DropdownOptionValue option) {
+        return dropdownOption(option.text());
     }
 
     /**
@@ -94,7 +93,7 @@ public final class SharedElements {
     }
 
     /**
-     * A dropdown's button, by its text (dropdownButton), for example "Add Master" or "Price Window".
+     * A dropdown's button, by its text (dropdownButton), for example "Add tool" or "Price Stack".
      *
      * @param name the button's text, exactly as shown
      * @return the button
@@ -104,7 +103,7 @@ public final class SharedElements {
     }
 
     /**
-     * An option of the open dropdown, by its text (dropdownOption), for example "Price Window".
+     * An option of the open dropdown, by its text (dropdownOption), for example "Price Stack".
      *
      * @param option the option's text, exactly as shown
      * @return the option

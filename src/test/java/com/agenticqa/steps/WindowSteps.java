@@ -26,9 +26,9 @@ public class WindowSteps {
 
     /**
      * Clicks a button in the current window, then one of its options, which opens a window, and switches to it:
-     * {@code When I switch from "Add Master" to the "Price Window" window}.
+     * {@code When I switch from "Add tool" to the "Price Stack" window}.
      *
-     * @param button   the button's text in the current window, exactly as shown, for example "Add Master"
+     * @param button   the button's text in the current window, exactly as shown, for example "Add tool"
      * @param window   the option's text, exactly as shown, which is also the new window's title
      */
     @When("I switch from {string} to the {string} window")
@@ -37,7 +37,7 @@ public class WindowSteps {
     }
 
     /**
-     * Switches back to a window opened earlier in this scenario: {@code When I go back to the "Price Window" window},
+     * Switches back to a window opened earlier in this scenario: {@code When I go back to the "Price Stack" window},
      * or to the first window with {@code When I go back to the "Home" window}.
      *
      * @param window the option text the window was opened with, or "Home"

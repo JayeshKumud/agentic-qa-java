@@ -51,7 +51,7 @@ public class Pages {
     }
 
     /**
-     * The Price window. Open it first with {@code windows.switchToWindow(button, "Price Window")}
+     * The Price window. Open it first with {@code windows.switchToWindow(button, "Price Stack")}
      * ({@link WindowNavigator}); before that this returns a PricePage on the scenario's first window, where its
      * elements are not found.
      *
