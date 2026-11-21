@@ -32,6 +32,16 @@ public class CommonSteps {
         CommonActions.openHelp(current.page(), current.healer());
     }
 
+    /**
+     * Logs out in the current window and checks that the login page is shown there (its title and sign in
+     * button): {@code When I log out}.
+     */
+    @When("I log out")
+    public void logout() {
+        PageElements current = windows.current().elements();
+        CommonActions.logout(current.page(), current.healer());
+    }
+
     /** Clicks the keyboard shortcuts button of the current window: {@code When I open the keyboard shortcuts}. */
     @When("I open the keyboard shortcuts")
     public void openKeyboardShortcuts() {

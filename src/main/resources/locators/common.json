@@ -4,6 +4,10 @@
     "selector": "button[aria-label='Help']",
     "description": "help button (on every page, CommonActions.openHelp)"
   },
+  "textButton": {
+    "selector": "button[type='button'][data-testid='button']:has(div:text-is('TEXT'))",
+    "description": "button whose div shows TEXT: 'Log Out' (CommonActions.logout), or the selected role (HomePage.selectRole)"
+  },
   "keyboardShortcutsButton": {
     "selector": "button[aria-label='Keyboard shortcuts']",
     "description": "keyboard shortcuts button (on every page, CommonActions.openKeyboardShortcuts)"

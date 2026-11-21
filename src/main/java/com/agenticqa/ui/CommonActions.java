@@ -1,7 +1,12 @@
 package com.agenticqa.ui;
 
+import com.agenticqa.config.Settings;
 import com.agenticqa.ui.healing.Healer;
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.PlaywrightException;
+import com.microsoft.playwright.options.WaitForSelectorState;
+import org.testng.Assert;
 
 /**
  * Buttons that are the same on every page, clicked in the window passed in, so page objects need no code for
@@ -14,6 +19,9 @@ import com.microsoft.playwright.Page;
  * other element, so a button that is not found is listed in the failure report with its selector.
  */
 public final class CommonActions {
+
+    /** Text of the log out button (textButton in locators/common.json). */
+    public static final String LOG_OUT = "Log Out";
 
     private CommonActions() {}
 
@@ -39,6 +47,39 @@ public final class CommonActions {
      */
     public static void openKeyboardShortcuts(Page page, Healer healer) {
         common(page, healer).get("keyboardShortcutsButton").click();
+    }
+
+    /**
+     * Logs out: clicks the log out button (textButton in locators/common.json with TEXT {@value #LOG_OUT}: the
+     * {@code button type="button" data-testid="button"} whose {@code div} shows it), then checks that the login
+     * page is shown in that window ({@link LoginPage#verifyDisplayed()}).
+     *
+     * @param page   the window to click it in
+     * @param healer this scenario's healer ({@code session.healer()})
+     * @return the login page, already checked
+     * @throws AssertionError if the login page is not shown after log out
+     */
+    public static LoginPage logout(Page page, Healer healer) {
+        common(page, healer).get("textButton", "TEXT", LOG_OUT).click();
+        return new LoginPage(page, healer).verifyDisplayed();
+    }
+
+    /**
+     * Waits until an element is visible, up to ui.waits.assertionMs, and fails with a clear TestNG message (not a
+     * Playwright timeout) if it does not appear: {@code CommonActions.assertVisible(button, "the COE role button")}.
+     *
+     * @param element the element that must be shown
+     * @param what    what it is, for the failure message
+     * @throws AssertionError if the element is not visible in time
+     */
+    public static void assertVisible(Locator element, String what) {
+        try {
+            element.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(Settings.getAssertionMs()));
+        } catch (PlaywrightException notShown) {
+            Assert.fail("Expected " + what + " to be shown within " + Settings.getAssertionMs() + " ms, on "
+                    + element.page().url());
+        }
     }
 
     private static PageElements common(Page page, Healer healer) {

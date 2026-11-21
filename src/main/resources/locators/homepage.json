@@ -59,30 +59,9 @@
     "selector": "button.button-small.button-kkk.role_login_MYNAME",
     "description": "Select button in the row whose Name column is MYNAME"
   },
-  "logInField": {
-    "selector": "#kc-form-login",
-    "description": "login form"
-  },
-  "usernameField": {
-    "selector": "Username or email",
-    "description": "username or email field"
-  },
-  "signInButton": {
-    "selector": "#kc-login",
-    "description": "sign in button"
-  },
-  "invalidLoginError": {
-    "selector": "//*[contains(text(),'Invalid username or password')]",
-    "description": "invalid username or password error message",
-    "heal": false
-  },
   "btnLogOut": {
     "selector": "//*[contains(text(),'Log out')]",
     "description": "log out button"
-  },
-  "lblSign": {
-    "selector": "//*[@id='kc-header-wrapper' and text()='Open Balancing Platform']",
-    "description": "Open Balancing Platform sign-in heading"
   },
   "notiTableRowSeverity": {
     "selector": "[row-index='MYROW'] div[col-id='severity']",

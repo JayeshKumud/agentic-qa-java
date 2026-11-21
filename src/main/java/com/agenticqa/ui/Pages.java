@@ -40,6 +40,11 @@ public class Pages {
         return get(HomePage.class);
     }
 
+    /** @return the login page of this scenario (the first window) */
+    public LoginPage login() {
+        return get(LoginPage.class);
+    }
+
     /** @return the customers page of this scenario (the Customer window once WindowNavigator opened it) */
     public CustomersPage customers() {
         return get(CustomersPage.class);

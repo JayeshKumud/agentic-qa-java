@@ -15,6 +15,9 @@ public class HomePage implements PageComponents {
     /** Name of the locator file, locators/homepage.json. */
     public static final String LOCATORS = "homepage";
 
+    /** Text of the home page's dropdown button; it is shown only on the home page. */
+    public static final String ADD_MASTER = "Add Master";
+
     private final Page page;
     private final PageElements el;
 
@@ -42,17 +45,33 @@ public class HomePage implements PageComponents {
     }
 
     /**
+     * Checks that the home page is shown: its Add Master dropdown button is visible (dropdownButton in
+     * locators/common.json). Waits up to ui.waits.assertionMs, for example right after sign in.
+     *
+     * @return this page
+     * @throws AssertionError if the home page is not shown
+     */
+    public HomePage verifyDisplayed() {
+        CommonActions.assertVisible(el.get("dropdownButton", "NAME", ADD_MASTER),
+                "the home page (its '" + ADD_MASTER + "' button)");
+        return this;
+    }
+
+    /**
      * Clicks the Select button of a role in the change-role dialog. Each button carries the class
      * {@code role_login_<ROLE>}, so the role picks its own button directly, without reading table rows.
      * <p>
-     * After the click it waits until the page has finished loading, so the next step sees the page of the new
-     * role.
+     * After the click it waits until the page has finished loading and checks that the page now shows the role's
+     * button (textButton in locators/common.json, the same button as Log Out, with the role as its text), so the
+     * next step sees the page of the new role.
      *
      * @param role the role as shown in the Role column, for example "COE", "NBE" or "OEM"
      * @return this page
+     * @throws AssertionError if the role's button is not shown after the switch
      */
     public HomePage selectRole(String role) {
         clickAndWait(el.get("roleLogin", "ROLE", role));
+        CommonActions.assertVisible(el.get("textButton", "TEXT", role), "the '" + role + "' role button");
         return this;
     }
 

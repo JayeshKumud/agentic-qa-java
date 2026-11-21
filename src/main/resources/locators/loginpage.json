@@ -1,0 +1,28 @@
+{
+  "_comment": "Locators of the login page (LoginPage), shown after log out and before sign in. Name -> selector, or an object with selector, description and heal (default true; false for elements that may legitimately be absent). Keys starting with _ are ignored. The form selectors are Keycloak's defaults, as in klm.json.",
+  "loginTitle": {
+    "selector": "#kc-header-wrapper",
+    "description": "login page title (Open Balancing Platform)"
+  },
+  "loginForm": {
+    "selector": "#kc-form-login",
+    "description": "login form"
+  },
+  "usernameInput": {
+    "selector": "#username",
+    "description": "username or email field"
+  },
+  "passwordInput": {
+    "selector": "#password",
+    "description": "password field"
+  },
+  "signInButton": {
+    "selector": "#kc-login",
+    "description": "sign in button"
+  },
+  "invalidLoginError": {
+    "selector": "//*[contains(text(),'Invalid username or password')]",
+    "description": "invalid username or password error message",
+    "heal": false
+  }
+}
