@@ -22,7 +22,7 @@ public class PricePage implements PageComponents {
      * {@link WindowNavigator} checks the new window's title against the option text. DUMMY: replace with the real
      * title (and the option in WindowNavigator.WINDOWS) if it differs.
      */
-    public static final String PAGE_TITLE = "Price Window";
+    public static final String PAGE_TITLE = SharedElements.PRICE_STACK;
 
     private final Page page;
     private final PageElements el;

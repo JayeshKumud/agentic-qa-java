@@ -6,10 +6,13 @@ import com.microsoft.playwright.Page;
 
 /**
  * The elements that are not owned by one page (help button, dropdown, buttons by their text, ...), with one method
- * per element, so callers never pass locator names or placeholders:
+ * per element, so callers never pass locator names or placeholders. The app's fixed texts are defined here once
+ * ({@link #LOG_OUT}, {@link #ADD_TOOL}, ...), each with its own method; the methods that take a text are for
+ * values that vary, such as a role:
  * <pre>
- * pages.home().shared().textButton("Log Out").click();
- * pricePage.shared().dropdownButton("Price Window").click();
+ * pages.home().shared().logoutButton().click();
+ * pages.home().shared().addMasterButton().click();
+ * pages.home().shared().textButton(role).click();
  * new SharedElements(page, healer).helpButton().click();
  * </pre>
  * The selectors live once in {@code src/main/resources/locators/common.json}; this class is their only user, as
@@ -17,6 +20,15 @@ import com.microsoft.playwright.Page;
  * the failure report's element lookups work as for every other element.
  */
 public final class SharedElements {
+
+    /** Text of the log out button (home page). */
+    public static final String LOG_OUT = "Log Out";
+    /** Text of the home page's dropdown button that opens the other windows. */
+    public static final String ADD_TOOL = "Add tool";
+    /** The Price window: an option of the Add Master dropdown, the window's title, and its own dropdown button. */
+    public static final String PRICE_STACK = "Price Stack";
+    /** The Customer window: an option of the Price window's dropdown, and the window's title. */
+    public static final String CUSTOMER_WINDOW = "Customer Window";
 
     private final PageElements el;
 
@@ -38,6 +50,36 @@ public final class SharedElements {
     /** @return the keyboard shortcuts button (keyboardShortcutsButton) */
     public Locator keyboardShortcutsButton() {
         return el.get("keyboardShortcutsButton");
+    }
+
+    /** @return the log out button of the home page: {@code textButton(LOG_OUT)} */
+    public Locator logoutButton() {
+        return textButton(LOG_OUT);
+    }
+
+    /** @return the role button of the home page: {@code textButton(LOG_OUT)} */
+    public Locator roleButton(String role) {
+        return textButton(role);
+    }
+
+    /** @return the home page's Add Master dropdown button: {@code dropdownButton(ADD_MASTER)} */
+    public Locator addMasterButton() {
+        return dropdownButton(ADD_TOOL);
+    }
+
+    /** @return the Price window's own dropdown button: {@code dropdownButton(PRICE_WINDOW)} */
+    public Locator priceWindowButton() {
+        return dropdownButton(PRICE_STACK);
+    }
+
+    /** @return the Price Window option of the open dropdown: {@code dropdownOption(PRICE_WINDOW)} */
+    public Locator priceWindowOption() {
+        return dropdownOption(PRICE_STACK);
+    }
+
+    /** @return the Customer Window option of the open dropdown: {@code dropdownOption(CUSTOMER_WINDOW)} */
+    public Locator customerWindowOption() {
+        return dropdownOption(CUSTOMER_WINDOW);
     }
 
     /**

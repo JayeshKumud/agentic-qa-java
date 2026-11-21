@@ -15,9 +15,6 @@ public class HomePage implements PageComponents {
     /** Name of the locator file, locators/homepage.json. */
     public static final String LOCATORS = "homepage";
 
-    /** Text of the home page's dropdown button; it is shown only on the home page. */
-    public static final String ADD_MASTER = "Add Master";
-
     /** The browser page title (the tab) of the home page. DUMMY: replace with the real title. */
     public static final String PAGE_TITLE = "Open Platform";
 
@@ -57,8 +54,8 @@ public class HomePage implements PageComponents {
      */
     public HomePage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);
-        CommonActions.assertVisible(shared().dropdownButton(ADD_MASTER),
-                "the home page (its '" + ADD_MASTER + "' button)");
+        CommonActions.assertVisible(shared().addMasterButton(),
+                "the home page (its '" + SharedElements.ADD_TOOL + "' button)");
         return this;
     }
 

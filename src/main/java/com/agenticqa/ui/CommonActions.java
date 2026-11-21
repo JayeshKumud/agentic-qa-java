@@ -20,9 +20,6 @@ import org.testng.Assert;
  */
 public final class CommonActions {
 
-    /** Text of the log out button (textButton in locators/common.json). */
-    public static final String LOG_OUT = "Log Out";
-
     private CommonActions() {}
 
     /**
@@ -50,9 +47,8 @@ public final class CommonActions {
     }
 
     /**
-     * Logs out from the home page, the only page with the log out button: clicks it (textButton in
-     * locators/common.json with TEXT {@value #LOG_OUT}: the {@code button type="button" data-testid="button"}
-     * whose {@code div} shows it), then checks that the login page is shown in the home window
+     * Logs out from the home page, the only page with the log out button: clicks it
+     * ({@link SharedElements#logoutButton()}), then checks that the login page is shown in the home window
      * ({@link LoginPage#verifyDisplayed()}): {@code CommonActions.logout(pages.home())}.
      *
      * @param home the home page
@@ -60,7 +56,7 @@ public final class CommonActions {
      * @throws AssertionError if the login page is not shown after log out
      */
     public static LoginPage logout(HomePage home) {
-        home.shared().textButton(LOG_OUT).click();
+        home.shared().logoutButton().click();
         return new LoginPage(home.window(), home.elements().healer()).verifyDisplayed();
     }
 

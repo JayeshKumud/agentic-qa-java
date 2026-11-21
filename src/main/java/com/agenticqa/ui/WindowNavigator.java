@@ -37,8 +37,8 @@ public class WindowNavigator {
      * the page object for that window. Add a line here for each new window.
      */
     static final Map<String, Class<? extends PageComponents>> WINDOWS = Map.of(
-            "Price Window", PricePage.class,
-            "Customer Window", CustomersPage.class);
+            SharedElements.PRICE_STACK, PricePage.class,
+            SharedElements.CUSTOMER_WINDOW, CustomersPage.class);
 
     private final TestSession session;
     private final Pages pages;
