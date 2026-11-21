@@ -19,7 +19,7 @@ public class HomePage implements PageComponents {
     public static final String ADD_MASTER = "Add Master";
 
     /** The browser page title (the tab) of the home page. DUMMY: replace with the real title. */
-    public static final String PAGE_TITLE = "Open Balancing Platform";
+    public static final String PAGE_TITLE = "Open Platform";
 
     private final Page page;
     private final PageElements el;

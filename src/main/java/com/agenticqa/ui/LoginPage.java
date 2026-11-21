@@ -17,10 +17,10 @@ public class LoginPage implements PageComponents {
     public static final String LOCATORS = "loginpage";
 
     /** The title the login page shows (loginTitle in loginpage.json). */
-    public static final String TITLE = "Open Balancing Platform";
+    public static final String TITLE = "Open Platform";
 
     /** The browser page title (the tab) of the login page. DUMMY: replace with the real title. */
-    public static final String PAGE_TITLE = "Sign in to Open Balancing Platform";
+    public static final String PAGE_TITLE = "Sign in to Open Platform";
 
     private final Page page;
     private final Healer healer;
