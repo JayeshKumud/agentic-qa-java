@@ -12,4 +12,5 @@ Feature: Moving between windows
     And I open the Customer window
     And I open the keyboard shortcuts
     And I go back to the "Price Stack" window
+    Then the Price window is displayed
     And I go back to the "Home" window

@@ -3,6 +3,7 @@ package com.agenticqa.steps;
 import com.agenticqa.ui.Pages;
 import com.agenticqa.ui.Window;
 import com.agenticqa.ui.WindowNavigator;
+import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
 import java.util.List;
@@ -90,6 +91,16 @@ public class WindowSteps {
         return table.getOrDefault(field, List.of()).stream()
                 .filter(value -> value != null && !value.isBlank())
                 .toList();
+    }
+
+    /**
+     * Checks that the Price window is shown and ready: its title and Search Data button
+     * ({@link com.agenticqa.ui.PricePage#verifyDisplayed()}): {@code Then the Price window is displayed}. Opening the
+     * window already checks this; use it after going back to a Price window that may have changed in between.
+     */
+    @Then("the Price window is displayed")
+    public void priceWindowDisplayed() {
+        pages.price().verifyDisplayed();
     }
 
     /** Clicks the filter button of the Price window: {@code When I open the filter on the Price window}. */
