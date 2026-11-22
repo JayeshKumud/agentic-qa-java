@@ -4,6 +4,27 @@
     "selector": "[data-testid='filter']",
     "description": "filter button"
   },
+  "searchDataButton": {
+    "selector": "button[type='button'][data-testid='search']:has(div:text-is('Search Data'))",
+    "description": "Search Data button"
+  },
+  "test1Input": {
+    "selector": "div.dropdownk2-container:has(p:text-is('TEST1')) input[data-testid='dropdownk2-input']",
+    "description": "input of the TEST1 dropdown (bookings, PricePage.selectBookings)"
+  },
+  "test2Input": {
+    "selector": "div.dropdownk2-container:has(p:text-is('TEST2')) input[data-testid='dropdownk2-input']",
+    "description": "input of the TEST2 dropdown (days, PricePage.selectDays)"
+  },
+  "dropdownList": {
+    "selector": "ul.dropdownK5",
+    "description": "option list of the open TEST1/TEST2 dropdown (only there while open)",
+    "heal": false
+  },
+  "dropdownListItem": {
+    "selector": "ul.dropdownK5 li:has(p:text-is('OPTION'))",
+    "description": "option OPTION of the open TEST1/TEST2 dropdown: the li whose p shows OPTION"
+  },
   "rows": {
     "selector": "div[role='row']",
     "description": "grid rows (a header row has role=row too)",

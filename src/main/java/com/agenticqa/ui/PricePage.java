@@ -5,6 +5,8 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
+import java.util.List;
+
 /**
  * Page object of the Price window, opened with {@code windows.switchToWindow(Window.PRICE_STACK)}
  * ({@link WindowNavigator}). Steps talk to this class and never use selectors themselves.
@@ -62,6 +64,71 @@ public class PricePage implements PageComponents {
     public PricePage openFilter() {
         el.get("filterButton").click();
         return this;
+    }
+
+    /**
+     * Selects bookings in the TEST1 dropdown (test1Input): opens it and clicks each option, the li whose p shows
+     * that text: {@code pricePage.selectBookings("Booking A", "Booking B")}. The list is left open; close it with
+     * {@link #closeDropdown()}, or use {@link #applySearchs}.
+     *
+     * @param bookings the option texts, exactly as shown
+     * @return this page
+     */
+    public PricePage selectBookings(String... bookings) {
+        selectFromDropdown("test1Input", bookings);
+        return this;
+    }
+
+    /**
+     * Selects days in the TEST2 dropdown (test2Input), like {@link #selectBookings}:
+     * {@code pricePage.selectDays("Monday", "Friday")}.
+     *
+     * @param days the option texts, exactly as shown
+     * @return this page
+     */
+    public PricePage selectDays(String... days) {
+        selectFromDropdown("test2Input", days);
+        return this;
+    }
+
+    /**
+     * Selects bookings and days, closing each list with Escape: {@code pricePage.applySearchs(List.of("Booking A"),
+     * List.of("Monday", "Friday"))}. The bookings list is closed before the days dropdown is opened, so it cannot
+     * cover the days input, and the days list is closed at the end, so the next step sees the page.
+     *
+     * @param bookings the booking texts for the TEST1 dropdown
+     * @param days     the day texts for the TEST2 dropdown
+     * @return this page
+     */
+    public PricePage applySearchs(List<String> bookings, List<String> days) {
+        selectBookings(bookings.toArray(String[]::new));
+        closeDropdown();
+        selectDays(days.toArray(String[]::new));
+        closeDropdown();
+        return this;
+    }
+
+    /**
+     * Closes the open dropdown list with Escape and waits until it is gone.
+     *
+     * @return this page
+     */
+    public PricePage closeDropdown() {
+        page.keyboard().press("Escape");
+        el.get("dropdownList").waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.HIDDEN));
+        return this;
+    }
+
+    /**
+     * Opens a dropdown by clicking its input, then clicks each option. Before every option it checks that the list
+     * is open, and opens it again if a click closed it (some dropdowns close after each choice).
+     */
+    private void selectFromDropdown(String input, String... options) {
+        el.get(input).click();
+        for (String option : options) {
+            if (!el.get("dropdownList").isVisible()) el.get(input).click();
+            el.get("dropdownListItem", "OPTION", option).click();   // waits for the list and the option
+        }
     }
 
     /**
