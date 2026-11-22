@@ -58,6 +58,7 @@ public class LoginPage implements PageComponents {
      * @return this page
      * @throws AssertionError if the title or the sign in button is not shown
      */
+    @Override
     public LoginPage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);
         Locator title = el.get("loginTitle");
@@ -68,14 +69,16 @@ public class LoginPage implements PageComponents {
     }
 
     /**
-     * Signs in and checks that the home page is shown.
+     * Signs in and checks that the home page is shown. It first waits for the login page ({@link #verifyDisplayed()}),
+     * so the form is not looked up while a redirect to the login page is still running.
      *
      * @param username the user name or email
      * @param password the password
      * @return the home page, already checked with {@link HomePage#verifyDisplayed()}
-     * @throws AssertionError if the home page is not shown after sign in
+     * @throws AssertionError if the login page is not shown, or the home page is not shown after sign in
      */
     public HomePage signIn(String username, String password) {
+        verifyDisplayed(); // waits for the login page (title, heading, sign in button), so no lookup runs mid-redirect
         el.get("usernameInput").fill(username);
         el.get("passwordInput").fill(password);
         el.get("signInButton").click();

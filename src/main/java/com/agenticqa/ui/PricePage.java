@@ -119,6 +119,7 @@ public class PricePage implements PageComponents {
         return this;
     }
 
+
     /**
      * Opens a dropdown by clicking its input, then clicks each option. Before every option it checks that the list
      * is open, and opens it again if a click closed it (some dropdowns close after each choice).
@@ -144,13 +145,17 @@ public class PricePage implements PageComponents {
     }
 
     /**
-     * Checks that the Price window is shown: its browser page title is {@link #PAGE_TITLE}.
+     * Checks that the Price window is shown and ready: its browser page title is {@link #PAGE_TITLE} and its Search
+     * Data button is visible. {@link WindowNavigator} calls it when it opens the Price window, so the next step
+     * only runs once the window's controls are there.
      *
      * @return this page
-     * @throws AssertionError if the title is not {@link #PAGE_TITLE} within ui.waits.assertionMs
+     * @throws AssertionError if the title or the Search Data button is not shown within ui.waits.assertionMs
      */
+    @Override
     public PricePage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);
+        CommonActions.assertVisible(el.get("searchDataButton"), "the Price window's Search Data button");
         return this;
     }
 

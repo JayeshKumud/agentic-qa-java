@@ -93,8 +93,8 @@ public class WindowNavigator {
 
     /**
      * Clicks the dropdown button and the option on {@code from}, waits for the window that opens and for its title
-     * to become {@code option}, checks the title with TestNG, maximizes the window, makes the page fill it, and
-     * creates the page object on it.
+     * to become {@code option}, checks the title with TestNG, maximizes the window, makes the page fill it, creates
+     * the page object on it and waits until that page is ready ({@link PageComponents#verifyDisplayed()}).
      */
     private static <T extends PageComponents> T openWindow(PageComponents from, String option, Class<T> type) {
         Page window = from.elements().page().waitForPopup(() -> from.selectDropdownOption(option));
@@ -102,7 +102,9 @@ public class WindowNavigator {
         CommonActions.assertTitle(window, option);
         BrowserWindow.maximize(window);
         BrowserWindow.resize(window);
-        return create(type, window, from.elements().healer());
+        T pageObject = create(type, window, from.elements().healer());
+        pageObject.verifyDisplayed();   // the window's own "ready" check, for example PricePage: Search Data button
+        return pageObject;
     }
 
     /** Creates a page object on the given window with its (Page, Healer) constructor. */

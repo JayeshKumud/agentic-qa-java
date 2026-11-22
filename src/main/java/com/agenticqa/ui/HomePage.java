@@ -52,6 +52,7 @@ public class HomePage implements PageComponents {
      * @return this page
      * @throws AssertionError if the home page is not shown
      */
+    @Override
     public HomePage verifyDisplayed() {
         CommonActions.assertTitle(page, PAGE_TITLE);
         CommonActions.assertVisible(shared().dropdownButton(), "the home page's dropdown button");

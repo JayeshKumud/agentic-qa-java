@@ -35,6 +35,19 @@ public interface PageComponents {
     }
 
     /**
+     * Waits until this page is shown and ready, and fails clearly if it is not. Each page object says what that
+     * means for it (a title, a button only that page has, ...); the default checks nothing. It is called at the
+     * points where a page changes: {@link WindowNavigator} calls it for every window it opens, LoginPage after
+     * log out and before sign in, HomePage after sign in.
+     *
+     * @return this page
+     * @throws AssertionError if the page is not shown within ui.waits.assertionMs
+     */
+    default PageComponents verifyDisplayed() {
+        return this;
+    }
+
+    /**
      * The shared elements (locators/common.json) in this page object's window:
      * {@code pages.home().shared().textButton("Log Out")}.
      *
