@@ -4,6 +4,8 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.PlaywrightException;
 
+import java.nio.file.Path;
+
 /**
  * A page object that {@link PageComponentsFactory} can create. Implementations need a public constructor
  * {@code (Page page, Healer healer)}, which the factory calls.
@@ -64,6 +66,39 @@ public interface PageComponents {
      */
     default GridLibrary grid() {
         return new GridLibrary(window(), elements().healer());
+    }
+
+    /**
+     * Takes a screenshot of the visible part of this page object's window and attaches it to the reports under the
+     * step that took it ({@link Screenshots}): {@code pricePage.screenshot("after filter")}.
+     *
+     * @param name the name shown in the reports and used in the file name
+     * @return the saved PNG file, under target/artifacts/screenshots
+     */
+    default Path screenshot(String name) {
+        return Screenshots.take(window(), name);
+    }
+
+    /**
+     * Takes a screenshot of the whole page of this page object's window, the parts scrolled out of view included:
+     * {@code pricePage.fullPageScreenshot("price grid")}.
+     *
+     * @param name the name shown in the reports and used in the file name
+     * @return the saved PNG file
+     */
+    default Path fullPageScreenshot(String name) {
+        return Screenshots.takeFullPage(window(), name);
+    }
+
+    /**
+     * Takes a screenshot of one element only: {@code pricePage.screenshot(el.get("filterButton"), "filter")}.
+     *
+     * @param element the element, for example a grid row or a dialog
+     * @param name    the name shown in the reports and used in the file name
+     * @return the saved PNG file
+     */
+    default Path screenshot(Locator element, String name) {
+        return Screenshots.take(element, name);
     }
 
     /**

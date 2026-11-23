@@ -13,6 +13,7 @@ import com.microsoft.playwright.Video;
 import com.microsoft.playwright.assertions.PlaywrightAssertions;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,8 +51,19 @@ public class TestSession {
      */
     public record SavedFiles(Path trace, Path video) {}
 
+    /**
+     * A screenshot a page object or step took ({@code com.agenticqa.ui.Screenshots}), waiting to be attached to the
+     * reports.
+     *
+     * @param name the name shown in the reports
+     * @param png  the image
+     * @param file where it was saved
+     */
+    public record Screenshot(String name, byte[] png, Path file) {}
+
     private final TestData data = new TestData();
     private final Map<Class<? extends PageComponents>, PageComponents> pageComponents = new HashMap<>();
+    private final List<Screenshot> screenshots = new ArrayList<>();
 
     private BrowserContext context;
     private Page page;
@@ -65,6 +77,31 @@ public class TestSession {
      */
     public void scenarioName(String name) {
         this.scenarioName = name;
+    }
+
+    /** @return the scenario name, for naming files such as screenshots */
+    public String scenarioName() {
+        return scenarioName;
+    }
+
+    /**
+     * Keeps a screenshot until the {@code @AfterStep} hook attaches it to the reports.
+     *
+     * @param screenshot the screenshot
+     */
+    public synchronized void addScreenshot(Screenshot screenshot) {
+        screenshots.add(screenshot);
+    }
+
+    /**
+     * The screenshots taken since the last call, oldest first; they are removed, so each is attached once.
+     *
+     * @return the screenshots, empty if none
+     */
+    public synchronized List<Screenshot> takeScreenshots() {
+        List<Screenshot> taken = List.copyOf(screenshots);
+        screenshots.clear();
+        return taken;
     }
 
     /**

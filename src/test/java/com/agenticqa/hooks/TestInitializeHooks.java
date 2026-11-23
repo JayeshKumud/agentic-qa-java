@@ -145,6 +145,7 @@ public class TestInitializeHooks {
     @AfterStep
     public void afterStep(Scenario scenario) {
         logElementLookupsOfFailedStep(scenario);
+        attachRequestedScreenshots(scenario);
         if (session.hasPage()) {
             try {
                 String screenshotName = scenario.getName().replaceAll(" ", "");
@@ -157,6 +158,18 @@ public class TestInitializeHooks {
         }
     }
 
+
+    /**
+     * Attaches the screenshots page objects and steps took during the step ({@code pageObject.screenshot(name)},
+     * {@code com.agenticqa.ui.Screenshots}), under their names.
+     *
+     * @param scenario the running scenario
+     */
+    private void attachRequestedScreenshots(Scenario scenario) {
+        for (TestSession.Screenshot shot : session.takeScreenshots()) {
+            scenario.attach(shot.png(), "image/png", shot.name());
+        }
+    }
 
     /**
      * When a step fails, logs the elements it looked up last (newest first) to the Extent, Allure and Cucumber
