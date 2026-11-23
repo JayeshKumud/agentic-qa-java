@@ -58,6 +58,15 @@ public interface PageComponents {
     }
 
     /**
+     * The data grid in this page object's window ({@link GridLibrary}): {@code pricePage.grid().waitUntilLoaded()}.
+     *
+     * @return the grid of this page's window
+     */
+    default GridLibrary grid() {
+        return new GridLibrary(window(), elements().healer());
+    }
+
+    /**
      * Opens this window's dropdown and picks one of its options: clicks the dropdown button (one per window, found
      * by its data-testid), then the option (the {@code li} in the option list whose span shows {@code option}). The
      * click on the option waits for the list to appear. If the list closes again before the option is clicked, the

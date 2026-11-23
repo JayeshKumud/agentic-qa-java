@@ -1,0 +1,43 @@
+{
+  "_comment": "Locators of the data grid every page has (GridLibrary), written for AG Grid's standard markup: column headers .ag-header-cell with col-id, rows .ag-row with row-index, cells .ag-cell with col-id. Adjust the selectors here if the grid differs; GridLibrary builds its row and cell lookups from them. Healing is off: grid content changes with the data.",
+  "root": {
+    "selector": ".ag-root-wrapper",
+    "description": "the grid",
+    "heal": false
+  },
+  "header": {
+    "selector": ".ag-header",
+    "description": "the grid's header",
+    "heal": false
+  },
+  "headerCell": {
+    "selector": ".ag-header-cell:has(.ag-header-cell-text:text-is('HEADER'))",
+    "description": "the column header showing HEADER; its col-id names the column's cells",
+    "heal": false
+  },
+  "loadingOverlay": {
+    "selector": ".ag-overlay-loading-wrapper",
+    "description": "the grid's loading overlay (only there while loading)",
+    "heal": false
+  },
+  "rowsOrNoRows": {
+    "selector": ".ag-center-cols-container .ag-row, .ag-overlay-no-rows-wrapper",
+    "description": "a data row, or the 'no rows' message: one of them is there once the grid has loaded",
+    "heal": false
+  },
+  "row": {
+    "selector": ".ag-row",
+    "description": "a grid row; its row-index is the same in the pinned and the scrolling part",
+    "heal": false
+  },
+  "cell": {
+    "selector": ".ag-cell",
+    "description": "a grid cell; its col-id is the column's col-id",
+    "heal": false
+  },
+  "checkbox": {
+    "selector": "input[type='checkbox']",
+    "description": "a checkbox inside a row or cell",
+    "heal": false
+  }
+}
