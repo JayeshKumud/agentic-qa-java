@@ -81,7 +81,7 @@ public final class CommonActions {
     /**
      * Checks the browser page title (the text in the tab). Waits up to ui.waits.assertionMs for it, because apps
      * often set the title by script a moment after the page has loaded, then asserts it with TestNG:
-     * {@code CommonActions.assertTitle(page, "Price Stack")}.
+     * {@code CommonActions.assertTitle(page, "Price Booking")}.
      *
      * @param page     the window whose title to check
      * @param expected the title, exactly

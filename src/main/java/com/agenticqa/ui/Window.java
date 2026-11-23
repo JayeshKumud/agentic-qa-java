@@ -6,8 +6,8 @@ import java.util.Arrays;
  * The app's windows. {@link WindowNavigator#switchToWindow(Window)} takes only these values, so a test can never
  * pass an unknown window:
  * <pre>
- * windows.switchToWindow(Window.PRICE_STACK);       // opens it from the current window's dropdown
- * windows.switchToWindow(Window.CUSTOMER_WINDOW);   // opens it from the Price Stack window's dropdown
+ * windows.switchToWindow(Window.PRICE_BOOKING);     // opens it from the current window's dropdown
+ * windows.switchToWindow(Window.CUSTOMER_WINDOW);   // opens it from the Price Booking window's dropdown
  * windows.switchToWindow(Window.HOME);              // the scenario's first window
  * </pre>
  * Every window except {@link #HOME} is opened by the dropdown option with its {@link #text()}, and that text is also
@@ -17,9 +17,9 @@ public enum Window {
 
     /** The scenario's first window, the home page. Not a dropdown option; it is never opened, only switched to. */
     HOME("Home", HomePage.class),
-    /** The Price Stack window: option "Price Stack" of the home page's dropdown. */
-    PRICE_STACK("Price Stack", PricePage.class),
-    /** The Customer window: option "Customer Window" of the Price Stack window's dropdown. */
+    /** The Price Booking window: option "Price Booking" of the home page's dropdown. */
+    PRICE_BOOKING("Price Booking", PricePage.class),
+    /** The Customer window: option "Customer Window" of the Price Booking window's dropdown. */
     CUSTOMER_WINDOW("Customer Window", CustomersPage.class);
 
     private final String text;
@@ -41,7 +41,7 @@ public enum Window {
     }
 
     /**
-     * The window with this exact text, for steps that get it from a feature file: {@code Window.of("Price Stack")}.
+     * The window with this exact text, for steps that get it from a feature file: {@code Window.of("Price Booking")}.
      *
      * @param text the option text, or "Home"
      * @return the window

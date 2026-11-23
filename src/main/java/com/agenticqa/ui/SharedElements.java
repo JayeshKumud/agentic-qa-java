@@ -73,7 +73,7 @@ public final class SharedElements {
 
     /**
      * The window's dropdown button (dropdownButton). Every window has one, found by its data-testid, whatever its
-     * text (Add tool, Price Stack, ...).
+     * text (Add tool, Price Booking, ...).
      *
      * @return the button
      */
@@ -82,7 +82,7 @@ public final class SharedElements {
     }
 
     /**
-     * An option of the open dropdown, by its text (dropdownOption), for example {@code Window.PRICE_STACK.text()}.
+     * An option of the open dropdown, by its text (dropdownOption), for example {@code Window.PRICE_BOOKING.text()}.
      *
      * @param option the option's text, exactly as shown
      * @return the option

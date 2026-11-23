@@ -73,7 +73,7 @@ public interface PageComponents {
      * button is clicked once more and the option again. Locators: dropdownButton, dropdownOption in
      * locators/common.json.
      *
-     * @param option the text of the option, exactly as shown, for example {@code Window.PRICE_STACK.text()}
+     * @param option the text of the option, exactly as shown, for example {@code Window.PRICE_BOOKING.text()}
      */
     default void selectDropdownOption(String option) {
         try {

@@ -6,11 +6,11 @@ Feature: Moving between windows
   # Replace @PRGBATR-1015 with the real Jira test case id.
   @PRGBATR-1015
   Scenario: Move from the home page to Price and Customer
-    When I open the Price Stack window
+    When I open the Price Booking window
     And I open the filter on the Price window
     And I open help
     And I open the Customer window
     And I open the keyboard shortcuts
-    And I go back to the "Price Stack" window
+    And I go back to the "Price Booking" window
     Then the Price window is displayed
     And I go back to the "Home" window

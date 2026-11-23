@@ -13,12 +13,12 @@ import java.util.Map;
  * <pre>
  * public WindowSteps(WindowNavigator windows, Pages pages) { ... }
  *
- * PricePage price = windows.switchToWindow(Window.PRICE_STACK);    // opens it from the home page
+ * PricePage price = windows.switchToWindow(Window.PRICE_BOOKING);  // opens it from the home page
  * price.openFilter();
- * windows.switchToWindow(Window.CUSTOMER_WINDOW);                   // opens it from Price Stack
- * windows.switchToWindow(Window.PRICE_STACK);                       // back, already open
- * windows.switchToWindow(Window.HOME);                              // the first window
- * pages.price().openFilter();                                                    // a later step, same window
+ * windows.switchToWindow(Window.CUSTOMER_WINDOW);                 // opens it from Price Booking
+ * windows.switchToWindow(Window.PRICE_BOOKING);                   // back, already open
+ * windows.switchToWindow(Window.HOME);                            // the first window
+ * pages.price().openFilter();                                      // a later step, same window
  * </pre>
  * Every window has one dropdown button (found by its data-testid), so a window is opened by its option only: the
  * current window's dropdown button is clicked, then the option. The new window becomes the current one, so the
@@ -50,7 +50,7 @@ public class WindowNavigator {
 
     /**
      * Switches to a window, opening it if needed, so the next steps act on it:
-     * {@code windows.switchToWindow(Window.PRICE_STACK)}.
+     * {@code windows.switchToWindow(Window.PRICE_BOOKING)}.
      * <ul>
      *   <li>{@link Window#HOME}: the scenario's first window.</li>
      *   <li>A window opened earlier in this scenario: brought to the front; nothing is clicked.</li>

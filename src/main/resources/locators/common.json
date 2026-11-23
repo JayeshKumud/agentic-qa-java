@@ -14,7 +14,7 @@
   },
   "dropdownButton": {
     "selector": "button[data-testid^='dropdown-menu']",
-    "description": "the window's dropdown button (one per window: Add tool, Price Stack, Customer Window)"
+    "description": "the window's dropdown button (one per window: Add tool, Price Booking, Customer Window)"
   },
   "dropdownOption": {
     "selector": "ul[aria-label='Dropdown Menu'] li:has(span:text-is('OPTION'))",

@@ -8,7 +8,7 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import java.util.List;
 
 /**
- * Page object of the Price window, opened with {@code windows.switchToWindow(Window.PRICE_STACK)}
+ * Page object of the Price window, opened with {@code windows.switchToWindow(Window.PRICE_BOOKING)}
  * ({@link WindowNavigator}). Steps talk to this class and never use selectors themselves.
  * <p>
  * The selectors live in {@code src/main/resources/locators/pricepage.json}, not in this class, and elements are
@@ -21,9 +21,9 @@ public class PricePage implements PageComponents {
 
     /**
      * The browser page title (the tab) of the Price window: the text of the option that opens it
-     * ({@link Window#PRICE_STACK}), because {@link WindowNavigator} checks the new window's title against it.
+     * ({@link Window#PRICE_BOOKING}), because {@link WindowNavigator} checks the new window's title against it.
      */
-    public static final String PAGE_TITLE = Window.PRICE_STACK.text();
+    public static final String PAGE_TITLE = Window.PRICE_BOOKING.text();
 
     private final Page page;
     private final PageElements el;
