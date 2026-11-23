@@ -23,6 +23,7 @@ Feature: Data grid on three pages
     Then the grid row where "Booking" is "Booking A" is checked
     When I uncheck the grid row where "Booking" is "Booking A"
     Then the grid row where "Booking" is "Booking A" is not checked
+    When I check column 1 in the grid row where "Booking" is "Booking B"
 
   @PRGBATR-1018
   Scenario: Customer grid - search, pick a column's checkbox, open a cell

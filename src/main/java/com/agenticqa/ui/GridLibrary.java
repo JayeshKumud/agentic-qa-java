@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
  * grid.cell("Booking", "Booking A", "Status").textContent(); // the Status cell in that row
  * grid.checkbox("Booking", "Booking A").check();            // the checkbox in that row
  * grid.checkbox("Booking", "Booking A", "Select").check();  // the checkbox in that row's Select column
+ * grid.checkbox("Booking", "Booking A", 1).check();         // the checkbox in that row's first column
  * grid.columnValues("Booking");                             // all Booking values shown
  * </pre>
  * The selectors are in {@code locators/grid.json}, written for AG Grid's markup (header cells and cells carry a
@@ -175,6 +176,35 @@ public final class GridLibrary {
      */
     public Locator checkbox(String header, String value, String checkboxHeader) {
         return cell(header, value, checkboxHeader).locator(selector("checkbox"));
+    }
+
+    /**
+     * Searches a column for a value and returns the cell at a column position in the same row, for columns without
+     * a header text: {@code grid.cell("Booking", "Booking A", 1)}.
+     *
+     * @param header      the column to search, for example "Booking"
+     * @param value       the value to find in it, exactly as shown
+     * @param columnIndex the position of the wanted column, counted from 1 at the left as shown on screen (pinned
+     *                    columns included); AG Grid's aria-colindex
+     * @return the cell
+     * @throws AssertionError if the value is not in the column
+     */
+    public Locator cell(String header, String value, int columnIndex) {
+        return row(header, value).locator(selector("cell") + "[aria-colindex='" + columnIndex + "']");
+    }
+
+    /**
+     * The checkbox at a column position of the row whose column {@code header} shows {@code value}:
+     * {@code grid.checkbox("Booking", "Booking A", 1).check()}.
+     *
+     * @param header      the column to search
+     * @param value       the value to find, exactly as shown
+     * @param columnIndex the position of the column that holds the checkbox, counted from 1 at the left
+     * @return the checkbox
+     * @throws AssertionError if the value is not in the column
+     */
+    public Locator checkbox(String header, String value, int columnIndex) {
+        return cell(header, value, columnIndex).locator(selector("checkbox"));
     }
 
     /**

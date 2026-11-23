@@ -24,6 +24,7 @@ import static org.testng.Assert.assertTrue;
  * Then in the grid row where "Booking" is "Booking A", "Status" is "Open"
  * When I check the grid row where "Booking" is "Booking A"
  * When I check "Select" in the grid row where "Booking" is "Booking A"
+ * When I check column 1 in the grid row where "Booking" is "Booking A"
  * Then the grid row where "Booking" is "Booking A" is checked
  * When I click "Status" in the grid row where "Booking" is "Booking A"
  * </pre>
@@ -146,6 +147,19 @@ public class GridSteps {
     @When("I check {string} in the grid row where {string} is {string}")
     public void checkInRow(String checkboxHeader, String header, String value) {
         grid().checkbox(header, value, checkboxHeader).check();
+    }
+
+    /**
+     * Ticks the checkbox at a column position of the row, for a checkbox column without a header text:
+     * {@code When I check column 1 in the grid row where "Booking" is "Booking A"}.
+     *
+     * @param columnIndex the position of the checkbox column, counted from 1 at the left as shown on screen
+     * @param header      the column to search
+     * @param value       the value that finds the row
+     */
+    @When("I check column {int} in the grid row where {string} is {string}")
+    public void checkColumnInRow(int columnIndex, String header, String value) {
+        grid().checkbox(header, value, columnIndex).check();
     }
 
     /**

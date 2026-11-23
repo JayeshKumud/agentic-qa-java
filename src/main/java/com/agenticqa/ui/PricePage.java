@@ -145,6 +145,36 @@ public class PricePage implements PageComponents {
     }
 
     /**
+     * Waits for the grid to load, searches a column for a value and ticks the checkbox in a given column of that
+     * row: {@code pricePage.checkGridRow("Booking", "Booking A", "Select")}.
+     *
+     * @param searchHeader   the column to search, by its header text, for example "Booking"
+     * @param value          the value to find in it, exactly as shown
+     * @param checkboxHeader the column that holds the checkbox, by its header text
+     * @return this page
+     * @throws AssertionError if the grid does not load or the value is not in the column
+     */
+    public PricePage checkGridRow(String searchHeader, String value, String checkboxHeader) {
+        grid().waitUntilLoaded().checkbox(searchHeader, value, checkboxHeader).check();
+        return this;
+    }
+
+    /**
+     * Like {@link #checkGridRow(String, String, String)}, with the checkbox column given by its position, for a
+     * checkbox column without a header text: {@code pricePage.checkGridRow("Booking", "Booking A", 1)}.
+     *
+     * @param searchHeader        the column to search, by its header text, for example "Booking"
+     * @param value               the value to find in it, exactly as shown
+     * @param checkboxColumnIndex the position of the checkbox column, counted from 1 at the left as shown on screen
+     * @return this page
+     * @throws AssertionError if the grid does not load or the value is not in the column
+     */
+    public PricePage checkGridRow(String searchHeader, String value, int checkboxColumnIndex) {
+        grid().waitUntilLoaded().checkbox(searchHeader, value, checkboxColumnIndex).check();
+        return this;
+    }
+
+    /**
      * Checks that the Price window is shown and ready: its browser page title is {@link #PAGE_TITLE} and its Search
      * Data button is visible. {@link WindowNavigator} calls it when it opens the Price window, so the next step
      * only runs once the window's controls are there.
