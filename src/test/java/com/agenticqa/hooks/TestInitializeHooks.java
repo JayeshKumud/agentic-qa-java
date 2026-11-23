@@ -160,8 +160,8 @@ public class TestInitializeHooks {
 
 
     /**
-     * Attaches the screenshots page objects and steps took during the step ({@code pageObject.screenshot(name)},
-     * {@code com.agenticqa.ui.Screenshots}), under their names.
+     * Attaches the screenshots page objects and steps took during the step ({@code pageObject.screenshot()}),
+     * each named after its page object.
      *
      * @param scenario the running scenario
      */

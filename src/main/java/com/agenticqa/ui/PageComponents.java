@@ -69,36 +69,14 @@ public interface PageComponents {
     }
 
     /**
-     * Takes a screenshot of the visible part of this page object's window and attaches it to the reports under the
-     * step that took it ({@link Screenshots}): {@code pricePage.screenshot("after filter")}.
+     * Takes a screenshot of the whole page of this page object's window (the parts scrolled out of view included)
+     * and attaches it to the reports under the step that took it, named after the page object:
+     * {@code pricePage.screenshot()}, or {@code windows.current().screenshot()} in a step.
      *
-     * @param name the name shown in the reports and used in the file name
-     * @return the saved PNG file, under target/artifacts/screenshots
+     * @return the saved PNG file, under target/artifacts/screenshots/&lt;scenario&gt;/
      */
-    default Path screenshot(String name) {
-        return Screenshots.take(window(), name);
-    }
-
-    /**
-     * Takes a screenshot of the whole page of this page object's window, the parts scrolled out of view included:
-     * {@code pricePage.fullPageScreenshot("price grid")}.
-     *
-     * @param name the name shown in the reports and used in the file name
-     * @return the saved PNG file
-     */
-    default Path fullPageScreenshot(String name) {
-        return Screenshots.takeFullPage(window(), name);
-    }
-
-    /**
-     * Takes a screenshot of one element only: {@code pricePage.screenshot(el.get("filterButton"), "filter")}.
-     *
-     * @param element the element, for example a grid row or a dialog
-     * @param name    the name shown in the reports and used in the file name
-     * @return the saved PNG file
-     */
-    default Path screenshot(Locator element, String name) {
-        return Screenshots.take(element, name);
+    default Path screenshot() {
+        return Screenshots.take(window(), getClass().getSimpleName());
     }
 
     /**

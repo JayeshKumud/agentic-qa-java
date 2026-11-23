@@ -52,10 +52,10 @@ public class TestSession {
     public record SavedFiles(Path trace, Path video) {}
 
     /**
-     * A screenshot a page object or step took ({@code com.agenticqa.ui.Screenshots}), waiting to be attached to the
+     * A screenshot a page object or step took ({@code pageObject.screenshot()}), waiting to be attached to the
      * reports.
      *
-     * @param name the name shown in the reports
+     * @param name the name shown in the reports, the page object's name
      * @param png  the image
      * @param file where it was saved
      */
