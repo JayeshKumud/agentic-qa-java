@@ -3,7 +3,6 @@ package com.agenticqa.core;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -61,17 +60,5 @@ public class TestSessionThreadTest {
         List<String> items = session.data().requireList(ITEMS);
         assertEquals(items, List.of("a", "b"));
         expectThrows(UnsupportedOperationException.class, () -> items.add("c")); // a copy, not the stored list
-    }
-
-    @Test
-    public void screenshotsAreHandedOutOnceInOrder() {
-        session = new TestSession();
-        assertTrue(session.takeScreenshots().isEmpty());
-
-        session.addScreenshot(new TestSession.Screenshot("first", new byte[]{1}, Path.of("a.png")));
-        session.addScreenshot(new TestSession.Screenshot("second", new byte[]{2}, Path.of("b.png")));
-        assertEquals(session.takeScreenshots().stream().map(TestSession.Screenshot::name).toList(),
-                List.of("first", "second"));
-        assertTrue(session.takeScreenshots().isEmpty(), "each screenshot is attached once");
     }
 }

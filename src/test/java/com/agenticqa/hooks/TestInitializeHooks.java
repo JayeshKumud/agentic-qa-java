@@ -6,6 +6,7 @@ import com.agenticqa.apis.UnitManagerApi;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.reporting.TestExecutionResult;
 import com.agenticqa.steps.Keys;
+import com.agenticqa.ui.WindowNavigator;
 import com.agenticqa.ui.healing.ElementLookup;
 import com.agenticqa.ui.healing.HealEvent;
 import com.microsoft.playwright.Page;
@@ -50,7 +51,7 @@ import java.util.stream.Collectors;
  * &#64;Before  1   bindSession            session usable by everything after it
  * &#64;Before  2   checkTags              skip or fail early, before any setup work
  * &#64;Before  3   setUpBaseData
- * &#64;AfterStep   afterStep              screenshot after every step
+ * &#64;AfterStep   afterStep              screenshot of the current window after every step
  * &#64;After   7   attachHealsAndFailureScreenshot   evidence first, while the page is open
  * &#64;After   6   collectDebugInformation           reads the page and the last API response
  * &#64;After   5   saveVideo              failed only: closes the context so the video is complete
@@ -67,6 +68,7 @@ public class TestInitializeHooks {
             Collections.synchronizedMap(new LinkedHashMap<>());
 
     private final TestSession session;
+    private final WindowNavigator windows;
     private long featureStartTime;
     /** How many element lookups a failed step logs, newest first. */
     private static final int LOOKUPS_LOGGED = 5;
@@ -74,12 +76,14 @@ public class TestInitializeHooks {
     private boolean lookupsLogged;
 
     /**
-     * Receives this scenario's session from PicoContainer.
+     * Receives this scenario's session and window navigator from PicoContainer.
      *
      * @param session the per-scenario session
+     * @param windows knows which window the scenario is on, so screenshots show that window
      */
-    public TestInitializeHooks(TestSession session) {
+    public TestInitializeHooks(TestSession session, WindowNavigator windows) {
         this.session = session;
+        this.windows = windows;
     }
 
     /**
@@ -142,14 +146,19 @@ public class TestInitializeHooks {
         // testDataSetup.tieBreak();
     }
 
+    /**
+     * Logs the failed step's element lookups and attaches a screenshot of the window the scenario is on (the home
+     * page, or the window the last switch opened), so a step on a Price Booking or Customer window shows that window.
+     *
+     * @param scenario the running scenario
+     */
     @AfterStep
     public void afterStep(Scenario scenario) {
         logElementLookupsOfFailedStep(scenario);
-        attachRequestedScreenshots(scenario);
         if (session.hasPage()) {
             try {
                 String screenshotName = scenario.getName().replaceAll(" ", "");
-                byte[] screenshot = session.page().screenshot();
+                byte[] screenshot = currentWindow().screenshot();
 
                 scenario.attach(screenshot, "image/png", screenshotName);
             } catch (Exception e) {
@@ -160,15 +169,12 @@ public class TestInitializeHooks {
 
 
     /**
-     * Attaches the screenshots page objects and steps took during the step ({@code pageObject.screenshot()}),
-     * each named after its page object.
-     *
-     * @param scenario the running scenario
+     * The window the scenario is on ({@link WindowNavigator#current()}); the first window if that one was closed.
+     * Call it only when {@code session.hasPage()}, so no browser is opened for it.
      */
-    private void attachRequestedScreenshots(Scenario scenario) {
-        for (TestSession.Screenshot shot : session.takeScreenshots()) {
-            scenario.attach(shot.png(), "image/png", shot.name());
-        }
+    private Page currentWindow() {
+        Page window = windows.current().window();
+        return window.isClosed() ? session.page() : window;
     }
 
     /**
@@ -197,8 +203,8 @@ public class TestInitializeHooks {
     }
 
     /**
-     * Attaches the healed locators, and a full-page screenshot if the scenario failed, while the page is still
-     * open.
+     * Attaches the healed locators, and a full-page screenshot of the current window if the scenario failed, while
+     * the page is still open.
      *
      * @param scenario the finished scenario
      */
@@ -212,7 +218,7 @@ public class TestInitializeHooks {
         }
         if (scenario.isFailed() && session.hasPage()) {
             try {
-                byte[] png = session.page().screenshot(new Page.ScreenshotOptions().setFullPage(true));
+                byte[] png = currentWindow().screenshot(new Page.ScreenshotOptions().setFullPage(true));
                 scenario.attach(png, "image/png", "failure-screenshot");
             } catch (RuntimeException ignored) {
                 // a missing screenshot must not hide the real failure

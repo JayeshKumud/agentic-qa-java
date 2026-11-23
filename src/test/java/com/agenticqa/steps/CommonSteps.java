@@ -5,7 +5,6 @@ import com.agenticqa.ui.HomePage;
 import com.agenticqa.ui.PageElements;
 import com.agenticqa.ui.Window;
 import com.agenticqa.ui.WindowNavigator;
-import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
 /**
@@ -51,14 +50,5 @@ public class CommonSteps {
     public void openKeyboardShortcuts() {
         PageElements current = windows.current().elements();
         CommonActions.openKeyboardShortcuts(current.page(), current.healer());
-    }
-
-    /**
-     * Takes a screenshot of the whole page of the current window and attaches it to the reports:
-     * {@code Then I take a screenshot}.
-     */
-    @Then("I take a screenshot")
-    public void takeScreenshot() {
-        windows.current().screenshot();
     }
 }

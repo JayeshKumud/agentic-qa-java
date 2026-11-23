@@ -4,8 +4,6 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.PlaywrightException;
 
-import java.nio.file.Path;
-
 /**
  * A page object that {@link PageComponentsFactory} can create. Implementations need a public constructor
  * {@code (Page page, Healer healer)}, which the factory calls.
@@ -66,17 +64,6 @@ public interface PageComponents {
      */
     default GridLibrary grid() {
         return new GridLibrary(window(), elements().healer());
-    }
-
-    /**
-     * Takes a screenshot of the whole page of this page object's window (the parts scrolled out of view included)
-     * and attaches it to the reports under the step that took it, named after the page object:
-     * {@code pricePage.screenshot()}, or {@code windows.current().screenshot()} in a step.
-     *
-     * @return the saved PNG file, under target/artifacts/screenshots/&lt;scenario&gt;/
-     */
-    default Path screenshot() {
-        return Screenshots.take(window(), getClass().getSimpleName());
     }
 
     /**
