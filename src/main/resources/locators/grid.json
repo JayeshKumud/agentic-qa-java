@@ -39,5 +39,35 @@
     "selector": "input[type='checkbox']",
     "description": "a checkbox inside a row or cell",
     "heal": false
+  },
+  "radio": {
+    "selector": "input[type='radio']",
+    "description": "a radio button inside a row or cell (element type for GridLibrary.element)",
+    "heal": false
+  },
+  "button": {
+    "selector": "button, [role='button']",
+    "description": "a button inside a row or cell (element type for GridLibrary.element)",
+    "heal": false
+  },
+  "link": {
+    "selector": "a",
+    "description": "a link inside a row or cell (element type for GridLibrary.element)",
+    "heal": false
+  },
+  "input": {
+    "selector": "input:not([type='checkbox']):not([type='radio']), textarea",
+    "description": "a text input inside a row or cell, for editable cells (element type for GridLibrary.element)",
+    "heal": false
+  },
+  "dropdown": {
+    "selector": "select, [role='combobox']",
+    "description": "a dropdown inside a row or cell (element type for GridLibrary.element)",
+    "heal": false
+  },
+  "image": {
+    "selector": "img",
+    "description": "an image inside a row or cell (element type for GridLibrary.element)",
+    "heal": false
   }
 }

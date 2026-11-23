@@ -27,7 +27,12 @@ import static org.testng.Assert.assertTrue;
  * When I check column 1 in the grid row where "Booking" is "Booking A"
  * Then the grid row where "Booking" is "Booking A" is checked
  * When I click "Status" in the grid row where "Booking" is "Booking A"
+ * When I click the "button" in the grid row where "Booking" is "Booking A"
+ * When I click the "link" in column "Customer" of the grid row where "Booking" is "Booking A"
+ * When I click the "button" in column 4 of the grid row where "Booking" is "Booking A"
  * </pre>
+ * The element type is checkbox, radio, button, link, input, dropdown or image, or a CSS selector such as
+ * {@code "[data-testid='edit']"} ({@link GridLibrary#element(String, String, String)}).
  */
 public class GridSteps {
 
@@ -199,5 +204,46 @@ public class GridSteps {
     @When("I click {string} in the grid row where {string} is {string}")
     public void clickCell(String targetHeader, String header, String value) {
         grid().cell(header, value, targetHeader).click();
+    }
+
+    /**
+     * Clicks an element of a type anywhere in the row found by a column's value (the first, if there are several):
+     * {@code When I click the "button" in the grid row where "Booking" is "Booking A"}.
+     *
+     * @param elementType checkbox, radio, button, link, input, dropdown, image, or a CSS selector
+     * @param header      the column to search
+     * @param value       the value that finds the row
+     */
+    @When("I click the {string} in the grid row where {string} is {string}")
+    public void clickElementInRow(String elementType, String header, String value) {
+        grid().element(header, value, elementType).click();
+    }
+
+    /**
+     * Clicks an element of a type in a given column of the row:
+     * {@code When I click the "link" in column "Customer" of the grid row where "Booking" is "Booking A"}.
+     *
+     * @param elementType  checkbox, radio, button, link, input, dropdown, image, or a CSS selector
+     * @param targetHeader the column that holds the element, by its header text
+     * @param header       the column to search
+     * @param value        the value that finds the row
+     */
+    @When("I click the {string} in column {string} of the grid row where {string} is {string}")
+    public void clickElementInColumn(String elementType, String targetHeader, String header, String value) {
+        grid().element(header, value, elementType, targetHeader).click();
+    }
+
+    /**
+     * Clicks an element of a type at a column position of the row, for a column without a header text:
+     * {@code When I click the "button" in column 4 of the grid row where "Booking" is "Booking A"}.
+     *
+     * @param elementType checkbox, radio, button, link, input, dropdown, image, or a CSS selector
+     * @param columnIndex the position of the column that holds the element, counted from 1 at the left
+     * @param header      the column to search
+     * @param value       the value that finds the row
+     */
+    @When("I click the {string} in column {int} of the grid row where {string} is {string}")
+    public void clickElementInColumnIndex(String elementType, int columnIndex, String header, String value) {
+        grid().element(header, value, elementType, columnIndex).click();
     }
 }

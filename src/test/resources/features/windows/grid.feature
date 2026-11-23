@@ -34,3 +34,4 @@ Feature: Data grid on three pages
     And the grid column "Customer" does not contain "Nobody"
     When I check "Select" in the grid row where "Customer" is "Ada Lovelace"
     And I click "Email" in the grid row where "Customer" is "Ada Lovelace"
+    And I click the "button" in column "Actions" of the grid row where "Customer" is "Ada Lovelace"

@@ -9,6 +9,8 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import org.testng.Assert;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -21,6 +23,9 @@ import java.util.regex.Pattern;
  * grid.checkbox("Booking", "Booking A").check();            // the checkbox in that row
  * grid.checkbox("Booking", "Booking A", "Select").check();  // the checkbox in that row's Select column
  * grid.checkbox("Booking", "Booking A", 1).check();         // the checkbox in that row's first column
+ * grid.element("Booking", "Booking A", "button").click();   // any element of a type in that row
+ * grid.element("Booking", "Booking A", "link", "Customer"); // ... in that row's Customer column
+ * grid.element("Booking", "Booking A", "span", 3);          // ... a tag or CSS selector, in column 3
  * grid.columnValues("Booking");                             // all Booking values shown
  * </pre>
  * The selectors are in {@code locators/grid.json}, written for AG Grid's markup (header cells and cells carry a
@@ -161,7 +166,7 @@ public final class GridLibrary {
      * @throws AssertionError if the value is not in the column
      */
     public Locator checkbox(String header, String value) {
-        return row(header, value).locator(selector("checkbox")).first();
+        return element(header, value, "checkbox");
     }
 
     /**
@@ -175,7 +180,7 @@ public final class GridLibrary {
      * @throws AssertionError if the value is not in the column
      */
     public Locator checkbox(String header, String value, String checkboxHeader) {
-        return cell(header, value, checkboxHeader).locator(selector("checkbox"));
+        return element(header, value, "checkbox", checkboxHeader);
     }
 
     /**
@@ -204,7 +209,56 @@ public final class GridLibrary {
      * @throws AssertionError if the value is not in the column
      */
     public Locator checkbox(String header, String value, int columnIndex) {
-        return cell(header, value, columnIndex).locator(selector("checkbox"));
+        return element(header, value, "checkbox", columnIndex);
+    }
+
+    /**
+     * Any element in the row whose column {@code header} shows {@code value}, by its type, wherever it is in the
+     * row (also in a pinned column): {@code grid.element("Booking", "Booking A", "button").click()}.
+     * <p>
+     * {@code elementType} is one of the element types in locators/grid.json: checkbox, radio, button, link, input
+     * (a text input or textarea), dropdown or image. Anything else is used as a CSS selector inside the row, so a tag
+     * ({@code "span"}), a class ({@code ".ag-icon"}) or an attribute ({@code "[data-testid='edit']"}) works too.
+     * If the row has several, the first is returned.
+     *
+     * @param header      the column to search
+     * @param value       the value to find, exactly as shown
+     * @param elementType the element type or a CSS selector
+     * @return the element; call click(), check(), fill(), isVisible() ...
+     * @throws AssertionError if the value is not in the column
+     */
+    public Locator element(String header, String value, String elementType) {
+        return row(header, value).locator(elementSelector(elementType)).first();
+    }
+
+    /**
+     * Any element in a given column of the row whose column {@code header} shows {@code value}:
+     * {@code grid.element("Booking", "Booking A", "link", "Customer").click()}.
+     *
+     * @param header       the column to search
+     * @param value        the value to find, exactly as shown
+     * @param elementType  the element type or a CSS selector, as for {@link #element(String, String, String)}
+     * @param targetHeader the column that holds the element, by its header text
+     * @return the element (the first, if the cell has several)
+     * @throws AssertionError if the value is not in the column
+     */
+    public Locator element(String header, String value, String elementType, String targetHeader) {
+        return cell(header, value, targetHeader).locator(elementSelector(elementType)).first();
+    }
+
+    /**
+     * Any element at a column position of the row whose column {@code header} shows {@code value}, for a column
+     * without a header text: {@code grid.element("Booking", "Booking A", "button", 5).click()}.
+     *
+     * @param header      the column to search
+     * @param value       the value to find, exactly as shown
+     * @param elementType the element type or a CSS selector, as for {@link #element(String, String, String)}
+     * @param columnIndex the position of the column that holds the element, counted from 1 at the left
+     * @return the element (the first, if the cell has several)
+     * @throws AssertionError if the value is not in the column
+     */
+    public Locator element(String header, String value, String elementType, int columnIndex) {
+        return cell(header, value, columnIndex).locator(elementSelector(elementType)).first();
     }
 
     /**
@@ -218,6 +272,19 @@ public final class GridLibrary {
         return page.locator(selector("row") + " " + selector("cell") + "[col-id='" + id + "']").allTextContents()
                 .stream().map(String::trim).toList();
     }
+
+    /**
+     * The selector for an element type: the grid.json entry of that name (checkbox, button, ...), case ignored, or
+     * the text itself as a CSS selector.
+     */
+    private static String elementSelector(String elementType) {
+        String name = elementType.trim().toLowerCase(Locale.ROOT);
+        return ELEMENT_TYPES.contains(name) ? selector(name) : elementType.trim();
+    }
+
+    /** The grid.json entries that are element types; the others (row, cell, ...) are the grid's structure. */
+    private static final Set<String> ELEMENT_TYPES =
+            Set.of("checkbox", "radio", "button", "link", "input", "dropdown", "image");
 
     /** The selector of a grid locator, for building row and cell lookups. */
     private static String selector(String name) {
