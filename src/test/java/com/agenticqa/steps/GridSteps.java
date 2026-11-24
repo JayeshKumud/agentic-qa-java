@@ -151,7 +151,12 @@ public class GridSteps {
      */
     @When("I uncheck the grid rows matching")
     public void uncheckMatchingRow(Map<String, String> match) {
-        grid().elements(match, CHECKBOX).all().forEach(Locator::uncheck);
+        List<Locator> checkboxes = grid().elements(match, CHECKBOX).all();
+        assertFalse(checkboxes.isEmpty(), "a checkbox in the grid rows matching " + match);
+        for (Locator checkbox : checkboxes) {
+            checkbox.uncheck();
+            assertFalse(checkbox.isChecked(), "checkbox in the grid rows matching " + match + " is unchecked");
+        }
     }
 
     /**
