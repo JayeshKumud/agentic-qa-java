@@ -21,12 +21,12 @@ import java.util.regex.Pattern;
  * tests never deal with column ids:
  * <pre>
  * GridLibrary grid = pricePage.grid().waitUntilLoaded();
- * grid.cell("Booking", "Booking A");                        // the Booking cell that shows "Booking A"
- * grid.cell("Booking", "Booking A", "Status").textContent(); // the Status cell in that row
- * grid.element(Map.of("Booking", "Booking A"), "checkbox").check();          // the checkbox in that row
- * grid.element(Map.of("Booking", "Booking A", "Status", "Open"), "button");  // the row matching both columns
- * grid.element(Map.of("Booking", "Booking A"), "link", "Customer").click();  // ... in that row's Customer column
- * grid.columnValues("Booking");                             // all Booking values shown
+ * grid.cell("Booking", "Booking A");                                  // the Booking cells that show "Booking A"
+ * grid.rows(Map.of("Booking", "Booking A", "Status", "Open"));        // every row matching both columns
+ * grid.values(Map.of("Booking", "Booking A"), "Status");              // the Status texts of those rows
+ * grid.elements(Map.of("Booking", "Booking A"), "checkbox");          // the checkboxes in those rows
+ * grid.elements(Map.of("Booking", "Booking A"), "link", "Customer");  // ... in their Customer column
+ * grid.columnValues("Booking");                                       // all Booking values shown
  * </pre>
  * The selectors are in {@code locators/grid.json}, written for AG Grid's markup (header cells and cells carry a
  * col-id, rows a row-index). A row is found by its row-index, so a checkbox in a pinned column (a separate part of
@@ -99,33 +99,6 @@ public final class GridLibrary {
     }
 
     /**
-     * Searches a column for a value and returns the cell of another column in the same row:
-     * {@code grid.cell("Booking", "Booking A", "Status")}.
-     *
-     * @param header       the column to search, for example "Booking"
-     * @param value        the value to find in it, exactly as shown
-     * @param targetHeader the column whose cell in that row is wanted, for example "Status"
-     * @return the cell
-     * @throws AssertionError if the value is not in the column
-     */
-    public Locator cell(String header, String value, String targetHeader) {
-        return cell(Map.of(header, value), targetHeader);
-    }
-
-    /**
-     * The cell of a column in the first row whose columns show all the given values:
-     * {@code grid.cell(Map.of("Name", "COE", "Role", "Admin"), "Email").textContent()}.
-     *
-     * @param match        column header text to the value that column must show, as for {@link #row(Map)}
-     * @param targetHeader the column whose cell in that row is wanted
-     * @return the cell
-     * @throws AssertionError if no row shows all the values
-     */
-    public Locator cell(Map<String, String> match, String targetHeader) {
-        return row(match).locator(selector("cell") + "[col-id='" + columnId(targetHeader) + "']");
-    }
-
-    /**
      * Searches the whole grid for a value: every cell, in any column, whose whole text is {@code value}.
      *
      * @param value the cell's text, exactly as shown
@@ -154,31 +127,17 @@ public final class GridLibrary {
     }
 
     /**
-     * The row whose column {@code header} shows {@code value}: every part of it (the pinned and the scrolling
-     * part share its row-index).
+     * Every row whose columns show all the given values, for example
+     * {@code grid.rows(Map.of("Booking", "Booking A", "Status", "Open"))}: every part of each row (the pinned and
+     * the scrolling part share its row-index, so the columns may be in different parts).
      *
-     * @param header the column to search
-     * @param value  the value to find, exactly as shown
-     * @return the row
-     * @throws AssertionError if the value is not in the column
-     */
-    public Locator row(String header, String value) {
-        return row(Map.of(header, value));
-    }
-
-    /**
-     * The first row whose columns show all the given values, for example
-     * {@code grid.row(Map.of("Booking", "Booking A", "Status", "Open"))}: every part of it (the pinned and the
-     * scrolling part share its row-index, so the columns may be in different parts).
-     *
-     * @param match column header text to the value that column must show, exactly as shown; pass a LinkedHashMap
-     *              to choose the order the columns are searched in
-     * @return the row
+     * @param match column header text to the value that column must show, exactly as shown
+     * @return the matching rows (one or more)
      * @throws AssertionError if no row shows all the values
      */
-    public Locator row(Map<String, String> match) {
+    public Locator rows(Map<String, String> match) {
         if (match.isEmpty()) {
-            throw new IllegalArgumentException("Give at least one column and value to find a grid row");
+            throw new IllegalArgumentException("Give at least one column and value to find grid rows");
         }
         Set<String> rowIndexes = null;
         for (Map.Entry<String, String> column : match.entrySet()) {
@@ -197,54 +156,66 @@ public final class GridLibrary {
         if (rowIndexes.isEmpty()) {
             Assert.fail("No grid row where " + describe(match) + ", on " + page.url());
         }
-        return page.locator(selector("row") + "[row-index='" + rowIndexes.iterator().next() + "']");
+        StringJoiner anyOfThem = new StringJoiner(", ");
+        rowIndexes.forEach(index -> anyOfThem.add(selector("row") + "[row-index='" + index + "']"));
+        return page.locator(anyOfThem.toString());
     }
 
     /**
-     * Searches a column for a value and returns the cell at a column position in the same row, for columns without
-     * a header text: {@code grid.cell("Booking", "Booking A", 1)}.
+     * The cells of a column in every row whose columns show all the given values:
+     * {@code grid.cells(Map.of("Name", "COE", "Role", "Admin"), "Email")}.
      *
-     * @param header      the column to search, for example "Booking"
-     * @param value       the value to find in it, exactly as shown
-     * @param columnIndex the position of the wanted column, counted from 1 at the left as shown on screen (pinned
-     *                    columns included); AG Grid's aria-colindex
-     * @return the cell
-     * @throws AssertionError if the value is not in the column
+     * @param match        column header text to the value that column must show, as for {@link #rows(Map)}
+     * @param targetHeader the column whose cells are wanted
+     * @return the cells, one per matching row
+     * @throws AssertionError if no row shows all the values
      */
-    public Locator cell(String header, String value, int columnIndex) {
-        return row(header, value).locator(selector("cell") + "[aria-colindex='" + columnIndex + "']");
+    public Locator cells(Map<String, String> match, String targetHeader) {
+        return rows(match).locator(selector("cell") + "[col-id='" + columnId(targetHeader) + "']");
     }
 
     /**
-     * Any element in the first row whose columns show all the given values, by its type, wherever it is in the row
-     * (also in a pinned column): {@code grid.element(Map.of("Booking", "Booking A"), "checkbox").check()}.
+     * The texts of a column in every row whose columns show all the given values, top to bottom:
+     * {@code grid.values(Map.of("Name", "COE"), "Role")}.
+     *
+     * @param match        column header text to the value that column must show, as for {@link #rows(Map)}
+     * @param targetHeader the column whose values are wanted
+     * @return the cell texts, trimmed, one per matching row
+     * @throws AssertionError if no row shows all the values
+     */
+    public List<String> values(Map<String, String> match, String targetHeader) {
+        return cells(match, targetHeader).allTextContents().stream().map(String::trim).toList();
+    }
+
+    /**
+     * Every element of a type in every row whose columns show all the given values, wherever it is in the row
+     * (also in a pinned column): {@code grid.elements(Map.of("Booking", "Booking A"), "checkbox")}.
      * <p>
      * {@code elementType} is one of the element types in locators/grid.json: checkbox, radio, button, link, input
-     * (a text input or textarea), dropdown or image. Anything else is used as a CSS selector inside the row, so a tag
-     * ({@code "span"}), a class ({@code ".ag-icon"}) or an attribute ({@code "[data-testid='edit']"}) works too.
-     * If the row has several, the first is returned.
+     * (a text input or textarea), dropdown or image. Anything else is used as a CSS selector inside the rows, so a
+     * tag ({@code "span"}), a class ({@code ".ag-icon"}) or an attribute ({@code "[data-testid='edit']"}) works too.
      *
-     * @param match       column header text to the value that column must show, as for {@link #row(Map)}
+     * @param match       column header text to the value that column must show, as for {@link #rows(Map)}
      * @param elementType the element type or a CSS selector
-     * @return the element; call click(), check(), isChecked(), fill(), isVisible() ...
+     * @return the elements; use all() to act on each, first() for one, count() ...
      * @throws AssertionError if no row shows all the values
      */
-    public Locator element(Map<String, String> match, String elementType) {
-        return row(match).locator(elementSelector(elementType)).first();
+    public Locator elements(Map<String, String> match, String elementType) {
+        return rows(match).locator(elementSelector(elementType));
     }
 
     /**
-     * Any element in a given column of the first row whose columns show all the given values:
-     * {@code grid.element(Map.of("Booking", "Booking A"), "link", "Customer").click()}.
+     * Every element of a type in a given column of every row whose columns show all the given values:
+     * {@code grid.elements(Map.of("Booking", "Booking A"), "link", "Customer")}.
      *
-     * @param match        column header text to the value that column must show, as for {@link #row(Map)}
-     * @param elementType  the element type or a CSS selector, as for {@link #element(Map, String)}
-     * @param targetHeader the column that holds the element, by its header text
-     * @return the element (the first, if the cell has several)
+     * @param match        column header text to the value that column must show, as for {@link #rows(Map)}
+     * @param elementType  the element type or a CSS selector, as for {@link #elements(Map, String)}
+     * @param targetHeader the column that holds the elements, by its header text
+     * @return the elements
      * @throws AssertionError if no row shows all the values
      */
-    public Locator element(Map<String, String> match, String elementType, String targetHeader) {
-        return cell(match, targetHeader).locator(elementSelector(elementType)).first();
+    public Locator elements(Map<String, String> match, String elementType, String targetHeader) {
+        return cells(match, targetHeader).locator(elementSelector(elementType));
     }
 
     /**

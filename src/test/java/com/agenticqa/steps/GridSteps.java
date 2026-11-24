@@ -2,6 +2,7 @@ package com.agenticqa.steps;
 
 import com.agenticqa.ui.GridLibrary;
 import com.agenticqa.ui.WindowNavigator;
+import com.microsoft.playwright.Locator;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
@@ -24,7 +25,8 @@ import static org.testng.Assert.assertTrue;
  *   | Booking C |
  * </pre>
  * A row is found by one or more columns: end the step with "matching" and give the columns and values as a
- * two-column table (header | value); the row must show all of them:
+ * two-column table (header | value). Every row that shows all of them is used: check, uncheck and the checks
+ * work on each of those rows, a click clicks the first:
  * <pre>
  * Then in the grid row matching, "Email" is "coe@example.com"
  *   | Name | COE   |
@@ -39,7 +41,7 @@ import static org.testng.Assert.assertTrue;
  * When I click the "link" in column "Customer" of the grid row matching
  * </pre>
  * The element type is checkbox, radio, button, link, input, dropdown or image, or a CSS selector such as
- * {@code "[data-testid='edit']"} ({@link GridLibrary#element(java.util.Map, String)}).
+ * {@code "[data-testid='edit']"} ({@link GridLibrary#elements(java.util.Map, String)}).
  */
 public class GridSteps {
 
@@ -125,8 +127,9 @@ public class GridSteps {
      */
     @Then("in the grid row matching, {string} is {string}")
     public void cellInMatchingRowIs(String targetHeader, String expected, Map<String, String> match) {
-        String actual = grid().cell(match, targetHeader).textContent().trim();
-        assertEquals(actual, expected, "'" + targetHeader + "' in the grid row matching " + match);
+        for (String actual : grid().values(match, targetHeader)) {
+            assertEquals(actual, expected, "'" + targetHeader + "' in the grid rows matching " + match);
+        }
     }
 
     /**
@@ -137,7 +140,7 @@ public class GridSteps {
      */
     @When("I check the grid row matching")
     public void checkMatchingRow(Map<String, String> match) {
-        grid().element(match, CHECKBOX).check();
+        grid().elements(match, CHECKBOX).all().forEach(Locator::check);
     }
 
     /**
@@ -148,7 +151,7 @@ public class GridSteps {
      */
     @When("I uncheck the grid row matching")
     public void uncheckMatchingRow(Map<String, String> match) {
-        grid().element(match, CHECKBOX).uncheck();
+        grid().elements(match, CHECKBOX).all().forEach(Locator::uncheck);
     }
 
     /**
@@ -160,7 +163,7 @@ public class GridSteps {
      */
     @When("I check {string} in the grid row matching")
     public void checkInMatchingRow(String checkboxHeader, Map<String, String> match) {
-        grid().element(match, CHECKBOX, checkboxHeader).check();
+        grid().elements(match, CHECKBOX, checkboxHeader).all().forEach(Locator::check);
     }
 
     /**
@@ -171,7 +174,9 @@ public class GridSteps {
      */
     @Then("the grid row matching is checked")
     public void matchingRowIsChecked(Map<String, String> match) {
-        assertTrue(grid().element(match, CHECKBOX).isChecked(), "the grid row matching " + match + " is checked");
+        for (Locator checkbox : grid().elements(match, CHECKBOX).all()) {
+            assertTrue(checkbox.isChecked(), "every checkbox in the grid rows matching " + match + " is checked");
+        }
     }
 
     /**
@@ -182,7 +187,9 @@ public class GridSteps {
      */
     @Then("the grid row matching is not checked")
     public void matchingRowIsNotChecked(Map<String, String> match) {
-        assertFalse(grid().element(match, CHECKBOX).isChecked(), "the grid row matching " + match + " is not checked");
+        for (Locator checkbox : grid().elements(match, CHECKBOX).all()) {
+            assertFalse(checkbox.isChecked(), "no checkbox in the grid rows matching " + match + " is checked");
+        }
     }
 
     /**
@@ -194,7 +201,7 @@ public class GridSteps {
      */
     @When("I click {string} in the grid row matching")
     public void clickCellInMatchingRow(String targetHeader, Map<String, String> match) {
-        grid().cell(match, targetHeader).click();
+        grid().cells(match, targetHeader).first().click();
     }
 
     /**
@@ -206,7 +213,7 @@ public class GridSteps {
      */
     @When("I click the {string} in the grid row matching")
     public void clickElementInMatchingRow(String elementType, Map<String, String> match) {
-        grid().element(match, elementType).click();
+        grid().elements(match, elementType).first().click();
     }
 
     /**
@@ -219,6 +226,6 @@ public class GridSteps {
      */
     @When("I click the {string} in column {string} of the grid row matching")
     public void clickElementInColumnOfMatchingRow(String elementType, String targetHeader, Map<String, String> match) {
-        grid().element(match, elementType, targetHeader).click();
+        grid().elements(match, elementType, targetHeader).first().click();
     }
 }

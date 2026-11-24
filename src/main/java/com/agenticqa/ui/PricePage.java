@@ -146,8 +146,8 @@ public class PricePage implements PageComponents {
     }
 
     /**
-     * Waits for the grid to load, searches a column for a value and ticks the checkbox in a given column of that
-     * row: {@code pricePage.checkGridRow("Booking", "Booking A", "Select")}.
+     * Waits for the grid to load, searches a column for a value and ticks the checkbox in a given column of every
+     * row that shows it: {@code pricePage.checkGridRow("Booking", "Booking A", "Select")}.
      *
      * @param searchHeader   the column to search, by its header text, for example "Booking"
      * @param value          the value to find in it, exactly as shown
@@ -156,7 +156,8 @@ public class PricePage implements PageComponents {
      * @throws AssertionError if the grid does not load or the value is not in the column
      */
     public PricePage checkGridRow(String searchHeader, String value, String checkboxHeader) {
-        grid().waitUntilLoaded().element(Map.of(searchHeader, value), "checkbox", checkboxHeader).check();
+        grid().waitUntilLoaded().elements(Map.of(searchHeader, value), "checkbox", checkboxHeader).all()
+                .forEach(Locator::check);
         return this;
     }
 
