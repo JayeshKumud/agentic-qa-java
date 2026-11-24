@@ -6,6 +6,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Page object of the Price window, opened with {@code windows.switchToWindow(Window.PRICE_BOOKING)}
@@ -155,22 +156,7 @@ public class PricePage implements PageComponents {
      * @throws AssertionError if the grid does not load or the value is not in the column
      */
     public PricePage checkGridRow(String searchHeader, String value, String checkboxHeader) {
-        grid().waitUntilLoaded().checkbox(searchHeader, value, checkboxHeader).check();
-        return this;
-    }
-
-    /**
-     * Like {@link #checkGridRow(String, String, String)}, with the checkbox column given by its position, for a
-     * checkbox column without a header text: {@code pricePage.checkGridRow("Booking", "Booking A", 1)}.
-     *
-     * @param searchHeader        the column to search, by its header text, for example "Booking"
-     * @param value               the value to find in it, exactly as shown
-     * @param checkboxColumnIndex the position of the checkbox column, counted from 1 at the left as shown on screen
-     * @return this page
-     * @throws AssertionError if the grid does not load or the value is not in the column
-     */
-    public PricePage checkGridRow(String searchHeader, String value, int checkboxColumnIndex) {
-        grid().waitUntilLoaded().checkbox(searchHeader, value, checkboxColumnIndex).check();
+        grid().waitUntilLoaded().element(Map.of(searchHeader, value), "checkbox", checkboxHeader).check();
         return this;
     }
 

@@ -13,17 +13,21 @@ Feature: Data grid on three pages
     And the grid column "Name" shows
       | COE |
       | NBE |
-    And in the grid row where "Name" is "COE", "Role" is "Admin"
+    And in the grid row matching, "Role" is "Admin"
+      | Name | COE |
 
   @PRGBATR-1017
   Scenario: Price Booking grid - select rows
     When I open the Price Booking window
     Then the grid is loaded
-    When I check the grid row where "Booking" is "Booking A"
-    Then the grid row where "Booking" is "Booking A" is checked
-    When I uncheck the grid row where "Booking" is "Booking A"
-    Then the grid row where "Booking" is "Booking A" is not checked
-    When I check column 1 in the grid row where "Booking" is "Booking B"
+    When I check the grid row matching
+      | Booking | Booking A |
+    Then the grid row matching is checked
+      | Booking | Booking A |
+    When I uncheck the grid row matching
+      | Booking | Booking A |
+    Then the grid row matching is not checked
+      | Booking | Booking A |
 
   @PRGBATR-1018
   Scenario: Customer grid - search, pick a column's checkbox, open a cell
@@ -32,6 +36,18 @@ Feature: Data grid on three pages
     Then the grid is loaded
     And the grid column "Customer" contains "Ada Lovelace"
     And the grid column "Customer" does not contain "Nobody"
-    When I check "Select" in the grid row where "Customer" is "Ada Lovelace"
-    And I click "Email" in the grid row where "Customer" is "Ada Lovelace"
-    And I click the "button" in column "Actions" of the grid row where "Customer" is "Ada Lovelace"
+    When I check "Select" in the grid row matching
+      | Customer | Ada Lovelace |
+    And I click "Email" in the grid row matching
+      | Customer | Ada Lovelace |
+    And I click the "button" in column "Actions" of the grid row matching
+      | Customer | Ada Lovelace |
+    When I check the grid row matching
+      | Customer | Ada Lovelace |
+      | Email    | ada@example.com |
+    Then the grid row matching is checked
+      | Customer | Ada Lovelace |
+      | Email    | ada@example.com |
+    When I click the "link" in column "Customer" of the grid row matching
+      | Customer | Ada Lovelace |
+      | Email    | ada@example.com |
