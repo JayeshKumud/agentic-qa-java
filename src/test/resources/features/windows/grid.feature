@@ -13,20 +13,20 @@ Feature: Data grid on three pages
     And the grid column "Name" shows
       | COE |
       | NBE |
-    And in the grid row matching, "Role" is "Admin"
+    And in the grid rows matching, "Role" is "Admin"
       | Name | COE |
 
   @PRGBATR-1017
   Scenario: Price Booking grid - select rows
     When I open the Price Booking window
     Then the grid is loaded
-    When I check the grid row matching
+    When I check the grid rows matching
       | Booking | Booking A |
-    Then the grid row matching is checked
+    Then the grid rows matching are checked
       | Booking | Booking A |
-    When I uncheck the grid row matching
+    When I uncheck the grid rows matching
       | Booking | Booking A |
-    Then the grid row matching is not checked
+    Then the grid rows matching are not checked
       | Booking | Booking A |
 
   @PRGBATR-1018
@@ -36,18 +36,18 @@ Feature: Data grid on three pages
     Then the grid is loaded
     And the grid column "Customer" contains "Ada Lovelace"
     And the grid column "Customer" does not contain "Nobody"
-    When I check "Select" in the grid row matching
+    When I check "Select" in the grid rows matching
       | Customer | Ada Lovelace |
-    And I click "Email" in the grid row matching
+    And I click "Email" in the grid rows matching
       | Customer | Ada Lovelace |
-    And I click the "button" in column "Actions" of the grid row matching
+    And I click the "button" in column "Actions" of the grid rows matching
       | Customer | Ada Lovelace |
-    When I check the grid row matching
-      | Customer | Ada Lovelace |
-      | Email    | ada@example.com |
-    Then the grid row matching is checked
+    When I check the grid rows matching
       | Customer | Ada Lovelace |
       | Email    | ada@example.com |
-    When I click the "link" in column "Customer" of the grid row matching
+    Then the grid rows matching are checked
+      | Customer | Ada Lovelace |
+      | Email    | ada@example.com |
+    When I click the "link" in column "Customer" of the grid rows matching
       | Customer | Ada Lovelace |
       | Email    | ada@example.com |

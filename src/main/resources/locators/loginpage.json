@@ -1,9 +1,5 @@
 {
   "_comment": "Locators of the login page (LoginPage), shown after log out and before sign in. Name -> selector, or an object with selector, description and heal (default true; false for elements that may legitimately be absent). Keys starting with _ are ignored. The form selectors are Keycloak's defaults, as in klm.json.",
-  "loginTitle": {
-    "selector": "#kc-header-wrapper",
-    "description": "login page title (Open Platform)"
-  },
   "loginForm": {
     "selector": "#kc-form-login",
     "description": "login form"

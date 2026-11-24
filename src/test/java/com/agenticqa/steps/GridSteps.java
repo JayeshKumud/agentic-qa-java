@@ -28,17 +28,17 @@ import static org.testng.Assert.assertTrue;
  * two-column table (header | value). Every row that shows all of them is used: check, uncheck and the checks
  * work on each of those rows, a click clicks the first:
  * <pre>
- * Then in the grid row matching, "Email" is "coe@example.com"
+ * Then in the grid rows matching, "Email" is "coe@example.com"
  *   | Name | COE   |
  *   | Role | Admin |
- * When I check the grid row matching
- * When I uncheck the grid row matching
- * When I check "Select" in the grid row matching
- * Then the grid row matching is checked
- * Then the grid row matching is not checked
- * When I click "Email" in the grid row matching
- * When I click the "button" in the grid row matching
- * When I click the "link" in column "Customer" of the grid row matching
+ * When I check the grid rows matching
+ * When I uncheck the grid rows matching
+ * When I check "Select" in the grid rows matching
+ * Then the grid rows matching are checked
+ * Then the grid rows matching are not checked
+ * When I click "Email" in the grid rows matching
+ * When I click the "button" in the grid rows matching
+ * When I click the "link" in column "Customer" of the grid rows matching
  * </pre>
  * The element type is checkbox, radio, button, link, input, dropdown or image, or a CSS selector such as
  * {@code "[data-testid='edit']"} ({@link GridLibrary#elements(java.util.Map, String)}).
@@ -116,7 +116,7 @@ public class GridSteps {
     /**
      * Checks a cell in the row that shows all the table's values:
      * <pre>
-     * Then in the grid row matching, "Email" is "coe@example.com"
+     * Then in the grid rows matching, "Email" is "coe@example.com"
      *   | Name | COE   |
      *   | Role | Admin |
      * </pre>
@@ -125,7 +125,7 @@ public class GridSteps {
      * @param expected     the text it must show, exactly (spaces around it ignored)
      * @param match        the table: column header | value, one row per column
      */
-    @Then("in the grid row matching, {string} is {string}")
+    @Then("in the grid rows matching, {string} is {string}")
     public void cellInMatchingRowIs(String targetHeader, String expected, Map<String, String> match) {
         for (String actual : grid().values(match, targetHeader)) {
             assertEquals(actual, expected, "'" + targetHeader + "' in the grid rows matching " + match);
@@ -134,45 +134,45 @@ public class GridSteps {
 
     /**
      * Ticks the checkbox of the row that shows all the table's values, wherever it is in the row:
-     * {@code When I check the grid row matching} + table.
+     * {@code When I check the grid rows matching} + table.
      *
      * @param match the table: column header | value
      */
-    @When("I check the grid row matching")
+    @When("I check the grid rows matching")
     public void checkMatchingRow(Map<String, String> match) {
         grid().elements(match, CHECKBOX).all().forEach(Locator::check);
     }
 
     /**
      * Unticks the checkbox of the row that shows all the table's values:
-     * {@code When I uncheck the grid row matching} + table.
+     * {@code When I uncheck the grid rows matching} + table.
      *
      * @param match the table: column header | value
      */
-    @When("I uncheck the grid row matching")
+    @When("I uncheck the grid rows matching")
     public void uncheckMatchingRow(Map<String, String> match) {
         grid().elements(match, CHECKBOX).all().forEach(Locator::uncheck);
     }
 
     /**
      * Ticks the checkbox in a given column of the row that shows all the table's values:
-     * {@code When I check "Select" in the grid row matching} + table.
+     * {@code When I check "Select" in the grid rows matching} + table.
      *
      * @param checkboxHeader the column that holds the checkbox
      * @param match          the table: column header | value
      */
-    @When("I check {string} in the grid row matching")
+    @When("I check {string} in the grid rows matching")
     public void checkInMatchingRow(String checkboxHeader, Map<String, String> match) {
         grid().elements(match, CHECKBOX, checkboxHeader).all().forEach(Locator::check);
     }
 
     /**
      * Checks that the checkbox of the row that shows all the table's values is ticked:
-     * {@code Then the grid row matching is checked} + table.
+     * {@code Then the grid rows matching are checked} + table.
      *
      * @param match the table: column header | value
      */
-    @Then("the grid row matching is checked")
+    @Then("the grid rows matching are checked")
     public void matchingRowIsChecked(Map<String, String> match) {
         for (Locator checkbox : grid().elements(match, CHECKBOX).all()) {
             assertTrue(checkbox.isChecked(), "every checkbox in the grid rows matching " + match + " is checked");
@@ -181,11 +181,11 @@ public class GridSteps {
 
     /**
      * Checks that the checkbox of the row that shows all the table's values is not ticked:
-     * {@code Then the grid row matching is not checked} + table.
+     * {@code Then the grid rows matching are not checked} + table.
      *
      * @param match the table: column header | value
      */
-    @Then("the grid row matching is not checked")
+    @Then("the grid rows matching are not checked")
     public void matchingRowIsNotChecked(Map<String, String> match) {
         for (Locator checkbox : grid().elements(match, CHECKBOX).all()) {
             assertFalse(checkbox.isChecked(), "no checkbox in the grid rows matching " + match + " is checked");
@@ -194,37 +194,37 @@ public class GridSteps {
 
     /**
      * Clicks a cell in the row that shows all the table's values:
-     * {@code When I click "Email" in the grid row matching} + table.
+     * {@code When I click "Email" in the grid rows matching} + table.
      *
      * @param targetHeader the column whose cell is clicked
      * @param match        the table: column header | value
      */
-    @When("I click {string} in the grid row matching")
+    @When("I click {string} in the grid rows matching")
     public void clickCellInMatchingRow(String targetHeader, Map<String, String> match) {
         grid().cells(match, targetHeader).first().click();
     }
 
     /**
      * Clicks an element of a type anywhere in the row that shows all the table's values:
-     * {@code When I click the "button" in the grid row matching} + table.
+     * {@code When I click the "button" in the grid rows matching} + table.
      *
      * @param elementType checkbox, radio, button, link, input, dropdown, image, or a CSS selector
      * @param match       the table: column header | value
      */
-    @When("I click the {string} in the grid row matching")
+    @When("I click the {string} in the grid rows matching")
     public void clickElementInMatchingRow(String elementType, Map<String, String> match) {
         grid().elements(match, elementType).first().click();
     }
 
     /**
      * Clicks an element of a type in a given column of the row that shows all the table's values:
-     * {@code When I click the "link" in column "Customer" of the grid row matching} + table.
+     * {@code When I click the "link" in column "Customer" of the grid rows matching} + table.
      *
      * @param elementType  checkbox, radio, button, link, input, dropdown, image, or a CSS selector
      * @param targetHeader the column that holds the element, by its header text
      * @param match        the table: column header | value
      */
-    @When("I click the {string} in column {string} of the grid row matching")
+    @When("I click the {string} in column {string} of the grid rows matching")
     public void clickElementInColumnOfMatchingRow(String elementType, String targetHeader, Map<String, String> match) {
         grid().elements(match, elementType, targetHeader).first().click();
     }
