@@ -4,9 +4,15 @@ import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
+import org.testng.Assert;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Page object of the Price window, opened with {@code windows.switchToWindow(Window.PRICE_BOOKING)}
@@ -25,6 +31,12 @@ public class PricePage implements PageComponents {
      * ({@link Window#PRICE_BOOKING}), because {@link WindowNavigator} checks the new window's title against it.
      */
     public static final String PAGE_TITLE = Window.PRICE_BOOKING.text();
+
+    /** The grid column that shows ranges such as "10->20" (see {@link #verifySelectionShown}). */
+    public static final String SPLIT_HEADER = "Splited";
+
+    /** What separates the two sides of a {@value #SPLIT_HEADER} range, as in "10->20". */
+    public static final String RANGE = "->";
 
     private final Page page;
     private final PageElements el;
@@ -159,6 +171,70 @@ public class PricePage implements PageComponents {
         grid().waitUntilLoaded().elements(Map.of(searchHeader, value), "checkbox", checkboxHeader).all()
                 .forEach(Locator::check);
         return this;
+    }
+
+    /**
+     * Checks that the cell of column {@code targetHeader} in every Price grid row matching {@code match} holds the
+     * div of a selection: for TEST1 the cell's div whose class contains model1, for TEST2 the one whose class
+     * contains model2 (locators test1Div and test2Div in pricepage.json):
+     * {@code pricePage.verifySelectionShown(Map.of("Booking", "Booking A", "Splited", "10"), "TEST1", "Price")}.
+     * <p>
+     * The {@value #SPLIT_HEADER} column shows ranges such as "10->20": a single value ("10" or "20") matches a row
+     * if either side is that value, and a range ("10->20") matches only that range. Other columns match as usual.
+     *
+     * @param match        column header text to the value that column must show
+     * @param selection    TEST1 or TEST2 (case ignored)
+     * @param targetHeader the column whose cells must hold the div, for example "Price"
+     * @return this page
+     * @throws AssertionError           if no row matches, or a matching cell does not hold the div
+     * @throws IllegalArgumentException if the selection is not TEST1 or TEST2
+     */
+    public PricePage verifySelectionShown(Map<String, String> match, String selection, String targetHeader) {
+        String divLocator = switch (selection.trim().toUpperCase(Locale.ROOT)) {
+            case "TEST1" -> "test1Div";
+            case "TEST2" -> "test2Div";
+            default -> throw new IllegalArgumentException(
+                    "Selection must be TEST1 or TEST2, not '" + selection + "'");
+        };
+        GridLibrary grid = grid().waitUntilLoaded();
+        String split = match.get(SPLIT_HEADER);
+        List<Locator> cells = new ArrayList<>();
+        if (split == null || split.contains(RANGE)) {
+            // no Splited value, or a whole range ("10->20"): the usual match
+            cells.addAll(grid.cells(match, targetHeader).all());
+        } else {
+            // one side ("10"): every Splited range shown, in the rows the other columns match, with that side
+            Map<String, String> others = new LinkedHashMap<>(match);
+            others.remove(SPLIT_HEADER);
+            List<String> shown = others.isEmpty() ? grid.columnValues(SPLIT_HEADER) : grid.values(others, SPLIT_HEADER);
+            List<String> ranges = shown.stream().distinct().filter(range -> hasSide(range, split)).toList();
+            if (ranges.isEmpty()) {
+                Assert.fail("No Price grid row whose '" + SPLIT_HEADER + "' range has the side '" + split
+                        + "', among the rows matching " + match + " (shown: " + shown + ")");
+            }
+            for (String range : ranges) {
+                Map<String, String> exact = new LinkedHashMap<>(others);
+                exact.put(SPLIT_HEADER, range);
+                cells.addAll(grid.cells(exact, targetHeader).all());
+            }
+        }
+        Assert.assertFalse(cells.isEmpty(),
+                "a '" + targetHeader + "' cell in the Price grid rows matching " + match);
+        for (Locator cell : cells) {
+            CommonActions.assertVisible(el.within(cell, divLocator),
+                    "the " + selection + " div in the '" + targetHeader + "' cell of the Price grid rows matching "
+                            + match);
+        }
+        return this;
+    }
+
+    /**
+     * Tells whether a {@value #SPLIT_HEADER} value is the given value or a range with it on either side: "10->20"
+     * has the sides 10 and 20 (numbers by value, so "10.00" counts as 10).
+     */
+    private static boolean hasSide(String shown, String side) {
+        return Arrays.stream(shown.split(Pattern.quote(RANGE)))
+                .anyMatch(part -> GridLibrary.sameValue(part, side));
     }
 
     /**

@@ -25,6 +25,7 @@ import static org.testng.Assert.assertTrue;
  * Then the Price grid rows matching are checked
  * Then the Price grid rows matching are not checked
  * Then in the Price grid rows matching, "Status" is "Open"
+ * Then the "Price" cells of the Price grid rows matching show the "TEST1" selection
  * When I click the "link" in column "Customer" of the Price grid rows matching
  * </pre>
  * For the grid of whichever window the scenario is on, use {@link GridSteps}.
@@ -136,6 +137,25 @@ public class PriceSteps {
             assertTrue(GridLibrary.sameValue(actual, expected), "'" + targetHeader + "' in the Price grid rows matching "
                     + match + " shows '" + actual + "', expected '" + expected + "'");
         }
+    }
+
+    /**
+     * Checks that a column of every matching Price grid row holds the div of a selection, TEST1 or TEST2
+     * ({@link com.agenticqa.ui.PricePage#verifySelectionShown}). The Splited column shows ranges such as "10->20":
+     * "10" or "20" matches either side, "10->20" only that range.
+     * <pre>
+     * Then the "Price" cells of the Price grid rows matching show the "TEST1" selection
+     *   | Booking | Booking A |
+     *   | Splited | 10        |
+     * </pre>
+     *
+     * @param targetHeader the column whose cells must hold the div
+     * @param selection    TEST1 or TEST2
+     * @param match        the table: column header | value
+     */
+    @Then("the {string} cells of the Price grid rows matching show the {string} selection")
+    public void selectionShown(String targetHeader, String selection, Map<String, String> match) {
+        pages.price().verifySelectionShown(match, selection, targetHeader);
     }
 
     /**

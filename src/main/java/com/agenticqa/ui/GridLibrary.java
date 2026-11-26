@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
  * grid.values(Map.of("Booking", "Booking A"), "Status");              // the Status texts of those rows
  * grid.elements(Map.of("Booking", "Booking A"), "checkbox");          // the checkboxes in those rows
  * grid.elements(Map.of("Booking", "Booking A"), "link", "Customer");  // ... in their Customer column
+ * grid.cellIn(row, "Price");                                          // the Price cell of a row you have
  * grid.columnValues("Booking");                                       // all Booking values shown
  * </pre>
  * The selectors are in {@code locators/grid.json}, written for AG Grid's markup (header cells and cells carry a
@@ -167,7 +168,20 @@ public final class GridLibrary {
      * @throws AssertionError if no row shows all the values
      */
     public Locator cells(Map<String, String> match, String targetHeader) {
-        return rows(match).locator(selector("cell") + "[col-id='" + columnId(targetHeader) + "']");
+        return cellIn(rows(match), targetHeader);
+    }
+
+    /**
+     * The cell of a column in a row you already have, for example one of {@link #rows(Map)}:
+     * {@code grid.cellIn(row, "Price")}. Every part of the row is searched (AG Grid's pinned and scrolling parts),
+     * so the column may be in either.
+     *
+     * @param row          the row (or rows: then their cells of that column, one per row)
+     * @param targetHeader the column whose cell is wanted, by its header text
+     * @return the cell
+     */
+    public Locator cellIn(Locator row, String targetHeader) {
+        return row.locator(selector("cell") + "[col-id='" + columnId(targetHeader) + "']");
     }
 
     /**

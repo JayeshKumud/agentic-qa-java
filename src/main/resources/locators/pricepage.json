@@ -29,5 +29,15 @@
     "selector": "div[role='row']",
     "description": "grid rows (a header row has role=row too)",
     "heal": false
+  },
+  "test1Div": {
+    "selector": ":scope > div[class*='model1']",
+    "description": "the TEST1 div of a Price grid cell: a div right inside the cell whose class contains model1 (PricePage.verifySelectionShown; searched inside the cell)",
+    "heal": false
+  },
+  "test2Div": {
+    "selector": ":scope > div[class*='model2']",
+    "description": "the TEST2 div of a Price grid cell: a div right inside the cell whose class contains model2 (PricePage.verifySelectionShown; searched inside the cell)",
+    "heal": false
   }
 }
