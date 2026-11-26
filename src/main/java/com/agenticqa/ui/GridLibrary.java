@@ -174,11 +174,12 @@ public final class GridLibrary {
      *
      * @param match        column header text to the value that column must show, as for {@link #rows(Map)}
      * @param targetHeader the column whose values are wanted
-     * @return the cell texts, trimmed, one per matching row
+     * @return what each cell shows, trimmed, one per matching row: its text, or the value of the text input,
+     *         textarea or dropdown it holds
      * @throws AssertionError if no row shows all the values
      */
     public List<String> values(Map<String, String> match, String targetHeader) {
-        return cells(match, targetHeader).allTextContents().stream().map(String::trim).toList();
+        return shownValues(cells(match, targetHeader));
     }
 
     /**
@@ -216,26 +217,51 @@ public final class GridLibrary {
      * The values a column shows, top to bottom (only the rows the grid has rendered).
      *
      * @param header the column header's text
-     * @return the cell texts, trimmed
+     * @return what each cell shows, trimmed: its text, or the value of the text input, textarea or dropdown it
+     *         holds
      */
     public List<String> columnValues(String header) {
-        return page.locator(columnCells(header)).allTextContents().stream().map(String::trim).toList();
+        return shownValues(page.locator(columnCells(header)));
+    }
+
+    /**
+     * JavaScript helpers shared by the scripts below: {@code fields(cell)} are the text inputs, textareas and
+     * dropdowns in a cell (checkboxes, radios and hidden inputs are left out: their value is not what is shown), and
+     * {@code shown(field)} is what a field shows (a dropdown: its selected option's text).
+     */
+    private static final String FIELDS = """
+            const shown = el => el.tagName === 'SELECT'
+                ? [...el.selectedOptions].map(o => o.textContent).join(' ')
+                : el.value;
+            const fields = c => [...c.querySelectorAll(
+                "input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea, select")];
+            """;
+
+    /**
+     * A JavaScript function (cells) that returns what each cell shows: the values of the fields it holds (joined by
+     * a space if several), or its text if it holds none.
+     */
+    private static final String CELL_VALUES = "cells => {" + FIELDS + """
+              return cells.map(c => {
+                const fs = fields(c);
+                return fs.length ? fs.map(shown).join(' ') : (c.textContent ?? '');
+              });
+            }""";
+
+    /** What each cell of a locator shows, trimmed, in page order: its fields' values, or its text. */
+    @SuppressWarnings("unchecked")
+    private static List<String> shownValues(Locator cells) {
+        return ((List<String>) cells.evaluateAll(CELL_VALUES)).stream().map(String::trim).toList();
     }
 
     /**
      * A JavaScript function (cells, want) that returns [row-index, col-id] of each cell whose text is {@code want},
      * or that holds a text input, textarea or dropdown whose value is {@code want}. Whitespace is collapsed and
-     * trimmed on both sides. Checkboxes, radios and hidden inputs are left out: their value is not what is shown.
+     * trimmed on both sides. Fields are as in {@link #FIELDS}.
      */
-    private static final String MATCHING_CELLS = """
-            (cells, want) => {
+    private static final String MATCHING_CELLS = "(cells, want) => {" + FIELDS + """
               const norm = s => (s ?? '').replace(/\\s+/g, ' ').trim();
               const target = norm(want);
-              const shown = el => el.tagName === 'SELECT'
-                  ? [...el.selectedOptions].map(o => o.textContent).join(' ')
-                  : el.value;
-              const fields = c => [...c.querySelectorAll(
-                  "input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea, select")];
               return cells
                   .filter(c => norm(c.textContent) === target || fields(c).some(f => norm(shown(f)) === target))
                   .map(c => [c.closest('[row-index]').getAttribute('row-index'), c.getAttribute('col-id')]);
