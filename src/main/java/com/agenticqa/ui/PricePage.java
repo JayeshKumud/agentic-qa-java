@@ -321,6 +321,28 @@ public class PricePage implements PageComponents {
     }
 
     /**
+     * The Price grid rows matching {@code match} whose {@value #MARKER_HEADER} cell holds a div whose class contains
+     * {@code classPart}:
+     * {@code pricePage.rowsWithPriceDiv(Map.of("Booking", "Booking A"), "TEST1").all()}.
+     * <p>
+     * The Locator keeps, of each row, the part that holds the {@value #MARKER_HEADER} cell: on an AG Grid with a
+     * pinned column, a cell of a column in the other part is not inside it. It is searched again on every use.
+     *
+     * @param match     column header text to the value that column must show
+     * @param classPart the text the div's class must contain, for example "TEST1" (case-sensitive)
+     * @return the rows (one Locator, one or more rows)
+     * @throws AssertionError if no row matches, or none of the matching rows has such a div in its Price cell
+     */
+    public Locator rowsWithPriceDiv(Map<String, String> match, String classPart) {
+        GridLibrary grid = grid().waitUntilLoaded();
+        String priceDiv = ".ag-cell[col-id='" + grid.columnId(MARKER_HEADER) + "'] div[class*='" + classPart + "']";
+        Locator rows = grid.rows(match).filter(new Locator.FilterOptions().setHas(page.locator(priceDiv)));
+        Assert.assertFalse(rows.all().isEmpty(),
+                "No Price grid row matching " + match + " has a '" + classPart + "' div in its Price cell");
+        return rows;
+    }
+
+    /**
      * A case-sensitive pattern for text contained anywhere, special characters taken literally. Playwright runs it
      * as a JavaScript regex in the browser, so they are escaped one by one (Java's Pattern.quote uses \Q...\E,
      * which JavaScript does not know).
