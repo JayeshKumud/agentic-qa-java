@@ -14,7 +14,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
-import java.util.regex.Pattern;
 
 /**
  * The data grid every page has, with the same functions on every page. Columns are named by their header text, so
@@ -87,43 +86,38 @@ public final class GridLibrary {
     }
 
     /**
-     * Searches a column for a value: the cell in that column whose whole text is {@code value}.
+     * Searches a column for a value: the cells in that column whose whole text is {@code value}, or that hold a text
+     * input, textarea or dropdown showing {@code value} (an input's value is not part of the cell's text, so a text
+     * match alone misses editable cells). It looks once, without waiting; use {@link #contains} to wait for a value.
      *
      * @param header the column header's text, for example "Booking"
-     * @param value  the cell's text, exactly as shown (spaces around it are ignored)
-     * @return the cell (a Locator: call isVisible(), textContent(), click() ...)
+     * @param value  the cell's text or input value, exactly as shown (spaces around it are ignored)
+     * @return the cells (a Locator: call isVisible(), textContent(), click() ...); count() is 0 if none
      */
     public Locator cell(String header, String value) {
-        return page.locator(selector("row") + " " + selector("cell") + "[col-id='" + columnId(header) + "']")
-                .filter(new Locator.FilterOptions().setHasText(exactly(value)));
+        return cellsAt(matchingCells(columnCells(header), value));
     }
 
     /**
-     * Searches the whole grid for a value: every cell, in any column, whose whole text is {@code value}.
+     * Searches the whole grid for a value: every cell, in any column, whose whole text or input value is
+     * {@code value}. It looks once, without waiting.
      *
-     * @param value the cell's text, exactly as shown
-     * @return the matching cells (may be several)
+     * @param value the cell's text or input value, exactly as shown
+     * @return the matching cells (may be several, or none)
      */
     public Locator cellWithValue(String value) {
-        return page.locator(selector("row") + " " + selector("cell"))
-                .filter(new Locator.FilterOptions().setHasText(exactly(value)));
+        return cellsAt(matchingCells(selector("row") + " " + selector("cell"), value));
     }
 
     /**
-     * Tells whether a column shows a value, waiting up to ui.waits.assertionMs for it.
+     * Tells whether a column shows a value (as text or in an input), waiting up to ui.waits.assertionMs for it.
      *
      * @param header the column header's text
      * @param value  the value, exactly as shown
      * @return true if a cell of that column shows the value
      */
     public boolean contains(String header, String value) {
-        try {
-            cell(header, value).first().waitFor(new Locator.WaitForOptions()
-                    .setState(WaitForSelectorState.VISIBLE).setTimeout(Settings.getAssertionMs()));
-            return true;
-        } catch (PlaywrightException notThere) {
-            return false;
-        }
+        return waitForMatch(columnCells(header), value);
     }
 
     /**
@@ -141,12 +135,12 @@ public final class GridLibrary {
         }
         Set<String> rowIndexes = null;
         for (Map.Entry<String, String> column : match.entrySet()) {
-            Locator cells = cell(column.getKey(), column.getValue());
-            CommonActions.assertVisible(cells.first(),
-                    "'" + column.getValue() + "' in the grid column '" + column.getKey() + "'");
-            @SuppressWarnings("unchecked")
-            List<String> found = (List<String>) cells.evaluateAll(
-                    "cells => cells.map(c => c.closest('[row-index]').getAttribute('row-index'))");
+            String cells = columnCells(column.getKey());
+            if (!waitForMatch(cells, column.getValue())) {
+                Assert.fail("'" + column.getValue() + "' was not shown in the grid column '" + column.getKey()
+                        + "' within " + Settings.getAssertionMs() + " ms, on " + page.url());
+            }
+            List<String> found = matchingCells(cells, column.getValue()).stream().map(place -> place.get(0)).toList();
             if (rowIndexes == null) {
                 rowIndexes = new LinkedHashSet<>(found);
             } else {
@@ -225,9 +219,61 @@ public final class GridLibrary {
      * @return the cell texts, trimmed
      */
     public List<String> columnValues(String header) {
-        String id = columnId(header);
-        return page.locator(selector("row") + " " + selector("cell") + "[col-id='" + id + "']").allTextContents()
-                .stream().map(String::trim).toList();
+        return page.locator(columnCells(header)).allTextContents().stream().map(String::trim).toList();
+    }
+
+    /**
+     * A JavaScript function (cells, want) that returns [row-index, col-id] of each cell whose text is {@code want},
+     * or that holds a text input, textarea or dropdown whose value is {@code want}. Whitespace is collapsed and
+     * trimmed on both sides. Checkboxes, radios and hidden inputs are left out: their value is not what is shown.
+     */
+    private static final String MATCHING_CELLS = """
+            (cells, want) => {
+              const norm = s => (s ?? '').replace(/\\s+/g, ' ').trim();
+              const target = norm(want);
+              const shown = el => el.tagName === 'SELECT'
+                  ? [...el.selectedOptions].map(o => o.textContent).join(' ')
+                  : el.value;
+              const fields = c => [...c.querySelectorAll(
+                  "input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea, select")];
+              return cells
+                  .filter(c => norm(c.textContent) === target || fields(c).some(f => norm(shown(f)) === target))
+                  .map(c => [c.closest('[row-index]').getAttribute('row-index'), c.getAttribute('col-id')]);
+            }""";
+
+    /** The CSS selector of a column's cells in every row. */
+    private String columnCells(String header) {
+        return selector("row") + " " + selector("cell") + "[col-id='" + columnId(header) + "']";
+    }
+
+    /** The [row-index, col-id] of each cell matching {@code cellSelector} that shows the value, right now. */
+    @SuppressWarnings("unchecked")
+    private List<List<String>> matchingCells(String cellSelector, String value) {
+        return (List<List<String>>) page.locator(cellSelector).evaluateAll(MATCHING_CELLS, value);
+    }
+
+    /** Waits up to ui.waits.assertionMs for a cell matching {@code cellSelector} to show the value. */
+    private boolean waitForMatch(String cellSelector, String value) {
+        try {
+            page.waitForFunction("([selector, want]) => (" + MATCHING_CELLS
+                            + ")([...document.querySelectorAll(selector)], want).length > 0",
+                    List.of(cellSelector, value),
+                    new Page.WaitForFunctionOptions().setTimeout(Settings.getAssertionMs()));
+            return true;
+        } catch (PlaywrightException notThere) {
+            return false;
+        }
+    }
+
+    /** A locator for the cells at the given [row-index, col-id] places; it matches nothing if there are none. */
+    private Locator cellsAt(List<List<String>> places) {
+        if (places.isEmpty()) {
+            return page.locator(selector("cell") + ":not(*)");
+        }
+        StringJoiner anyOfThem = new StringJoiner(", ");
+        places.forEach(place -> anyOfThem.add(selector("row") + "[row-index='" + place.get(0) + "'] "
+                + selector("cell") + "[col-id='" + place.get(1) + "']"));
+        return page.locator(anyOfThem.toString());
     }
 
     /**
@@ -253,15 +299,5 @@ public final class GridLibrary {
     /** The selector of a grid locator, for building row and cell lookups. */
     private static String selector(String name) {
         return LocatorRepository.get(LOCATORS, name).selector();
-    }
-
-    /**
-     * A pattern for a cell whose whole text is the value, spaces around it ignored. Playwright runs it as a
-     * JavaScript regex in the browser, so special characters are escaped one by one (Java's Pattern.quote uses
-     * \Q...\E, which JavaScript does not know).
-     */
-    private static Pattern exactly(String value) {
-        String escaped = value.replaceAll("[\\\\^$.|?*+()\\[\\]{}]", "\\\\$0");
-        return Pattern.compile("^\\s*" + escaped + "\\s*$");
     }
 }
