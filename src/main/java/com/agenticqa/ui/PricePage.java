@@ -46,6 +46,9 @@ public class PricePage implements PageComponents {
     /** The grid column that shows ranges such as "10->20" (see {@link #verifySelectionShown}). */
     public static final String SPLIT_HEADER = "Splited";
 
+    /** The grid column whose cell holds the TEST1 div (see {@link #test1Cells}). */
+    public static final String MARKER_HEADER = "Price";
+
     /** What separates the two sides of a {@value #SPLIT_HEADER} range, as in "10->20". */
     public static final String RANGE = "->";
 
@@ -237,6 +240,93 @@ public class PricePage implements PageComponents {
                             + match);
         }
         return this;
+    }
+
+    /**
+     * The cells of column {@code targetHeader} in the Price grid rows that match {@code match} and are TEST1 rows.
+     * It matches first, then filters: of the rows showing every value of {@code match}, it keeps those whose
+     * {@value #MARKER_HEADER} cell holds a div whose class contains TEST1 (locator test1Marker in pricepage.json):
+     * {@code pricePage.test1Cells(Map.of("Booking", "Booking A"), "Status")}.
+     *
+     * @param match        column header text to the value that column must show
+     * @param targetHeader the column whose cells are wanted
+     * @return the cells, one per TEST1 row (use them like any Locator: textContent(), click() ...)
+     * @throws AssertionError if no row matches, or none of the matching rows has the TEST1 div
+     */
+    public List<Locator> test1Cells(Map<String, String> match, String targetHeader) {
+        GridLibrary grid = grid().waitUntilLoaded();
+        Locator rows = grid.rows(match);
+        List<Locator> markerCells = grid.cellIn(rows, MARKER_HEADER).all();   // one per row, same order
+        List<Locator> targetCells = grid.cellIn(rows, targetHeader).all();
+        Assert.assertEquals(markerCells.size(), targetCells.size(), "'" + MARKER_HEADER + "' and '" + targetHeader
+                + "' cells in the Price grid rows matching " + match + " (one of each per row)");
+        List<Locator> test1 = new ArrayList<>();
+        for (int i = 0; i < targetCells.size(); i++) {
+            if (el.within(markerCells.get(i), "test1Marker").count() > 0) {
+                test1.add(targetCells.get(i));
+            }
+        }
+        if (test1.isEmpty()) {
+            Assert.fail("None of the " + targetCells.size() + " Price grid rows matching " + match
+                    + " has a TEST1 div in its '" + MARKER_HEADER + "' cell");
+        }
+        return test1;
+    }
+
+    /**
+     * The cells of column {@code header} in the Price grid rows matching {@code match} whose text contains
+     * {@code text} (case-sensitive): {@code pricePage.cellsContaining(Map.of("Booking", "Booking A"), "Range",
+     * "TESTRANGE")}.
+     *
+     * @param match  column header text to the value that column must show
+     * @param header the column to look in
+     * @param text   the text the cell must contain
+     * @return the cells, one per row that has it
+     * @throws AssertionError if no row matches, or none of the matching rows has the text in that column
+     */
+    public List<Locator> cellsContaining(Map<String, String> match, String header, String text) {
+        GridLibrary grid = grid().waitUntilLoaded();
+        List<Locator> cells = grid.cellIn(grid.rows(match), header).all().stream()
+                .filter(cell -> cell.innerText().contains(text))
+                .toList();
+        if (cells.isEmpty()) {
+            Assert.fail("No Price grid row matching " + match + " has '" + text + "' in its '" + header + "' cell");
+        }
+        return cells;
+    }
+
+    /**
+     * The same cells as {@link #cellsContaining}, as one filtered Locator instead of a list:
+     * {@code pricePage.cellContaining(Map.of("Booking", "Booking A"), "Range", "TESTRANGE")}. The filter runs in
+     * the browser on every use, so the Locator follows the grid after a refresh. The text is matched the same way:
+     * contained anywhere in the cell, case-sensitive, taken literally.
+     * <p>
+     * It may find several cells: use {@code first()}, {@code nth(i)} or {@code all()} for actions such as click()
+     * or innerText(), which fail on a Locator that finds more than one element.
+     *
+     * @param match  column header text to the value that column must show
+     * @param header the column to look in
+     * @param text   the text the cell must contain
+     * @return the cells (one Locator, one or more cells)
+     * @throws AssertionError if no row matches, or none of the matching rows has the text in that column
+     */
+    public Locator cellContaining(Map<String, String> match, String header, String text) {
+        GridLibrary grid = grid().waitUntilLoaded();
+        Locator cell = grid.cellIn(grid.rows(match), header)
+                .filter(new Locator.FilterOptions().setHasText(literally(text)));
+        if (cell.all().isEmpty()) {
+            Assert.fail("No Price grid row matching " + match + " has '" + text + "' in its '" + header + "' cell");
+        }
+        return cell;
+    }
+
+    /**
+     * A case-sensitive pattern for text contained anywhere, special characters taken literally. Playwright runs it
+     * as a JavaScript regex in the browser, so they are escaped one by one (Java's Pattern.quote uses \Q...\E,
+     * which JavaScript does not know).
+     */
+    private static Pattern literally(String text) {
+        return Pattern.compile(text.replaceAll("[\\\\^$.|?*+()\\[\\]{}]", "\\\\$0"));
     }
 
     /**

@@ -39,5 +39,10 @@
     "selector": ":scope > div[class*='model2']",
     "description": "the TEST2 div of a Price grid cell: a div right inside the cell whose class contains model2 (PricePage.verifySelectionShown; searched inside the cell)",
     "heal": false
+  },
+  "test1Marker": {
+    "selector": "div[class*='TEST1']",
+    "description": "the TEST1 marker of a Price grid row: a div anywhere in its Price cell whose class contains TEST1 (PricePage.test1Cells; searched inside the cell)",
+    "heal": false
   }
 }
