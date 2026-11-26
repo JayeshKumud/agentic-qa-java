@@ -8,12 +8,14 @@ import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import org.testng.Assert;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.regex.Pattern;
 
 /**
  * The data grid every page has, with the same functions on every page. Columns are named by their header text, so
@@ -224,6 +226,33 @@ public final class GridLibrary {
         return shownValues(page.locator(columnCells(header)));
     }
 
+    /** A number as grids show it: optional sign, digits (thousands may be grouped with commas), optional decimals. */
+    private static final Pattern NUMBER = Pattern.compile("[+-]?(\\d{1,3}(,\\d{3})+|\\d+)?(\\.\\d+)?");
+
+    /**
+     * Tells whether a value a cell shows is the expected one: the same text once whitespace is collapsed and
+     * trimmed, or, when both are numbers, the same number, so "70" matches "70.00" and "1,234.5" matches "1234.50".
+     * {@link #cell}, {@link #contains} and {@link #rows} match values this way too.
+     *
+     * @param actual   what the cell shows, for example from {@link #values}
+     * @param expected the value the test expects
+     * @return true if they are the same value
+     */
+    public static boolean sameValue(String actual, String expected) {
+        String a = actual == null ? "" : actual.replaceAll("\\s+", " ").trim();
+        String e = expected == null ? "" : expected.replaceAll("\\s+", " ").trim();
+        if (a.equals(e)) return true;
+        BigDecimal aNumber = number(a);
+        BigDecimal eNumber = number(e);
+        return aNumber != null && eNumber != null && aNumber.compareTo(eNumber) == 0;
+    }
+
+    /** The number a text shows, or null if it is not a number. */
+    private static BigDecimal number(String text) {
+        if (!NUMBER.matcher(text).matches() || !text.matches(".*\\d.*")) return null;
+        return new BigDecimal(text.replace(",", ""));
+    }
+
     /**
      * JavaScript helpers shared by the scripts below: {@code fields(cell)} are the text inputs, textareas and
      * dropdowns in a cell (checkboxes, radios and hidden inputs are left out: their value is not what is shown), and
@@ -256,14 +285,22 @@ public final class GridLibrary {
 
     /**
      * A JavaScript function (cells, want) that returns [row-index, col-id] of each cell whose text is {@code want},
-     * or that holds a text input, textarea or dropdown whose value is {@code want}. Whitespace is collapsed and
-     * trimmed on both sides. Fields are as in {@link #FIELDS}.
+     * or that holds a text input, textarea or dropdown whose value is {@code want}. Values are compared as
+     * {@link #sameValue} does: whitespace collapsed and trimmed, and numbers by their value (70 matches 70.00).
+     * Fields are as in {@link #FIELDS}.
      */
     private static final String MATCHING_CELLS = "(cells, want) => {" + FIELDS + """
               const norm = s => (s ?? '').replace(/\\s+/g, ' ').trim();
+              const NUMBER = /^[+-]?(\\d{1,3}(,\\d{3})+|\\d+)?(\\.\\d+)?$/;
+              const number = s => NUMBER.test(s) && /\\d/.test(s) ? Number(s.replace(/,/g, '')) : null;
               const target = norm(want);
+              const targetNumber = number(target);
+              const same = s => {
+                const text = norm(s);
+                return text === target || (targetNumber !== null && number(text) === targetNumber);
+              };
               return cells
-                  .filter(c => norm(c.textContent) === target || fields(c).some(f => norm(shown(f)) === target))
+                  .filter(c => same(c.textContent) || fields(c).some(f => same(shown(f))))
                   .map(c => [c.closest('[row-index]').getAttribute('row-index'), c.getAttribute('col-id')]);
             }""";
 

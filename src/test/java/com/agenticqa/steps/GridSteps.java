@@ -122,13 +122,14 @@ public class GridSteps {
      * </pre>
      *
      * @param targetHeader the column to check in that row
-     * @param expected     the text it must show, exactly (spaces around it ignored)
+     * @param expected     the value it must show (spaces around it ignored; numbers by value: 70 is 70.00)
      * @param match        the table: column header | value, one row per column
      */
     @Then("in the grid rows matching, {string} is {string}")
     public void cellInMatchingRowIs(String targetHeader, String expected, Map<String, String> match) {
         for (String actual : grid().values(match, targetHeader)) {
-            assertEquals(actual, expected, "'" + targetHeader + "' in the grid rows matching " + match);
+            assertTrue(GridLibrary.sameValue(actual, expected), "'" + targetHeader + "' in the grid rows matching "
+                    + match + " shows '" + actual + "', expected '" + expected + "'");
         }
     }
 

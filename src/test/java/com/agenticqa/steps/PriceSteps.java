@@ -9,7 +9,6 @@ import io.cucumber.java.en.When;
 import java.util.List;
 import java.util.Map;
 
-import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -126,7 +125,7 @@ public class PriceSteps {
      * </pre>
      *
      * @param targetHeader the column to check in those rows
-     * @param expected     the text it must show, exactly (spaces around it ignored)
+     * @param expected     the value it must show (spaces around it ignored; numbers by value: 70 is 70.00)
      * @param match        the table: column header | value
      */
     @Then("in the Price grid rows matching, {string} is {string}")
@@ -134,7 +133,8 @@ public class PriceSteps {
         List<String> values = grid().waitUntilLoaded().values(match, targetHeader);
         assertFalse(values.isEmpty(), "a '" + targetHeader + "' cell in the Price grid rows matching " + match);
         for (String actual : values) {
-            assertEquals(actual, expected, "'" + targetHeader + "' in the Price grid rows matching " + match);
+            assertTrue(GridLibrary.sameValue(actual, expected), "'" + targetHeader + "' in the Price grid rows matching "
+                    + match + " shows '" + actual + "', expected '" + expected + "'");
         }
     }
 
