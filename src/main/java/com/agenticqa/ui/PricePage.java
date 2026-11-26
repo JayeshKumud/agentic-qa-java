@@ -20,6 +20,17 @@ import java.util.regex.Pattern;
  * <p>
  * The selectors live in {@code src/main/resources/locators/pricepage.json}, not in this class, and elements are
  * looked up by name when they are used ({@code el.get("name")}).
+ * <p>
+ * The grid's cells of a column in rows you already have, with {@link GridLibrary#cellIn}: call {@code all()} on
+ * the cells, not on the rows (an AG Grid row has a pinned and a scrolling part, and only one holds the column):
+ * <pre>
+ * GridLibrary grid = pricePage.grid().waitUntilLoaded();
+ * Locator rows = grid.rows(Map.of("Booking", "Booking A"));
+ * for (Locator price : grid.cellIn(rows, "Price").all()) {     // one Price cell per matching row
+ *     CommonActions.assertVisible(price, "a Price cell of the Booking A rows");
+ * }
+ * List&lt;Locator&gt; bookings = grid.cellIn(rows, "Booking").all(); // same rows, same order
+ * </pre>
  */
 public class PricePage implements PageComponents {
 
