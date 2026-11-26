@@ -335,8 +335,9 @@ public class PricePage implements PageComponents {
      */
     public Locator rowsWithPriceDiv(Map<String, String> match, String classPart) {
         GridLibrary grid = grid().waitUntilLoaded();
-        String priceDiv = ".ag-cell[col-id='" + grid.columnId(MARKER_HEADER) + "'] div[class*='" + classPart + "']";
-        Locator rows = grid.rows(match).filter(new Locator.FilterOptions().setHas(page.locator(priceDiv)));
+        Locator priceCell = grid.cellIn(page.locator(":scope"), MARKER_HEADER);   // searched inside each row
+        Locator rows = grid.rows(match).filter(new Locator.FilterOptions()
+                .setHas(priceCell.locator("div[class*='" + classPart + "']")));
         Assert.assertFalse(rows.all().isEmpty(),
                 "No Price grid row matching " + match + " has a '" + classPart + "' div in its Price cell");
         return rows;
