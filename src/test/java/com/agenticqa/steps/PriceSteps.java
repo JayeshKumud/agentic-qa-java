@@ -25,6 +25,7 @@ import static org.testng.Assert.assertTrue;
  * Then the Price grid rows matching are checked
  * Then the Price grid rows matching are not checked
  * Then in the Price grid rows matching, "Status" is "Open"
+ * Then in the Price grid rows matching, "Range" contains "TESTRANGE"
  * Then the "Price" cells of the Price grid rows matching show the "TEST1" selection
  * When I click the "link" in column "Customer" of the Price grid rows matching
  * </pre>
@@ -137,6 +138,23 @@ public class PriceSteps {
             assertTrue(GridLibrary.sameValue(actual, expected), "'" + targetHeader + "' in the Price grid rows matching "
                     + match + " shows '" + actual + "', expected '" + expected + "'");
         }
+    }
+
+    /**
+     * Checks that a column of the matching Price grid rows contains a text, in at least one of them
+     * ({@link com.agenticqa.ui.PricePage#cellContaining}): the text may be anywhere in the cell, case-sensitive.
+     * <pre>
+     * Then in the Price grid rows matching, "Range" contains "TESTRANGE"
+     *   | Booking | Booking A |
+     * </pre>
+     *
+     * @param header the column to look in
+     * @param text   the text a cell of that column must contain
+     * @param match  the table: column header | value
+     */
+    @Then("in the Price grid rows matching, {string} contains {string}")
+    public void columnContainsInMatchingRows(String header, String text, Map<String, String> match) {
+        pages.price().cellContaining(match, header, text);
     }
 
     /**
