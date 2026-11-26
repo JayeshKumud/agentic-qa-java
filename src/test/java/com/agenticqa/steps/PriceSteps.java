@@ -26,6 +26,9 @@ import static org.testng.Assert.assertTrue;
  * Then the Price grid rows matching are not checked
  * Then in the Price grid rows matching, "Status" is "Open"
  * Then in the Price grid rows matching, "Range" contains "TESTRANGE"
+ * When I check "Select" in the Price grid rows with a "PRICE1" Price div for the units
+ *   | TEST1 |
+ *   | TEST2 |
  * Then the "Price" cells of the Price grid rows matching show the "TEST1" selection
  * When I click the "link" in column "Customer" of the Price grid rows matching
  * </pre>
@@ -137,6 +140,29 @@ public class PriceSteps {
         for (String actual : values) {
             assertTrue(GridLibrary.sameValue(actual, expected), "'" + targetHeader + "' in the Price grid rows matching "
                     + match + " shows '" + actual + "', expected '" + expected + "'");
+        }
+    }
+
+    /**
+     * Ticks the checkbox in a column of the Price grid rows of the table's units whose Price cell holds a div whose
+     * class contains a text ({@link com.agenticqa.ui.PricePage#checkboxesWithPriceDiv}); a unit without such a row is
+     * skipped:
+     * <pre>
+     * When I check "Select" in the Price grid rows with a "PRICE1" Price div for the units
+     *   | TEST1 |
+     *   | TEST2 |
+     * </pre>
+     *
+     * @param checkboxHeader the column that holds the checkbox, by its header text
+     * @param classPart      the text the div's class must contain
+     * @param units          the table: one Unit value per line
+     */
+    @When("I check {string} in the Price grid rows with a {string} Price div for the units")
+    public void checkRowsWithPriceDiv(String checkboxHeader, String classPart, List<String> units) {
+        for (Locator checkbox : pages.price().checkboxesWithPriceDiv(units, classPart, checkboxHeader)) {
+            checkbox.check();
+            assertTrue(checkbox.isChecked(), "'" + checkboxHeader + "' checkbox of a Price grid row of the units "
+                    + units + " with a '" + classPart + "' Price div is checked");
         }
     }
 

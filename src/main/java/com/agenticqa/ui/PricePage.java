@@ -49,6 +49,9 @@ public class PricePage implements PageComponents {
     /** The grid column whose cell holds the TEST1 div (see {@link #test1Cells}). */
     public static final String MARKER_HEADER = "Price";
 
+    /** The grid column that shows a row's unit (see {@link #checkboxesWithPriceDiv}). */
+    public static final String UNIT_HEADER = "Unit";
+
     /** What separates the two sides of a {@value #SPLIT_HEADER} range, as in "10->20". */
     public static final String RANGE = "->";
 
@@ -334,13 +337,53 @@ public class PricePage implements PageComponents {
      * @throws AssertionError if no row matches, or none of the matching rows has such a div in its Price cell
      */
     public Locator rowsWithPriceDiv(Map<String, String> match, String classPart) {
-        GridLibrary grid = grid().waitUntilLoaded();
-        Locator priceCell = grid.cellIn(page.locator(":scope"), MARKER_HEADER);   // searched inside each row
-        Locator rows = grid.rows(match).filter(new Locator.FilterOptions()
-                .setHas(priceCell.locator("div[class*='" + classPart + "']")));
+        Locator rows = priceDivRows(grid().waitUntilLoaded(), match, classPart);
         Assert.assertFalse(rows.all().isEmpty(),
                 "No Price grid row matching " + match + " has a '" + classPart + "' div in its Price cell");
         return rows;
+    }
+
+    /**
+     * The checkboxes in column {@code checkboxHeader} of the Price grid rows of the given units whose
+     * {@value #MARKER_HEADER} cell holds a div whose class contains {@code classPart}:
+     * {@code pricePage.checkboxesWithPriceDiv(List.of("TEST1", "TEST2"), "PRICE1", "Select")}.
+     * <p>
+     * For each unit it filters the rows whose {@value #UNIT_HEADER} is that unit to those whose Price cell has the
+     * div (as {@link #rowsWithPriceDiv}), then takes the checkbox in their {@code checkboxHeader} cell. A unit
+     * without such a row is skipped.
+     * <p>
+     * The checkbox column must be in the same part of the row as the Price column: on an AG Grid where one of
+     * them is pinned and the other is not, the filtered rows do not contain the checkbox and none is found.
+     *
+     * @param units          the {@value #UNIT_HEADER} values, each one row lookup
+     * @param classPart      the text the div's class must contain, for example "PRICE1" (case-sensitive)
+     * @param checkboxHeader the column that holds the checkbox, by its header text, for example "Select"
+     * @return the checkboxes, of all units together
+     * @throws AssertionError if a unit has no row at all, or no row of any unit has the div (and a checkbox)
+     */
+    public List<Locator> checkboxesWithPriceDiv(List<String> units, String classPart, String checkboxHeader) {
+        GridLibrary grid = grid().waitUntilLoaded();
+        List<Locator> checkboxes = new ArrayList<>();
+        for (String unit : units) {
+            Locator rows = priceDivRows(grid, Map.of(UNIT_HEADER, unit), classPart);   // none: unit skipped
+            checkboxes.addAll(grid.cellIn(rows, checkboxHeader).locator("input[type='checkbox']").all());
+        }
+        if (checkboxes.isEmpty()) {
+            Assert.fail("No Price grid row of the units " + units + " has a '" + classPart + "' div in its '"
+                    + MARKER_HEADER + "' cell and a checkbox in its '" + checkboxHeader + "' cell (the two columns"
+                    + " must be in the same part of the row: not one pinned and the other not)");
+        }
+        return checkboxes;
+    }
+
+    /**
+     * The rows matching {@code match} whose {@value #MARKER_HEADER} cell holds a div whose class contains
+     * {@code classPart}, without failing when there are none (see {@link #rowsWithPriceDiv}).
+     */
+    private Locator priceDivRows(GridLibrary grid, Map<String, String> match, String classPart) {
+        Locator priceCell = grid.cellIn(page.locator(":scope"), MARKER_HEADER);   // searched inside each row
+        return grid.rows(match).filter(new Locator.FilterOptions()
+                .setHas(priceCell.locator("div[class*='" + classPart + "']")));
     }
 
     /**
