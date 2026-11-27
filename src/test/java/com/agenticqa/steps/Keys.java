@@ -3,6 +3,7 @@ package com.agenticqa.steps;
 import com.agenticqa.apis.model.Customer;
 import com.agenticqa.apis.model.Unique;
 import com.agenticqa.core.DataKey;
+import com.agenticqa.mq.MqMessage;
 import io.restassured.response.Response;
 
 import java.util.List;
@@ -42,6 +43,12 @@ public final class Keys {
      */
     public static final DataKey<Map<String, Unique>> BASE_UNIQUE =
             DataKey.mapOf("baseUnique", String.class, Unique.class);
+
+    /** The last MQ message a step read or found ({@code MqSteps}). */
+    public static final DataKey<MqMessage> MQ_MESSAGE = DataKey.of("mqMessage", MqMessage.class);
+
+    /** The MQ messages the last "read all" or "browse all" step returned ({@code MqSteps}). */
+    public static final DataKey<List<MqMessage>> MQ_MESSAGES = DataKey.listOf("mqMessages", MqMessage.class);
 
     /** Constants only, not instantiable. */
     private Keys() {}
