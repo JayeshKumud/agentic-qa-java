@@ -36,6 +36,10 @@ import java.util.regex.Pattern;
  * <p>
  * A grid only renders the rows that fit on screen; a value further down is found once it is scrolled into view,
  * for example after filtering the grid.
+ * <p>
+ * Every lookup searches inside one grid (its {@code root} in grid.json), never the whole page, so a page with two
+ * grids cannot mix their rows (both have a row-index 0). {@code pricePage.grid()} is the page's only grid; on a page
+ * with several, pick one by a column only it has: {@code pricePage.grid("Booking")}.
  */
 public final class GridLibrary {
 
@@ -43,9 +47,14 @@ public final class GridLibrary {
 
     private final Page page;
     private final PageElements el;
+    /** The grid this library works on: every lookup is inside it. */
+    private final Locator root;
+    /** The column that picks the grid, or null for the window's only grid. */
+    private final String pickedBy;
 
     /**
-     * Binds the grid locators to a window.
+     * The window's only grid. {@link #waitUntilLoaded()} fails clearly if the window has more than one: use
+     * {@link #GridLibrary(Page, Healer, String)} there.
      *
      * @param page   the window the grid is in
      * @param healer this scenario's healer
@@ -53,6 +62,24 @@ public final class GridLibrary {
     public GridLibrary(Page page, Healer healer) {
         this.page = page;
         this.el = new PageElements(page, healer, LOCATORS);
+        this.root = el.get("root");
+        this.pickedBy = null;
+    }
+
+    /**
+     * The grid of the window that has a column with this header, for windows with several grids:
+     * {@code new GridLibrary(page, healer, "Booking")}, usually {@code pricePage.grid("Booking")}. Pick a column only
+     * that grid has; {@link #waitUntilLoaded()} fails clearly if no grid or several grids have it.
+     *
+     * @param page   the window the grids are in
+     * @param healer this scenario's healer
+     * @param column the header text of a column of that grid, exactly as shown
+     */
+    public GridLibrary(Page page, Healer healer, String column) {
+        this.page = page;
+        this.el = new PageElements(page, healer, LOCATORS);
+        this.root = el.get("root").filter(new Locator.FilterOptions().setHas(el.get("headerCell", "HEADER", column)));
+        this.pickedBy = column;
     }
 
     /**
@@ -63,16 +90,30 @@ public final class GridLibrary {
      * @return this grid
      */
     public GridLibrary waitUntilLoaded() {
-        CommonActions.assertVisible(el.get("root"), "the grid");
-        CommonActions.assertVisible(el.get("header"), "the grid's header");
+        CommonActions.assertVisible(root.first(), name());
+        int grids = root.count();
+        if (grids > 1) {
+            Assert.fail(pickedBy == null
+                    ? grids + " grids on " + page.url() + ": pick one by a column only it has, for example "
+                            + "pricePage.grid(\"Booking\")"
+                    : grids + " grids have a '" + pickedBy + "' column on " + page.url()
+                            + ": pick the grid by a column only it has");
+        }
+        CommonActions.assertVisible(el.within(root, "header"), "the header of " + name());
         try {
-            el.get("loadingOverlay").waitFor(new Locator.WaitForOptions()
+            el.within(root, "loadingOverlay").waitFor(new Locator.WaitForOptions()
                     .setState(WaitForSelectorState.HIDDEN).setTimeout(Settings.getAssertionMs()));
         } catch (PlaywrightException stillLoading) {
-            Assert.fail("The grid was still loading after " + Settings.getAssertionMs() + " ms, on " + page.url());
+            Assert.fail(name() + " was still loading after " + Settings.getAssertionMs() + " ms, on " + page.url());
         }
-        CommonActions.assertVisible(el.get("rowsOrNoRows").first(), "a grid row or the grid's 'no rows' message");
+        CommonActions.assertVisible(el.within(root, "rowsOrNoRows").first(),
+                "a row or the 'no rows' message of " + name());
         return this;
+    }
+
+    /** "the grid", or "the grid with the column 'Booking'", for messages. */
+    private String name() {
+        return pickedBy == null ? "the grid" : "the grid with the column '" + pickedBy + "'";
     }
 
     /**
@@ -83,8 +124,8 @@ public final class GridLibrary {
      * @throws AssertionError if no column header shows that text
      */
     public String columnId(String header) {
-        Locator headerCell = el.get("headerCell", "HEADER", header);
-        CommonActions.assertVisible(headerCell, "the grid column '" + header + "'");
+        Locator headerCell = root.locator(selector("headerCell").replace("HEADER", header));
+        CommonActions.assertVisible(headerCell, "the column '" + header + "' of " + name());
         return headerCell.getAttribute("col-id");
     }
 
@@ -155,7 +196,7 @@ public final class GridLibrary {
         }
         StringJoiner anyOfThem = new StringJoiner(", ");
         rowIndexes.forEach(index -> anyOfThem.add(selector("row") + "[row-index='" + index + "']"));
-        return page.locator(anyOfThem.toString());
+        return root.locator(anyOfThem.toString());
     }
 
     /**
@@ -237,7 +278,7 @@ public final class GridLibrary {
      *         holds
      */
     public List<String> columnValues(String header) {
-        return shownValues(page.locator(columnCells(header)));
+        return shownValues(root.locator(columnCells(header)));
     }
 
     /** A number as grids show it: optional sign, digits (thousands may be grouped with commas), optional decimals. */
@@ -326,31 +367,31 @@ public final class GridLibrary {
     /** The [row-index, col-id] of each cell matching {@code cellSelector} that shows the value, right now. */
     @SuppressWarnings("unchecked")
     private List<List<String>> matchingCells(String cellSelector, String value) {
-        return (List<List<String>>) page.locator(cellSelector).evaluateAll(MATCHING_CELLS, value);
+        return (List<List<String>>) root.locator(cellSelector).evaluateAll(MATCHING_CELLS, value);
     }
 
-    /** Waits up to ui.waits.assertionMs for a cell matching {@code cellSelector} to show the value. */
+    /**
+     * Waits up to ui.waits.assertionMs for a cell of this grid matching {@code cellSelector} to show the value,
+     * checking every 100 ms.
+     */
     private boolean waitForMatch(String cellSelector, String value) {
-        try {
-            page.waitForFunction("([selector, want]) => (" + MATCHING_CELLS
-                            + ")([...document.querySelectorAll(selector)], want).length > 0",
-                    List.of(cellSelector, value),
-                    new Page.WaitForFunctionOptions().setTimeout(Settings.getAssertionMs()));
-            return true;
-        } catch (PlaywrightException notThere) {
-            return false;
+        long end = System.currentTimeMillis() + Settings.getAssertionMs();
+        while (true) {
+            if (!matchingCells(cellSelector, value).isEmpty()) return true;
+            if (System.currentTimeMillis() >= end) return false;
+            page.waitForTimeout(100);
         }
     }
 
     /** A locator for the cells at the given [row-index, col-id] places; it matches nothing if there are none. */
     private Locator cellsAt(List<List<String>> places) {
         if (places.isEmpty()) {
-            return page.locator(selector("cell") + ":not(*)");
+            return root.locator(selector("cell") + ":not(*)");
         }
         StringJoiner anyOfThem = new StringJoiner(", ");
         places.forEach(place -> anyOfThem.add(selector("row") + "[row-index='" + place.get(0) + "'] "
                 + selector("cell") + "[col-id='" + place.get(1) + "']"));
-        return page.locator(anyOfThem.toString());
+        return root.locator(anyOfThem.toString());
     }
 
     /**

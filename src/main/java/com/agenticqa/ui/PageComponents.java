@@ -59,11 +59,23 @@ public interface PageComponents {
 
     /**
      * The data grid in this page object's window ({@link GridLibrary}): {@code pricePage.grid().waitUntilLoaded()}.
+     * The window must have one grid; with several, use {@link #grid(String)}.
      *
      * @return the grid of this page's window
      */
     default GridLibrary grid() {
         return new GridLibrary(window(), elements().healer());
+    }
+
+    /**
+     * The grid of this page object's window that has a column with this header, for windows with several grids:
+     * {@code pricePage.grid("Booking").waitUntilLoaded()}. Pick a column only that grid has.
+     *
+     * @param column the header text of one of that grid's columns, exactly as shown
+     * @return that grid
+     */
+    default GridLibrary grid(String column) {
+        return new GridLibrary(window(), elements().healer(), column);
     }
 
     /**
