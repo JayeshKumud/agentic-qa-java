@@ -84,6 +84,7 @@ public class WindowNavigator {
             // the app may load the new window into the window it was opened from (Price -> Unique in the same
             // browser window): that window no longer shows its old page, so forget it; switching back opens it again
             opened.values().removeIf(old -> old.elements().page() == shown);
+            session.useGrid(shown, null);   // a grid chosen for the old page does not apply to the new one
             opened.put(window, target);
         }
         return makeCurrent(target);

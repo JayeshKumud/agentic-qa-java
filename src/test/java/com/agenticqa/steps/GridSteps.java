@@ -1,5 +1,6 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.GridLibrary;
 import com.agenticqa.ui.WindowNavigator;
 import com.microsoft.playwright.Locator;
@@ -42,20 +43,53 @@ import static org.testng.Assert.assertTrue;
  * </pre>
  * The element type is checkbox, radio, button, link, input, dropdown or image, or a CSS selector such as
  * {@code "[data-testid='edit']"} ({@link GridLibrary#elements(java.util.Map, String)}).
+ * <p>
+ * On a window with several grids, pick one first by a column only it has; every later grid step on that window,
+ * these and the Price grid steps, then works on it:
+ * <pre>
+ * When I use the grid with column "Booking"
+ * When I check the grid rows matching
+ *   | Booking | Booking A |
+ * When I use the grid with column "Customer"
+ * When I use the only grid
+ * </pre>
  */
 public class GridSteps {
 
     private static final String CHECKBOX = "checkbox";
 
     private final WindowNavigator windows;
+    private final TestSession session;
 
     /**
-     * Receives the scenario's window navigator from PicoContainer.
+     * Receives the scenario's window navigator and session from PicoContainer.
      *
      * @param windows knows which window the scenario is on
+     * @param session the per-scenario session, which keeps the grid chosen per window
      */
-    public GridSteps(WindowNavigator windows) {
+    public GridSteps(WindowNavigator windows, TestSession session) {
         this.windows = windows;
+        this.session = session;
+    }
+
+    /**
+     * Picks the grid of the current window that has a column with this header, for windows with several grids:
+     * {@code When I use the grid with column "Booking"}. Every later grid step on this window (GridSteps and
+     * PriceSteps, and the page methods they call) works on that grid, until another grid is picked; other windows
+     * keep their own choice. Waits until that grid has loaded, so a wrong or shared column fails here.
+     *
+     * @param column the header text of a column only that grid has
+     */
+    @When("I use the grid with column {string}")
+    public void useGridWithColumn(String column) {
+        session.useGrid(windows.current().window(), column);
+        grid().waitUntilLoaded();
+    }
+
+    /** Goes back to the current window's only grid: {@code When I use the only grid}. */
+    @When("I use the only grid")
+    public void useOnlyGrid() {
+        session.useGrid(windows.current().window(), null);
     }
 
     /** The grid of the current window. */

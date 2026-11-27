@@ -14,6 +14,7 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions;
 
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -52,6 +53,8 @@ public class TestSession {
 
     private final TestData data = new TestData();
     private final Map<Class<? extends PageComponents>, PageComponents> pageComponents = new HashMap<>();
+    /** Per window: the column that picks its grid ({@link #useGrid}); no entry = the window's only grid. */
+    private final Map<Page, String> gridColumns = new IdentityHashMap<>();
 
     private BrowserContext context;
     private Page page;
@@ -191,6 +194,38 @@ public class TestSession {
     }
 
     /**
+     * Makes {@code grid()} of every page object on this window the grid with this column, for windows with several
+     * grids (the step "I use the grid with column ..."). The choice belongs to the window: other windows keep
+     * theirs, and it ends with the scenario.
+     *
+     * @param window the window
+     * @param column the header text of a column only that grid has; null = the window's only grid again
+     */
+    public synchronized void useGrid(Page window, String column) {
+        if (column == null) gridColumns.remove(window);
+        else gridColumns.put(window, column);
+    }
+
+    /**
+     * @param window the window
+     * @return the column chosen with {@link #useGrid} for that window, or null for its only grid
+     */
+    public synchronized String gridColumn(Page window) {
+        return gridColumns.get(window);
+    }
+
+    /**
+     * The grid column chosen for a window in the scenario running on this thread, for {@code PageComponents.grid()}.
+     *
+     * @param window the window
+     * @return the column, or null if none was chosen or no scenario is running on this thread
+     */
+    public static String chosenGridColumn(Page window) {
+        TestSession session = CURRENT.get();
+        return session == null ? null : session.gridColumn(window);
+    }
+
+    /**
      * The browser context, started on first use.
      *
      * @return the scenario's browser context
@@ -253,6 +288,7 @@ public class TestSession {
         context = null;
         page = null;
         pageComponents.clear();
+        gridColumns.clear();
         if (CURRENT.get() == this) CURRENT.remove(); // the next scenario on this thread cannot see this one
         return new SavedFiles(trace, keptVideo);
     }

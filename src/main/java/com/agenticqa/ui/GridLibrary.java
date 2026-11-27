@@ -94,8 +94,8 @@ public final class GridLibrary {
         int grids = root.count();
         if (grids > 1) {
             Assert.fail(pickedBy == null
-                    ? grids + " grids on " + page.url() + ": pick one by a column only it has, for example "
-                            + "pricePage.grid(\"Booking\")"
+                    ? grids + " grids on " + page.url() + ": pick one by a column only it has, with the step"
+                            + " 'I use the grid with column \"Booking\"' or pricePage.grid(\"Booking\")"
                     : grids + " grids have a '" + pickedBy + "' column on " + page.url()
                             + ": pick the grid by a column only it has");
         }
@@ -109,6 +109,23 @@ public final class GridLibrary {
         CommonActions.assertVisible(el.within(root, "rowsOrNoRows").first(),
                 "a row or the 'no rows' message of " + name());
         return this;
+    }
+
+    /**
+     * The grid element itself ({@code root} in grid.json, AG Grid's {@code .ag-root-wrapper}), for anything this
+     * class has no method for. Searches from it stay inside this grid:
+     * <pre>
+     * Locator bookingsGrid = pricePage.grid("Booking").root();
+     * bookingsGrid.locator("button:has-text('Export')").click();   // the Export button of that grid only
+     * </pre>
+     * It is the grid the library was created for: the window's only grid, the one chosen with "I use the grid with
+     * column ...", or the one with the column given to {@code grid("...")}. Call {@link #waitUntilLoaded()} first
+     * if the grid may still be loading, which also fails clearly if the choice finds several grids.
+     *
+     * @return the grid's root element
+     */
+    public Locator root() {
+        return root;
     }
 
     /** "the grid", or "the grid with the column 'Booking'", for messages. */

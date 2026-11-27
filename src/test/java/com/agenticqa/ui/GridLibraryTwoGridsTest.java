@@ -1,7 +1,9 @@
 package com.agenticqa.ui;
 
+import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.healing.Healer;
 import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
@@ -74,6 +76,34 @@ public class GridLibraryTwoGridsTest {
         assertEquals(bookings.rows(Map.of("Booking", "Booking A")).count(), 1);
         assertEquals(bookings.cellWithValue("Booking A").count(), 1);
         assertEquals(bookings.elements(Map.of("Status", "Open"), "checkbox").count(), 1);
+    }
+
+    @Test
+    public void rootIsThatGridOnly() {
+        Locator bookings = new GridLibrary(page, healer, "Booking").waitUntilLoaded().root();
+        assertEquals(bookings.count(), 1);
+        assertEquals(bookings.locator(".ag-row").count(), 2);                     // its own 2 rows, not all 4
+        assertEquals(bookings.locator(".ag-cell:text-is('Ada')").count(), 0);      // Ada is in the other grid
+        assertEquals(new GridLibrary(page, healer, "Customer").root().locator(".ag-cell:text-is('Ada')").count(), 1);
+    }
+
+    @Test
+    public void gridChosenForTheWindowIsWhatPageObjectsUse() {
+        TestSession session = new TestSession();
+        session.bindToCurrentThread();
+        try {
+            PricePage price = new PricePage(page, healer);
+            session.useGrid(page, "Customer");     // the step "I use the grid with column "Customer""
+            assertEquals(price.grid().waitUntilLoaded().columnValues("Status"), List.of("Closed", "Open"));
+            session.useGrid(page, "Booking");
+            assertEquals(price.grid().waitUntilLoaded().columnValues("Status"), List.of("Open", "Closed"));
+            session.useGrid(page, null);           // "I use the only grid": two grids, so it fails clearly
+            expectThrows(AssertionError.class, () -> price.grid().waitUntilLoaded());
+        } finally {
+            session.close(false);                  // no browser was started: only unbinds
+        }
+        // outside a scenario no grid is chosen
+        assertEquals(TestSession.chosenGridColumn(page), null);
     }
 
     @Test

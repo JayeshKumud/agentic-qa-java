@@ -1,5 +1,6 @@
 package com.agenticqa.ui;
 
+import com.agenticqa.core.TestSession;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.PlaywrightException;
@@ -59,12 +60,14 @@ public interface PageComponents {
 
     /**
      * The data grid in this page object's window ({@link GridLibrary}): {@code pricePage.grid().waitUntilLoaded()}.
-     * The window must have one grid; with several, use {@link #grid(String)}.
+     * It is the window's only grid, or, if the scenario chose one for this window ({@link TestSession#useGrid}, the
+     * step "I use the grid with column ..."), that grid. With several grids and no choice, use {@link #grid(String)}.
      *
      * @return the grid of this page's window
      */
     default GridLibrary grid() {
-        return new GridLibrary(window(), elements().healer());
+        String column = TestSession.chosenGridColumn(window());
+        return column == null ? new GridLibrary(window(), elements().healer()) : grid(column);
     }
 
     /**
