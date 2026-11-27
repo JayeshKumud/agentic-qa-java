@@ -1,12 +1,21 @@
 package com.agenticqa.ui;
 
+import com.agenticqa.config.Settings;
 import com.agenticqa.core.TestSession;
 import com.agenticqa.ui.healing.Healer;
+import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.PlaywrightException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Moves between the app's windows, injected into step classes by PicoContainer next to {@link Pages}:
@@ -29,6 +38,8 @@ import java.util.Map;
  * current window is per scenario without a ThreadLocal.
  */
 public class WindowNavigator {
+
+    private static final Logger log = LoggerFactory.getLogger(WindowNavigator.class);
 
     private final TestSession session;
     private final Pages pages;
@@ -95,9 +106,22 @@ public class WindowNavigator {
      * Clicks the dropdown button and the option on {@code from}, waits for the window that opens and for its title
      * to become {@code option}, checks the title with TestNG, maximizes the window, makes the page fill it, creates
      * the page object on it and waits until that page is ready ({@link PageComponents#verifyDisplayed()}).
+     * <p>
+     * It does not rely on {@code from} being the new window's opener ({@code page.waitForPopup}), because apps open
+     * windows in three ways:
+     * <ol>
+     *   <li>{@code from} opens it, or another window does (for example the home window opens every window): a new
+     *       page appears in the browser context, whichever window opened it.</li>
+     *   <li>the app reuses a window that is already open ({@code window.open(url, name)}): no new page appears, so
+     *       the window is found by its title {@code option}.</li>
+     *   <li>the option is clicked before {@code from} is ready, or the app opens the window only after a slow call:
+     *       {@code from} is checked first ({@link PageComponents#verifyDisplayed()}) and the wait lasts up to
+     *       ui.waits.navigationMs.</li>
+     * </ol>
      */
     private static <T extends PageComponents> T openWindow(PageComponents from, String option, Class<T> type) {
-        Page window = from.elements().page().waitForPopup(() -> from.selectDropdownOption(option));
+        from.verifyDisplayed();
+        Page window = clickAndFindWindow(from, option);
         window.waitForLoadState();
         CommonActions.assertTitle(window, option);
         BrowserWindow.maximize(window);
@@ -105,6 +129,54 @@ public class WindowNavigator {
         T pageObject = create(type, window, from.elements().healer());
         pageObject.verifyDisplayed();   // the window's own "ready" check, for example PricePage: Search Data button
         return pageObject;
+    }
+
+    /**
+     * Clicks the option on {@code from} and returns the window it opened: the first page that was not in the browser
+     * context before the click, else an already open window (other than {@code from}) whose title is
+     * {@code option}. Checks every 250 ms, up to ui.waits.navigationMs.
+     *
+     * @throws AssertionError if neither shows up in time; the message lists the open windows
+     */
+    private static Page clickAndFindWindow(PageComponents from, String option) {
+        Page source = from.window();
+        BrowserContext context = source.context();
+        Set<Page> before = Collections.newSetFromMap(new IdentityHashMap<>());
+        before.addAll(context.pages());
+
+        from.selectDropdownOption(option);
+
+        long end = System.currentTimeMillis() + Settings.getNavigationMs();
+        while (true) {
+            for (Page page : context.pages()) {
+                if (!before.contains(page)) {
+                    log.info("'{}' opened a new window from '{}'", option, source.title());
+                    return page;
+                }
+            }
+            for (Page page : context.pages()) {
+                if (page != source && !page.isClosed() && option.equals(titleOf(page))) {
+                    log.info("'{}' is an already open window (reused), not a new one", option);
+                    return page;
+                }
+            }
+            if (System.currentTimeMillis() >= end) {
+                List<String> open = context.pages().stream().map(WindowNavigator::titleOf).toList();
+                throw new AssertionError("Clicked '" + option + "' on '" + source.title() + "', but within "
+                        + Settings.getNavigationMs() + " ms no new window opened and no open window has the title '"
+                        + option + "'. Open windows: " + open);
+            }
+            source.waitForTimeout(250);   // lets Playwright process the browser's events while waiting
+        }
+    }
+
+    /** The page's title, or "" while it is loading or closing. */
+    private static String titleOf(Page page) {
+        try {
+            return page.title();
+        } catch (PlaywrightException loadingOrClosed) {
+            return "";
+        }
     }
 
     /** Creates a page object on the given window with its (Page, Healer) constructor. */
