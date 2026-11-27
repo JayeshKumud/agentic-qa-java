@@ -1,5 +1,6 @@
 package com.agenticqa.steps;
 
+import com.agenticqa.ui.CommonActions;
 import com.agenticqa.ui.GridLibrary;
 import com.agenticqa.ui.Pages;
 import com.microsoft.playwright.Locator;
@@ -30,6 +31,7 @@ import static org.testng.Assert.assertTrue;
  *   | TEST1 |
  *   | TEST2 |
  * Then the "Price" cells of the Price grid rows matching show the "TEST1" selection
+ * Then the Price grid rows matching have "span.something:text-is('TEST')" in column "Price"
  * When I click the "link" in column "Customer" of the Price grid rows matching
  * </pre>
  * For the grid of whichever window the scenario is on, use {@link GridSteps}.
@@ -200,6 +202,28 @@ public class PriceSteps {
     @Then("the {string} cells of the Price grid rows matching show the {string} selection")
     public void selectionShown(String targetHeader, String selection, Map<String, String> match) {
         pages.price().verifySelectionShown(match, selection, targetHeader);
+    }
+
+    /**
+     * Checks that a column of the matching Price grid rows holds an element a selector finds, and that it is
+     * visible ({@link com.agenticqa.ui.PricePage#elementsInCell}): at least one such element, at any depth in the
+     * cell. The selector is CSS, with Playwright's text pseudo-classes:
+     * <pre>
+     * Then the Price grid rows matching have "span.something:text-is('TEST')" in column "Price"
+     *   | Booking | Booking A |
+     * </pre>
+     * {@code span.something} = a span with the class something; {@code :text-is('TEST')} = text exactly TEST;
+     * {@code :has-text('TEST')} = text contains TEST, any case; {@code span[class*='some']} = class contains some.
+     *
+     * @param selector the element, for example "span.something:text-is('TEST')"
+     * @param header   the column whose cells hold it, by its header text
+     * @param match    the table: column header | value
+     */
+    @Then("the Price grid rows matching have {string} in column {string}")
+    public void elementInColumn(String selector, String header, Map<String, String> match) {
+        Locator found = pages.price().elementsInCell(match, header, selector);
+        CommonActions.assertVisible(found.first(), "'" + selector + "' in column '" + header
+                + "' of the Price grid rows matching " + match);
     }
 
     /**
