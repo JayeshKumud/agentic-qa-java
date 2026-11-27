@@ -1,0 +1,3 @@
+{
+  "_comment": "Locators of the Unique window (UniquePage). Name -> selector, or an object with selector, description and heal (default true; false for elements that may legitimately be absent). Keys starting with _ are ignored."
+}

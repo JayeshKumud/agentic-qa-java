@@ -69,6 +69,16 @@ public class WindowSteps {
     }
 
     /**
+     * Opens the Unique window from the current window's dropdown: {@code When I open the Unique window}. The Unique
+     * Window option is in the Price Booking window's dropdown, so open that first; the app then shows Unique in that
+     * same window.
+     */
+    @When("I open the Unique window")
+    public void openUnique() {
+        windows.switchToWindow(Window.UNIQUE_WINDOW);
+    }
+
+    /**
      * Selects bookings and days on the Price window ({@link com.agenticqa.ui.PricePage#applySearchs}), from a table
      * with one row per field and its values across:
      * <pre>

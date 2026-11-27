@@ -8,6 +8,7 @@ import java.util.Arrays;
  * <pre>
  * windows.switchToWindow(Window.PRICE_BOOKING);     // opens it from the current window's dropdown
  * windows.switchToWindow(Window.CUSTOMER_WINDOW);   // opens it from the Price Booking window's dropdown
+ * windows.switchToWindow(Window.UNIQUE_WINDOW);     // from Price Booking; replaces it in the same window
  * windows.switchToWindow(Window.HOME);              // the scenario's first window
  * </pre>
  * Every window except {@link #HOME} is opened by the dropdown option with its {@link #text()}, and that text is also
@@ -20,7 +21,12 @@ public enum Window {
     /** The Price Booking window: option "Price Booking" of the home page's dropdown. */
     PRICE_BOOKING("Price Booking", PricePage.class),
     /** The Customer window: option "Customer Window" of the Price Booking window's dropdown. */
-    CUSTOMER_WINDOW("Customer Window", CustomersPage.class);
+    CUSTOMER_WINDOW("Customer Window", CustomersPage.class),
+    /**
+     * The Unique window: option "Unique Window" of the Price Booking window's dropdown. The app loads it into the
+     * Price Booking window itself, so that window shows Unique afterwards.
+     */
+    UNIQUE_WINDOW("Unique Window", UniquePage.class);
 
     private final String text;
     private final Class<? extends PageComponents> page;

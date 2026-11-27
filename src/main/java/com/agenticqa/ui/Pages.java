@@ -61,6 +61,17 @@ public class Pages {
         return get(PricePage.class);
     }
 
+    /**
+     * The Unique window. Open it first with {@code windows.switchToWindow(Window.UNIQUE_WINDOW)}
+     * ({@link WindowNavigator}); it then shows in the window that showed Price Booking, so use this, not
+     * {@code price()}, from then on.
+     *
+     * @return the Unique window
+     */
+    public UniquePage unique() {
+        return get(UniquePage.class);
+    }
+
     /** @return the KLM GUI of this scenario */
     public KlmPage klm() {
         return get(KlmPage.class);
