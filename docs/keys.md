@@ -126,6 +126,7 @@ Declaring every key once in `Keys.java` also means:
 | `NAME_TAG` | `String` | `DataKey.of` | `Given {int} customers share a unique name tag` | GUI search for that tag |
 | `ZONE_ID` | `Long` | `DataKey.of` | `Given a unique zone id is set` | the zone id steps |
 | `VIEWS` | `List<String>` | `DataKey.listOf` | your steps | your steps |
+| `CREATED_UNIQUE` | `List<Unique>` | `DataKey.listOf` | the step or builder that creates a unique (`add`) | your steps (`list`, `requireList`) |
 | `BASE_UNIQUE` | `Map<String, Unique>` | `DataKey.mapOf` | `Given the unique {string} has registration id {string}` | `BackUniqueTransit` |
 
 ## Kinds of keys
@@ -178,6 +179,49 @@ List<String> views = session.data().get(Keys.VIEWS);
 
 Use **one style per key**. `List.copyOf` makes a list that cannot be changed, so a later `add` on the same key
 fails with `UnsupportedOperationException`.
+
+#### `add`, not `put`, for items collected one by one
+
+`Keys.CREATED_UNIQUE` holds every unique the scenario created. Each time one is built, it is added:
+
+```java
+// Keys.java
+public static final DataKey<List<Unique>> CREATED_UNIQUE = DataKey.listOf("createdUnique", Unique.class);
+```
+
+`add` does that for you in one call:
+
+```java
+session.data().add(Keys.CREATED_UNIQUE, u1);               // creates the list: [u1]
+session.data().add(Keys.CREATED_UNIQUE, u2);               // [u1, u2]
+session.data().list(Keys.CREATED_UNIQUE);                  // [u1, u2], as a copy
+```
+
+`put` does not:
+
+```java
+session.data().put(Keys.CREATED_UNIQUE, u1);               // does not compile: a Unique is not a List<Unique>
+session.data().put(Keys.CREATED_UNIQUE, List.of(u1));      // [u1]
+session.data().put(Keys.CREATED_UNIQUE, List.of(u2));      // [u2]: put replaces the list, u1 is gone
+```
+
+| | `put(key, value)` | `add(listKey, item)` |
+|---|---|---|
+| does | replaces the whole value under the key | appends one item to the list |
+| first call | stores the list you give it | creates the list |
+| `null` | fails | fails: `Cannot add null to 'createdUnique' in this scenario` |
+| earlier items | gone | kept, oldest first |
+
+Outside a step class (a builder, a helper) use the scenario's session from `TestSession.current()`:
+
+```java
+Unique uniqueToCreate = builder.build();
+TestSession.current().data().add(Keys.CREATED_UNIQUE, uniqueToCreate);
+```
+
+This replaces the old `ScenarioContext.createdUnique` ThreadLocal and its `addCreatedUnique` method: no
+`withInitial`, no null check of your own, and nothing to clear after the scenario, because the list lives in the
+scenario's session and ends with it.
 
 ### A map: `DataKey.mapOf`
 

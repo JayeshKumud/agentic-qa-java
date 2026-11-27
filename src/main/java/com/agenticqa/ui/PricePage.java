@@ -324,6 +324,32 @@ public class PricePage implements PageComponents {
     }
 
     /**
+     * The elements a CSS selector finds inside the {@code header} cells of the Price grid rows matching
+     * {@code match}, at any depth in the cell:
+     * <pre>
+     * pricePage.elementsInCell(Map.of("Booking", "Booking A"), "Price", "span.something").first().click();
+     * pricePage.elementsInCell(match, "Price", "span[class*='price']");   // class contains "price"
+     * pricePage.elementsInCell(match, "Status", "div.badge.active");       // both classes
+     * pricePage.elementsInCell(match, "Status", "span[title='Locked']");   // any attribute
+     * </pre>
+     * The Locator is searched again on every use; it may find several elements (one or more per row), so use
+     * {@code first()}, {@code nth(i)} or {@code all()} to act on one.
+     *
+     * @param match    column header text to the value that column must show
+     * @param header   the column whose cells hold the element, for example "Price"
+     * @param selector a CSS selector, for example "span.something"
+     * @return the elements (one Locator, one or more elements)
+     * @throws AssertionError if no row matches, or no matching row has such an element in that cell
+     */
+    public Locator elementsInCell(Map<String, String> match, String header, String selector) {
+        Locator elements = grid().waitUntilLoaded().cells(match, header).locator(selector);
+        if (elements.all().isEmpty()) {
+            Assert.fail("No Price grid row matching " + match + " has '" + selector + "' in its '" + header + "' cell");
+        }
+        return elements;
+    }
+
+    /**
      * The Price grid rows matching {@code match} whose {@value #MARKER_HEADER} cell holds a div whose class contains
      * {@code classPart}:
      * {@code pricePage.rowsWithPriceDiv(Map.of("Booking", "Booking A"), "TEST1").all()}.

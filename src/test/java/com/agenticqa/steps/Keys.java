@@ -37,6 +37,14 @@ public final class Keys {
     public static final DataKey<List<String>> VIEWS = DataKey.listOf("views", String.class);
 
     /**
+     * The uniques the scenario created, oldest first. Each step adds the one it created with
+     * {@code session.data().add(CREATED_UNIQUE, unique)} ({@code TestSession.current().data()} outside step classes),
+     * which creates the list on first use and fails on null; read them with {@code session.data().list(CREATED_UNIQUE)}.
+     * Use add, not put: put replaces the whole list.
+     */
+    public static final DataKey<List<Unique>> CREATED_UNIQUE = DataKey.listOf("createdUnique", Unique.class);
+
+    /**
      * Uniques created in the scenario, by base name. Add with {@code TestSession.current().data().put(BASE_UNIQUE, name,
      * unique)} and read with {@code TestSession.current().data().map(BASE_UNIQUE)}; see {@code BackUniqueTransit}.
      * The constant is only the key: the map itself lives in each scenario's session and ends with it.
