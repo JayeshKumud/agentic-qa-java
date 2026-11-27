@@ -193,7 +193,7 @@ public class WindowNavigator {
     /** Creates a page object on the given window with its (Page, Healer) constructor. */
     private static <T extends PageComponents> T create(Class<T> type, Page window, Healer healer) {
         try {
-            return type.getConstructor(Page.class, Healer.class).newInstance(window, healer);
+            return PageComponentsFactory.checked(type.getConstructor(Page.class, Healer.class).newInstance(window, healer));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(type.getSimpleName()
                     + " needs a public constructor (Page page, Healer healer)", e);

@@ -60,7 +60,8 @@ public final class PageComponentsFactory {
      */
     private static <T extends PageComponents> T create(Class<T> pageToCreate, TestSession session) {
         try {
-            return pageToCreate.getConstructor(Page.class, Healer.class).newInstance(session.page(), session.healer());
+            return checked(pageToCreate.getConstructor(Page.class, Healer.class)
+                    .newInstance(session.page(), session.healer()));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(pageToCreate.getSimpleName()
                     + " needs a public constructor (Page page, Healer healer)", e);
@@ -70,5 +71,28 @@ public final class PageComponentsFactory {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Cannot create " + pageToCreate.getSimpleName() + ": " + e, e);
         }
+    }
+
+    /**
+     * Fails clearly when a new page object cannot be used, instead of a NullPointerException later: its
+     * {@link PageComponents#elements()} must return the PageElements built in its constructor, on a window.
+     *
+     * @param page the page object just created
+     * @param <T>  the page type
+     * @return the page object
+     * @throws IllegalStateException if elements() or elements().page() is null
+     */
+    static <T extends PageComponents> T checked(T page) {
+        String name = page.getClass().getSimpleName();
+        PageElements elements = page.elements();
+        if (elements == null) {
+            throw new IllegalStateException(name + ".elements() returned null: build a PageElements in the constructor "
+                    + "(this.el = new PageElements(page, healer, LOCATORS)) and return it from elements()");
+        }
+        if (elements.page() == null) {
+            throw new IllegalStateException(name + ".elements() has no window: pass the constructor's Page to "
+                    + "new PageElements(page, healer, LOCATORS)");
+        }
+        return page;
     }
 }
