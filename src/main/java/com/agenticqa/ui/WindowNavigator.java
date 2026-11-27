@@ -80,6 +80,10 @@ public class WindowNavigator {
         PageComponents target = opened.get(window);
         if (target == null || target.elements().page().isClosed()) {
             target = keep(window.page(), openWindow(current(), window.text(), window.page()));
+            Page shown = target.elements().page();
+            // the app may load the new window into the window it was opened from (Price -> Unique in the same
+            // browser window): that window no longer shows its old page, so forget it; switching back opens it again
+            opened.values().removeIf(old -> old.elements().page() == shown);
             opened.put(window, target);
         }
         return makeCurrent(target);
@@ -112,8 +116,10 @@ public class WindowNavigator {
      * <ol>
      *   <li>{@code from} opens it, or another window does (for example the home window opens every window): a new
      *       page appears in the browser context, whichever window opened it.</li>
-     *   <li>the app reuses a window that is already open ({@code window.open(url, name)}): no new page appears, so
-     *       the window is found by its title {@code option}.</li>
+     *   <li>the app reuses a window that is already open ({@code window.open(url, name)}), or loads the new page
+     *       into {@code from} itself (Price Booking becomes Unique Window in the same browser window): no new page
+     *       appears, so the window is found by its title {@code option}. In the second case {@code from}'s page
+     *       object is forgotten, so switching back to it opens it again.</li>
      *   <li>the option is clicked before {@code from} is ready, or the app opens the window only after a slow call:
      *       {@code from} is checked first ({@link PageComponents#verifyDisplayed()}) and the wait lasts up to
      *       ui.waits.navigationMs.</li>
@@ -134,7 +140,7 @@ public class WindowNavigator {
     /**
      * Clicks the option on {@code from} and returns the window it opened: the first page that was not in the browser
      * context before the click, else an already open window (other than {@code from}) whose title is
-     * {@code option}. Checks every 250 ms, up to ui.waits.navigationMs.
+     * {@code option}, else {@code from} itself once its title is {@code option} (the page was replaced in place). Checks every 250 ms, up to ui.waits.navigationMs.
      *
      * @throws AssertionError if neither shows up in time; the message lists the open windows
      */
@@ -143,6 +149,7 @@ public class WindowNavigator {
         BrowserContext context = source.context();
         Set<Page> before = Collections.newSetFromMap(new IdentityHashMap<>());
         before.addAll(context.pages());
+        String sourceTitle = titleOf(source);
 
         from.selectDropdownOption(option);
 
@@ -150,7 +157,7 @@ public class WindowNavigator {
         while (true) {
             for (Page page : context.pages()) {
                 if (!before.contains(page)) {
-                    log.info("'{}' opened a new window from '{}'", option, source.title());
+                    log.info("'{}' opened a new window from '{}'", option, sourceTitle);
                     return page;
                 }
             }
@@ -160,9 +167,13 @@ public class WindowNavigator {
                     return page;
                 }
             }
+            if (option.equals(titleOf(source))) {
+                log.info("'{}' replaced '{}' in the same window", option, sourceTitle);
+                return source;
+            }
             if (System.currentTimeMillis() >= end) {
                 List<String> open = context.pages().stream().map(WindowNavigator::titleOf).toList();
-                throw new AssertionError("Clicked '" + option + "' on '" + source.title() + "', but within "
+                throw new AssertionError("Clicked '" + option + "' on '" + sourceTitle + "', but within "
                         + Settings.getNavigationMs() + " ms no new window opened and no open window has the title '"
                         + option + "'. Open windows: " + open);
             }
