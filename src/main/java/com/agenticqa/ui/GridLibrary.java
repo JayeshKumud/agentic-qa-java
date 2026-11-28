@@ -39,7 +39,8 @@ import java.util.regex.Pattern;
  * <p>
  * Every lookup searches inside one grid (its {@code root} in grid.json), never the whole page, so a page with two
  * grids cannot mix their rows (both have a row-index 0). {@code pricePage.grid()} is the page's only grid; on a page
- * with several, pick one by a column only it has: {@code pricePage.grid("Booking")}.
+ * with several, pick one by a column only it has: {@code pricePage.grid("Booking")}, or, when no column tells them
+ * apart, by the element it is in (a locator of the page): {@code pricePage.gridIn("bookingsGrid")}.
  */
 public final class GridLibrary {
 
@@ -49,12 +50,14 @@ public final class GridLibrary {
     private final PageElements el;
     /** The grid this library works on: every lookup is inside it. */
     private final Locator root;
-    /** The column that picks the grid, or null for the window's only grid. */
-    private final String pickedBy;
+    /** "the grid", "the grid with the column 'Booking'" or "the grid in 'bookingsGrid'", for messages. */
+    private final String name;
+    /** What {@link #waitUntilLoaded()} says when the choice finds several grids. */
+    private final String severalGrids;
 
     /**
      * The window's only grid. {@link #waitUntilLoaded()} fails clearly if the window has more than one: use
-     * {@link #GridLibrary(Page, Healer, String)} there.
+     * {@link #GridLibrary(Page, Healer, String)} or {@link #GridLibrary(Page, Healer, Locator, String)} there.
      *
      * @param page   the window the grid is in
      * @param healer this scenario's healer
@@ -63,7 +66,34 @@ public final class GridLibrary {
         this.page = page;
         this.el = new PageElements(page, healer, LOCATORS);
         this.root = el.get("root");
-        this.pickedBy = null;
+        this.name = "the grid";
+        this.severalGrids = "%d grids on %s: pick one by a column only it has, with the step 'I use the grid with"
+                + " column \"Booking\"' or pricePage.grid(\"Booking\"), or by its container, with the step 'I use the"
+                + " grid in \"bookingsGrid\"' or pricePage.gridIn(\"bookingsGrid\")";
+    }
+
+    /**
+     * The grid in a container, for windows with several grids that no column tells apart (they show the same
+     * columns): {@code new GridLibrary(page, healer, page.locator("#bookings"), "#bookings")}, usually
+     * {@code pricePage.gridIn("bookingsGrid")} with the container in the page's locator file.
+     * <p>
+     * The container is the element around the grid (a panel, a tab, a {@code div} with an id), or the grid element
+     * itself ({@code "#bookings .ag-root-wrapper"}): either way the grid is the one in it.
+     * {@link #waitUntilLoaded()} fails clearly if the container holds no grid or several.
+     *
+     * @param page      the window the grids are in
+     * @param healer    this scenario's healer
+     * @param container the element the grid is in, or the grid element itself
+     * @param containerName what the container is called in messages, for example its locator name
+     */
+    public GridLibrary(Page page, Healer healer, Locator container, String containerName) {
+        this.page = page;
+        this.el = new PageElements(page, healer, LOCATORS);
+        // the grid inside the container, or the container itself when its locator is the grid element
+        this.root = container.locator(selector("root")).or(container.and(el.get("root")));
+        this.name = "the grid in '" + containerName + "'";
+        this.severalGrids = "%d grids in '" + containerName.replace("%", "%%")
+                + "' on %s: make its locator match the element around one grid only";
     }
 
     /**
@@ -79,7 +109,10 @@ public final class GridLibrary {
         this.page = page;
         this.el = new PageElements(page, healer, LOCATORS);
         this.root = el.get("root").filter(new Locator.FilterOptions().setHas(el.get("headerCell", "HEADER", column)));
-        this.pickedBy = column;
+        this.name = "the grid with the column '" + column + "'";
+        this.severalGrids = "%d grids have a '" + column.replace("%", "%%") + "' column on %s: pick the grid by a"
+                + " column only it has, or by its container, with 'I use the grid in \"bookingsGrid\"' or"
+                + " pricePage.gridIn(\"bookingsGrid\")";
     }
 
     /**
@@ -93,11 +126,7 @@ public final class GridLibrary {
         CommonActions.assertVisible(root.first(), name());
         int grids = root.count();
         if (grids > 1) {
-            Assert.fail(pickedBy == null
-                    ? grids + " grids on " + page.url() + ": pick one by a column only it has, with the step"
-                            + " 'I use the grid with column \"Booking\"' or pricePage.grid(\"Booking\")"
-                    : grids + " grids have a '" + pickedBy + "' column on " + page.url()
-                            + ": pick the grid by a column only it has");
+            Assert.fail(severalGrids.formatted(grids, page.url()));
         }
         CommonActions.assertVisible(el.within(root, "header"), "the header of " + name());
         try {
@@ -119,7 +148,8 @@ public final class GridLibrary {
      * bookingsGrid.locator("button:has-text('Export')").click();   // the Export button of that grid only
      * </pre>
      * It is the grid the library was created for: the window's only grid, the one chosen with "I use the grid with
-     * column ...", or the one with the column given to {@code grid("...")}. Call {@link #waitUntilLoaded()} first
+     * column ..." or "I use the grid in ...", the one with the column given to {@code grid("...")}, or the one
+     * in the container given to {@code gridIn("...")}. Call {@link #waitUntilLoaded()} first
      * if the grid may still be loading, which also fails clearly if the choice finds several grids.
      *
      * @return the grid's root element
@@ -128,9 +158,9 @@ public final class GridLibrary {
         return root;
     }
 
-    /** "the grid", or "the grid with the column 'Booking'", for messages. */
+    /** "the grid", "the grid with the column 'Booking'" or "the grid in 'bookingsGrid'", for messages. */
     private String name() {
-        return pickedBy == null ? "the grid" : "the grid with the column '" + pickedBy + "'";
+        return name;
     }
 
     /**

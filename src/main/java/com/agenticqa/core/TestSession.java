@@ -55,6 +55,8 @@ public class TestSession {
     private final Map<Class<? extends PageComponents>, PageComponents> pageComponents = new HashMap<>();
     /** Per window: the column that picks its grid ({@link #useGrid}); no entry = the window's only grid. */
     private final Map<Page, String> gridColumns = new IdentityHashMap<>();
+    /** Per window: the locator name of the container that picks its grid ({@link #useGridIn}). */
+    private final Map<Page, String> gridContainers = new IdentityHashMap<>();
 
     private BrowserContext context;
     private Page page;
@@ -198,12 +200,51 @@ public class TestSession {
      * grids (the step "I use the grid with column ..."). The choice belongs to the window: other windows keep
      * theirs, and it ends with the scenario.
      *
+     * It replaces a container chosen with {@link #useGridIn}.
+     *
      * @param window the window
      * @param column the header text of a column only that grid has; null = the window's only grid again
      */
     public synchronized void useGrid(Page window, String column) {
+        gridContainers.remove(window);
         if (column == null) gridColumns.remove(window);
         else gridColumns.put(window, column);
+    }
+
+    /**
+     * Makes {@code grid()} of every page object on this window the grid in a container, for windows whose grids no
+     * column tells apart (the step "I use the grid in ..."). The container is a locator name in the locator file of
+     * the page object asking. It replaces a column chosen with {@link #useGrid}; the choice belongs to the window,
+     * like a column.
+     *
+     * @param window        the window
+     * @param containerName the locator name of the element the grid is in, for example "bookingsGrid"; null = the
+     *                      window's only grid again
+     */
+    public synchronized void useGridIn(Page window, String containerName) {
+        gridColumns.remove(window);
+        if (containerName == null) gridContainers.remove(window);
+        else gridContainers.put(window, containerName);
+    }
+
+    /**
+     * @param window the window
+     * @return the container locator name chosen with {@link #useGridIn} for that window, or null
+     */
+    public synchronized String gridContainer(Page window) {
+        return gridContainers.get(window);
+    }
+
+    /**
+     * The grid container chosen for a window in the scenario running on this thread, for
+     * {@code PageComponents.grid()}.
+     *
+     * @param window the window
+     * @return the container's locator name, or null if none was chosen or no scenario is running on this thread
+     */
+    public static String chosenGridContainer(Page window) {
+        TestSession session = CURRENT.get();
+        return session == null ? null : session.gridContainer(window);
     }
 
     /**
@@ -289,6 +330,7 @@ public class TestSession {
         page = null;
         pageComponents.clear();
         gridColumns.clear();
+        gridContainers.clear();
         if (CURRENT.get() == this) CURRENT.remove(); // the next scenario on this thread cannot see this one
         return new SavedFiles(trace, keptVideo);
     }

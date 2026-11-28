@@ -38,9 +38,10 @@ error. Now a lookup can only reach the picked grid.
 | Step | Does |
 |---|---|
 | `When I use the grid with column "Booking"` | picks the grid of the current window that has a column with that header, and waits until it has loaded |
-| `When I use the only grid` | goes back to the window's single grid |
+| `When I use the grid in "bookingsGrid"` | picks the grid in an element of the page: `bookingsGrid` is a locator in the current page's locator file ([below](#grids-with-the-same-columns-pick-by-container)); waits until it has loaded |
+| `When I use the only grid` | goes back to the window's single grid (clears a column or a container choice) |
 
-After `I use the grid with column`, **every grid step on that window** works on the picked grid:
+After `I use the grid with column` or `I use the grid in`, **every grid step on that window** works on the picked grid:
 
 - the general grid steps ([`GridSteps`](../src/test/java/com/agenticqa/steps/GridSteps.java)): `the grid is loaded`,
   `the grid column ... contains ...`, `I check the grid rows matching`, ...
@@ -55,7 +56,8 @@ No step text changes: the steps you already have keep working, on the grid you p
 
 The choice belongs to **the window** it was made on:
 
-- It stays until you pick another grid, or `I use the only grid`, on that window.
+- It stays until you pick another grid (by column or by container: the newer choice replaces the other), or
+  `I use the only grid`, on that window.
 - Other windows keep their own choice, so after `I go back to the "Price Booking" window` the Price window's
   grid is the one picked there earlier.
 - When a window's page is replaced in place (opening Unique Window from Price Booking loads it into the same
@@ -75,17 +77,19 @@ Pick a column that **only that grid** has, and write its header exactly as shown
 
 | Message | Means | Fix |
 |---|---|---|
-| `2 grids have a 'Status' column on <url>: pick the grid by a column only it has` | both grids have that column | pick a column only one of them has |
+| `2 grids have a 'Status' column on <url>: pick the grid by a column only it has, or by its container ...` | both grids have that column | pick a column only one of them has, or [pick by container](#grids-with-the-same-columns-pick-by-container) |
 | `Expected the grid with the column 'Bookings' to be shown within 15000 ms, on <url>` | no grid has that column (yet) | check the header text; open the tab or panel that shows the grid first |
-| `2 grids on <url>: pick one by a column only it has, with the step 'I use the grid with column "Booking"' or pricePage.grid("Booking")` | a grid step ran on a window with two grids, and none was picked | add `I use the grid with column "..."` before it |
+| `2 grids on <url>: pick one by a column only it has, with the step 'I use the grid with column "Booking"' or pricePage.grid("Booking")` | a grid step ran on a window with two grids, and none was picked | add `I use the grid with column "..."` or `I use the grid in "..."` before it |
 
 ## In Java
 
 ```java
 GridLibrary grid = pages.price().grid();               // the Price window's grid: the only one, or the one picked
 GridLibrary bookings = pages.price().grid("Booking");  // the grid with a Booking column, whatever was picked
+GridLibrary inPanel = pages.price().gridIn("bookingsGrid"); // the grid in the bookingsGrid element of pricepage.json
 GridLibrary chosen = windows.current().grid();         // the current window's grid, as GridSteps uses it
 new GridLibrary(page, healer, "Booking");              // the same, without a page object
+new GridLibrary(page, healer, page.locator("#bookings"), "#bookings"); // a container, without a page object
 ```
 
 Every method of a `GridLibrary` stays inside its grid:
@@ -99,7 +103,8 @@ bookings.elements(Map.of("Booking", "Booking A"), "checkbox").all().forEach(Loca
 bookings.cellIn(rows, "Price").locator("span.something");
 ```
 
-`grid("Booking")` always gives the grid with that column; `grid()` follows the choice of the window. A step class of
+`grid("Booking")` always gives the grid with that column, `gridIn("bookingsGrid")` the grid in that element;
+`grid()` follows the choice of the window. A step class of
 your own that uses `windows.current().grid()` or `pages.price().grid()` therefore follows `I use the grid with
 column` without any extra code:
 
@@ -130,17 +135,57 @@ The step stores the choice in the scenario's session; code can do the same:
 
 ```java
 session.useGrid(windows.current().window(), "Booking");   // like I use the grid with column "Booking"
-session.useGrid(windows.current().window(), null);        // like I use the only grid
+session.useGridIn(windows.current().window(), "bookingsGrid"); // like I use the grid in "bookingsGrid"
+session.useGrid(windows.current().window(), null);        // like I use the only grid (clears both kinds)
 session.gridColumn(window);                                // the column picked for a window, or null
+session.gridContainer(window);                             // the container picked for a window, or null
 ```
 
-Prefer `grid("Booking")` in code: it says which grid it uses where it is used.
+Prefer `grid("Booking")` or `gridIn("bookingsGrid")` in code: it says which grid it uses where it is used.
+
+## Grids with the same columns: pick by container
+
+When both grids show exactly the same columns, no column tells them apart. Pick the grid by the element it is in
+instead. Add that element to the page's locator file (for the Price window, `locators/pricepage.json`):
+
+```json
+"bookingsGrid": {
+  "selector": "#bookings",
+  "description": "the panel around the Bookings grid",
+  "heal": false
+}
+```
+
+Then pick it:
+
+```gherkin
+When I use the grid in "bookingsGrid"
+Then the Price grid is loaded
+```
+
+```java
+GridLibrary bookings = pages.price().gridIn("bookingsGrid").waitUntilLoaded();
+```
+
+The locator can point at the element **around** the grid (a panel, a tab, a `div` with an id: `#bookings`) or at the
+**grid element itself** (`#bookings .ag-root-wrapper`); either way the grid is the one in it. The name is looked up in
+the locator file of the page object the step works on (`windows.current()`), so the locator belongs in that page's
+file, not in `grid.json`.
+
+| Message | Means | Fix |
+|---|---|---|
+| `No locator 'bookingGrid' in locators/pricepage.json or locators/common.json. Locators: [...]` (IllegalArgumentException) | the name is not in the current page's locator file | check the spelling, or add the locator |
+| `Expected the grid in 'bookingsGrid' to be shown within 15000 ms, on <url>` | the element has no grid in it (yet), or the locator finds nothing | check the selector; open the tab or panel that shows the grid first |
+| `2 grids in 'bookingsGrid' on <url>: make its locator match the element around one grid only` | the element holds both grids, or the locator finds several elements | make the selector narrower |
+
+`I use the grid in` checks the grid before keeping the choice, so a wrong name or container fails at that step and
+leaves the earlier choice as it was.
 
 ## Limits
 
-- **Grids with the same columns.** A grid is picked by a column only it has. If both grids show exactly the same
-  columns, no column tells them apart; that needs picking by a container from the page's locator file (for example
-  `"bookingsGrid": "#bookings .ag-root-wrapper"`), which is not built yet.
+- **Grids with the same columns and no element of their own.** Picking by container needs an element that holds
+  one grid only. If the app renders both grids in the same parent without ids or classes that tell them apart, a
+  positional selector (`#panel > div:nth-child(2)`) works but breaks when the layout changes.
 - **Nested grids.** AG Grid's master/detail rows put a grid inside a row of another. The outer grid's lookups
   would also find the inner grid's rows. The windows this was built for have side-by-side grids, not nested ones.
 - **Hidden grids.** A grid in a closed tab or panel still counts: it has its columns and its root. If one of the
@@ -158,6 +203,16 @@ visible AG-Grid-like grids that both have a row 0 (`page.setContent`, no applica
 - a column both grids have fails clearly;
 - a page object's `grid()` follows the grid picked for its window, and "only grid" again fails clearly.
 
+[`GridLibraryContainerTest`](../src/test/java/com/agenticqa/ui/GridLibraryContainerTest.java) builds two grids with
+the **same** columns in `#left` and `#right` (containers in the test-only `src/test/resources/locators/twogridstest.json`)
+and checks that:
+
+- each grid is found by its container, whether the locator is the panel around it or the grid element itself;
+- a column cannot pick them, and the message points to picking by container;
+- a container with both grids, a container without a grid and an unknown locator name fail clearly;
+- `grid()` follows a container picked for the window; a column choice replaces it and the other way round; "only
+  grid" clears it.
+
 ```powershell
-mvn test -Dtest=GridLibraryTwoGridsTest
+mvn test -Dtest="GridLibraryTwoGridsTest,GridLibraryContainerTest"
 ```

@@ -53,6 +53,10 @@ import static org.testng.Assert.assertTrue;
  * When I use the grid with column "Customer"
  * When I use the only grid
  * </pre>
+ * Grids that show the same columns are picked by the element they are in, a locator of the page's locator file:
+ * <pre>
+ * When I use the grid in "bookingsGrid"
+ * </pre>
  */
 public class GridSteps {
 
@@ -84,6 +88,21 @@ public class GridSteps {
     public void useGridWithColumn(String column) {
         session.useGrid(windows.current().window(), column);
         grid().waitUntilLoaded();
+    }
+
+    /**
+     * Picks the grid of the current window that is in an element of its page, for windows whose grids no column
+     * tells apart (they show the same columns): {@code When I use the grid in "bookingsGrid"}. The name is a
+     * locator in the current page's locator file, for example {@code "bookingsGrid": "#bookings"}. Every later grid
+     * step on this window works on that grid, as after "I use the grid with column ...". Waits until that grid has
+     * loaded, so an unknown name, an empty container or one with several grids fails here.
+     *
+     * @param containerName the locator name of the element the grid is in
+     */
+    @When("I use the grid in {string}")
+    public void useGridIn(String containerName) {
+        windows.current().gridIn(containerName).waitUntilLoaded();   // fails before the choice is kept
+        session.useGridIn(windows.current().window(), containerName);
     }
 
     /** Goes back to the current window's only grid: {@code When I use the only grid}. */

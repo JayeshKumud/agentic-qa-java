@@ -61,13 +61,30 @@ public interface PageComponents {
     /**
      * The data grid in this page object's window ({@link GridLibrary}): {@code pricePage.grid().waitUntilLoaded()}.
      * It is the window's only grid, or, if the scenario chose one for this window ({@link TestSession#useGrid}, the
-     * step "I use the grid with column ..."), that grid. With several grids and no choice, use {@link #grid(String)}.
+     * step "I use the grid with column ...", or {@link TestSession#useGridIn}, the step "I use the grid in ..."),
+     * that grid. With several grids and no choice, use {@link #grid(String)} or {@link #gridIn(String)}.
      *
      * @return the grid of this page's window
      */
     default GridLibrary grid() {
+        String container = TestSession.chosenGridContainer(window());
+        if (container != null) return gridIn(container);
         String column = TestSession.chosenGridColumn(window());
         return column == null ? new GridLibrary(window(), elements().healer()) : grid(column);
+    }
+
+    /**
+     * The grid in an element of this page, for windows with several grids that no column tells apart:
+     * {@code pricePage.gridIn("bookingsGrid").waitUntilLoaded()}. The element is a locator of this page object's
+     * locator file, the element around the grid ({@code "#bookings"}) or the grid element itself
+     * ({@code "#bookings .ag-root-wrapper"}).
+     *
+     * @param containerName the locator name in this page's locator file, for example "bookingsGrid"
+     * @return the grid in that element
+     * @throws IllegalArgumentException if the page's locator file has no locator with that name
+     */
+    default GridLibrary gridIn(String containerName) {
+        return new GridLibrary(window(), elements().healer(), elements().get(containerName), containerName);
     }
 
     /**

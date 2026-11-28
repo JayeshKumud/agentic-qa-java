@@ -1,0 +1,23 @@
+{
+  "_comment": "Test-only locators for GridLibraryContainerTest: the containers of two grids that show the same columns.",
+  "leftGrid": {
+    "selector": "#left",
+    "description": "the panel around the left grid",
+    "heal": false
+  },
+  "rightGrid": {
+    "selector": "#right .ag-root-wrapper",
+    "description": "the right grid element itself",
+    "heal": false
+  },
+  "bothPanels": {
+    "selector": "body",
+    "description": "an element that holds both grids",
+    "heal": false
+  },
+  "noGrid": {
+    "selector": "#empty",
+    "description": "a panel without a grid",
+    "heal": false
+  }
+}
