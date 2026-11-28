@@ -350,33 +350,12 @@ public class PricePage implements PageComponents {
     }
 
     /**
-     * The Price grid rows matching {@code match} whose {@value #MARKER_HEADER} cell holds a div whose class contains
-     * {@code classPart}:
-     * {@code pricePage.rowsWithPriceDiv(Map.of("Booking", "Booking A"), "TEST1").all()}.
-     * <p>
-     * The Locator keeps, of each row, the part that holds the {@value #MARKER_HEADER} cell: on an AG Grid with a
-     * pinned column, a cell of a column in the other part is not inside it. It is searched again on every use.
-     *
-     * @param match     column header text to the value that column must show
-     * @param classPart the text the div's class must contain, for example "TEST1" (case-sensitive)
-     * @return the rows (one Locator, one or more rows)
-     * @throws AssertionError if no row matches, or none of the matching rows has such a div in its Price cell
-     */
-    public Locator rowsWithPriceDiv(Map<String, String> match, String classPart) {
-        Locator rows = priceDivRows(grid().waitUntilLoaded(), match, classPart);
-        Assert.assertFalse(rows.all().isEmpty(),
-                "No Price grid row matching " + match + " has a '" + classPart + "' div in its Price cell");
-        return rows;
-    }
-
-    /**
      * The checkboxes in column {@code checkboxHeader} of the Price grid rows of the given units whose
      * {@value #MARKER_HEADER} cell holds a div whose class contains {@code classPart}:
      * {@code pricePage.checkboxesWithPriceDiv(List.of("TEST1", "TEST2"), "PRICE1", "Select")}.
      * <p>
      * For each unit it filters the rows whose {@value #UNIT_HEADER} is that unit to those whose Price cell has the
-     * div (as {@link #rowsWithPriceDiv}), then takes the checkbox in their {@code checkboxHeader} cell. A unit
-     * without such a row is skipped.
+     * div, then takes the checkbox in their {@code checkboxHeader} cell. A unit without such a row is skipped.
      * <p>
      * The checkbox column must be in the same part of the row as the Price column: on an AG Grid where one of
      * them is pinned and the other is not, the filtered rows do not contain the checkbox and none is found.
@@ -402,10 +381,6 @@ public class PricePage implements PageComponents {
         return checkboxes;
     }
 
-    /**
-     * The rows matching {@code match} whose {@value #MARKER_HEADER} cell holds a div whose class contains
-     * {@code classPart}, without failing when there are none (see {@link #rowsWithPriceDiv}).
-     */
     private Locator priceDivRows(GridLibrary grid, Map<String, String> match, String classPart) {
         Locator priceCell = grid.cellIn(page.locator(":scope"), MARKER_HEADER);   // searched inside each row
         return grid.rows(match).filter(new Locator.FilterOptions()
