@@ -356,11 +356,15 @@ public final class GridLibrary {
     }
 
     /**
-     * JavaScript helpers shared by the scripts below: {@code fields(cell)} are the text inputs, textareas and
-     * dropdowns in a cell (checkboxes, radios and hidden inputs are left out: their value is not what is shown), and
-     * {@code shown(field)} is what a field shows (a dropdown: its selected option's text).
+     * JavaScript helpers shared by the scripts below: {@code text(cell)} is the text a cell shows, as Playwright's
+     * {@code innerText()} gives it (hidden elements such as AG Grid's accessibility labels left out, CSS
+     * text-transform applied), not {@code textContent}, which also has the hidden text; {@code fields(cell)} are
+     * the text inputs, textareas and dropdowns in a cell (checkboxes, radios and hidden inputs are left out: their
+     * value is not what is shown), and {@code shown(field)} is what a field shows (a dropdown: its selected
+     * option's text).
      */
     private static final String FIELDS = """
+            const text = c => c.innerText ?? c.textContent ?? '';
             const shown = el => el.tagName === 'SELECT'
                 ? [...el.selectedOptions].map(o => o.textContent).join(' ')
                 : el.value;
@@ -375,7 +379,7 @@ public final class GridLibrary {
     private static final String CELL_VALUES = "cells => {" + FIELDS + """
               return cells.map(c => {
                 const fs = fields(c);
-                return fs.length ? fs.map(shown).join(' ') : (c.textContent ?? '');
+                return fs.length ? fs.map(shown).join(' ') : text(c);
               });
             }""";
 
@@ -402,7 +406,7 @@ public final class GridLibrary {
                 return text === target || (targetNumber !== null && number(text) === targetNumber);
               };
               return cells
-                  .filter(c => same(c.textContent) || fields(c).some(f => same(shown(f))))
+                  .filter(c => same(text(c)) || fields(c).some(f => same(shown(f))))
                   .map(c => [c.closest('[row-index]').getAttribute('row-index'), c.getAttribute('col-id')]);
             }""";
 
